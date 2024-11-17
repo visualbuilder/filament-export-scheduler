@@ -3,15 +3,19 @@
 namespace VisualBuilder\ExportScheduler\Models;
 
 use Carbon\Carbon;
+use Cron\CronExpression;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Facades\Log;
 use VisualBuilder\ExportScheduler\Enums\DateRange;
 use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 
 class ExportSchedule extends Model
 {
     use HasFactory;
+
+    protected $appends = ['next_due_at'];
 
     /**
      * The attributes that are mass assignable.
@@ -56,72 +60,50 @@ class ExportSchedule extends Model
         return $this->morphTo();
     }
 
-    /**
-     * *********************************
-     * Helpers
-     * *********************************
-     */
+
 
     /**
-     * Check if the export schedule is due to run.
+     * Get the next due time for the schedule.
+     *
+     * @return Carbon|null
      */
-    public function isDue(): bool
+    public function getNextDueAtAttribute(): ?Carbon
     {
-        $lastRun = $this->last_run_at ?? Carbon::minValue();
+        $baseTime = $this->getScheduleBaseTime();
+        Log::info(print_r($baseTime, true));
+        if (!$baseTime) {
+            return null;
+        }
 
         switch ($this->schedule_frequency) {
-            case ScheduleFrequency::DAILY->value:
-                return now()->diffInDays($lastRun) >= 1;
+            case ScheduleFrequency::DAILY:
+                return $baseTime->addDay();
 
-            case ScheduleFrequency::WEEKLY->value:
-                return now()->diffInWeeks($lastRun) >= 1
-                    && now()->dayOfWeek === $this->schedule_day_of_week;
+            case ScheduleFrequency::WEEKLY:
+                return $baseTime->addWeek()->next($this->schedule_day_of_week);
 
-            case ScheduleFrequency::MONTHLY->value:
-                return now()->diffInMonths($lastRun) >= 1
-                    && now()->day === $this->schedule_day_of_month;
+            case ScheduleFrequency::MONTHLY:
+                return $baseTime->addMonth()->day($this->schedule_day_of_month);
 
-            case ScheduleFrequency::QUARTERLY->value:
-                return now()->diffInMonths($lastRun) >= 3
-                    && now()->day === $this->schedule_day_of_month;
+            case ScheduleFrequency::QUARTERLY:
+                return $baseTime->addMonths(3)->day($this->schedule_day_of_month);
 
-            case ScheduleFrequency::HALF_YEARLY->value:
-                return now()->diffInMonths($lastRun) >= 6
-                    && now()->day === $this->schedule_day_of_month;
+            case ScheduleFrequency::HALF_YEARLY:
+                return $baseTime->addMonths(6)->day($this->schedule_day_of_month);
 
-            case ScheduleFrequency::YEARLY->value:
-                return now()->diffInYears($lastRun) >= 1
-                    && now()->day === $this->schedule_day_of_month
-                    && now()->month === $this->schedule_month;
+            case ScheduleFrequency::YEARLY:
+                return $baseTime->addYear()
+                    ->month($this->schedule_month)
+                    ->day($this->schedule_day_of_month);
 
-            case ScheduleFrequency::CRON->value:
-                return $this->isCronDue();
+            case ScheduleFrequency::CRON:
+                return $this->getNextCronRunAt();
 
             default:
-                return false;
+                return null;
         }
     }
 
-    /**
-     * Check if the export is due based on the cron expression.
-     */
-    protected function isCronDue(): bool
-    {
-        if (! $this->custom_cron_expression) {
-            return false;
-        }
-
-        $cron = new CronExpression($this->custom_cron_expression);
-        $nextRunAt = Carbon::instance($cron->getNextRunDate($this->last_run_at ?? 'now'));
-
-        return now()->greaterThanOrEqualTo($nextRunAt);
-    }
-
-    /**
-     * ********************************
-     * Attributes
-     * ********************************
-     */
     public function getStartsAtAttribute(): Carbon
     {
         return $this->date_range->getDateRange()['start'];
@@ -150,5 +132,41 @@ class ExportSchedule extends Model
     public function getDateRangeLabelAttribute(): string
     {
         return $this->date_range->getLabel();
+    }
+
+
+
+    /**
+     * Get the base time for scheduling by combining last run and schedule time.
+     *
+     * @return Carbon|null
+     */
+    protected function getScheduleBaseTime(): ?Carbon
+    {
+        // Use the last run time if available, otherwise start from now
+        $lastRun = $this->last_run_at ? Carbon::parse($this->last_run_at) : now();
+
+        if ($this->schedule_time) {
+            // Combine the date from $lastRun with the time from schedule_time
+            [$hour, $minute, $second] = explode(':', $this->schedule_time);
+            $lastRun->setTime($hour, $minute, $second);
+        }
+
+        return $lastRun;
+    }
+
+    /**
+     * Calculate the next due time based on the cron expression.
+     *
+     * @return Carbon|null
+     */
+    protected function getNextCronRunAt(): ?Carbon
+    {
+        if (!$this->custom_cron_expression) {
+            return null;
+        }
+
+        $cron = new CronExpression($this->custom_cron_expression);
+        return Carbon::instance($cron->getNextRunDate($this->last_run_at ?? 'now'));
     }
 }

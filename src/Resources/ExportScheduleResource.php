@@ -254,6 +254,7 @@ class ExportScheduleResource extends Resource
                 Tables\Columns\TextColumn::make('owner.email'),
                 Tables\Columns\TextColumn::make('last_run_at')->label('Last Run')->date(),
                 Tables\Columns\TextColumn::make('last_successful_run_at')->label('Last Success')->date(),
+                Tables\Columns\TextColumn::make('next_due_at')->label('Next Due')->date(),
             ])
             ->filters([
                 //

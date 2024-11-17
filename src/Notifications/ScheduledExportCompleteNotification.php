@@ -40,9 +40,13 @@ class ScheduledExportCompleteNotification extends Notification implements Should
      */
     public function toMail($notifiable)
     {
-        $mailable = config('export-scheduler.mail.mailable');
+        $mailableClass = config('export-scheduler.mailable');
 
-        return app(AdminExportReady::class, ['admin' => $notifiable, 'export' => $this->export, 'exportSchedule' => $this->exportSchedule]);
+        if (!class_exists($mailableClass)) {
+            throw new \InvalidArgumentException("The configured mailable class [{$mailableClass}] does not exist.");
+        }
+
+        return new $mailableClass($notifiable, $this->export, $this->exportSchedule);
     }
 
     /**
@@ -55,13 +59,13 @@ class ScheduledExportCompleteNotification extends Notification implements Should
     {
         return [
             'actions' => [],
-            'body' => 'Export Complete',
+            'body' => 'Scheduled Export Complete',
             'color' => null,
             'duration' => 'persistent',
             'icon' => 'heroicon-o-arrow-down-tray',
             'iconColor' => 'success',
             'status' => null,
-            'title' => 'Export Complete',
+            'title' => 'Scheduled Export Complete',
             'view' => 'filament-notifications::notification',
             'viewData' => [],
             'format' => 'filament',

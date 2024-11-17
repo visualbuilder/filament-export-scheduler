@@ -35,9 +35,8 @@ class DynamicExporter
         }
 
         // Prepare column mappings
-        $columnsConfig = json_decode($exportSchedule->columns, true);
         $columnMap = [];
-        foreach ($columnsConfig as $column) {
+        foreach ($exportSchedule->columns as $column) {
             $columnMap[$column['name']] = $column['label'] ?? $column['name'];
         }
 
@@ -48,7 +47,7 @@ class DynamicExporter
         $export = new Export;
         $export->exporter = $exporter;
         $export->total_rows = $query->count();
-        $export->file_disk = 'local';
+        $export->file_disk = config('export-scheduler.file_disk');
         $export->file_name = $this->generateFileName($exportSchedule);
         $export->user()->associate($exportSchedule->owner);
         $export->save();

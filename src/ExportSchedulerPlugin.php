@@ -6,14 +6,12 @@ use Closure;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
 use Filament\Support\Concerns\EvaluatesClosures;
-use VisualBuilder\ExportScheduler\Resources\ExportScheduleResource;
 
 class ExportSchedulerPlugin implements Plugin
 {
-
     use EvaluatesClosures;
 
-    protected bool|Closure $navigation = false;
+    protected bool | Closure $navigation = false;
 
     public function getId(): string
     {
@@ -25,10 +23,7 @@ class ExportSchedulerPlugin implements Plugin
         $panel->resources(config('export-scheduler.resources'));
     }
 
-    public function boot(Panel $panel): void
-    {
-
-    }
+    public function boot(Panel $panel): void {}
 
     public static function make(): static
     {
@@ -43,7 +38,7 @@ class ExportSchedulerPlugin implements Plugin
         return $plugin;
     }
 
-    public function enableNavigation(bool|Closure $callback = true): static
+    public function enableNavigation(bool | Closure $callback = true): static
     {
         $this->navigation = $callback;
 
@@ -52,7 +47,6 @@ class ExportSchedulerPlugin implements Plugin
 
     public function shouldRegisterNavigation(): bool
     {
-        return $this->evaluate($this->navigation) === true ?? config('export-scheduler.navigation.enabled',true);
+        return $this->evaluate($this->navigation) === true ?? config('export-scheduler.navigation.enabled', true);
     }
-
 }

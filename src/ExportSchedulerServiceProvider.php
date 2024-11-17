@@ -9,12 +9,10 @@ use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
 use Filament\Support\Facades\FilamentIcon;
 use Illuminate\Filesystem\Filesystem;
-use Livewire\Features\SupportTesting\Testable;
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use VisualBuilder\ExportScheduler\Commands\ExportSchedulerCommand;
-use VisualBuilder\ExportScheduler\Testing\TestsExportScheduler;
 
 class ExportSchedulerServiceProvider extends PackageServiceProvider
 {
@@ -33,7 +31,7 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
 
             ->hasViews('export-scheduler')
             ->hasCommands($this->getCommands())
-            ->hasInstallCommand(function(InstallCommand $command) {
+            ->hasInstallCommand(function (InstallCommand $command) {
                 $command
                     ->publishConfigFile()
                     ->publishAssets()
@@ -62,15 +60,16 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
         }
     }
 
-    public function packageRegistered(): void {
+    public function packageRegistered(): void
+    {
 
         parent::packageRegistered();
 
-        $this->loadJsonTranslationsFrom(__DIR__.'/../resources/lang/');
+        $this->loadJsonTranslationsFrom(__DIR__ . '/../resources/lang/');
 
         // Bind the ExportScheduler class to the container
         $this->app->singleton(ExportScheduler::class, function () {
-            return new ExportScheduler();
+            return new ExportScheduler;
         });
     }
 
@@ -78,19 +77,19 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
     {
         parent::packageBooted();
 
-//        // Asset Registration
-//        FilamentAsset::register(
-//            $this->getAssets(),
-//            $this->getAssetPackageName()
-//        );
+        //        // Asset Registration
+        //        FilamentAsset::register(
+        //            $this->getAssets(),
+        //            $this->getAssetPackageName()
+        //        );
 
-//        FilamentAsset::registerScriptData(
-//            $this->getScriptData(),
-//            $this->getAssetPackageName()
-//        );
+        //        FilamentAsset::registerScriptData(
+        //            $this->getScriptData(),
+        //            $this->getAssetPackageName()
+        //        );
 
         // Icon Registration
-//        FilamentIcon::register($this->getIcons());
+        //        FilamentIcon::register($this->getIcons());
 
         // Handle Stubs
         if (app()->runningInConsole()) {
@@ -100,7 +99,7 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
                 ], 'filament-export-scheduler-stubs');
             }
             $this->publishes([
-                __DIR__.'/../database/seeders/ExportScheduleSeeder.php' => database_path('seeders/ExportScheduleSeeder.php'),
+                __DIR__ . '/../database/seeders/ExportScheduleSeeder.php' => database_path('seeders/ExportScheduleSeeder.php'),
 
             ], 'filament-export-scheduler-seeds');
         }
@@ -119,11 +118,10 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
     {
         return [
             // AlpineComponent::make('filament-export-scheduler', __DIR__ . '/../resources/dist/components/filament-export-scheduler.js'),
-//            Css::make('filament-export-scheduler-styles', __DIR__ . '/../resources/dist/filament-export-scheduler.css'),
-//            Js::make('filament-export-scheduler-scripts', __DIR__ . '/../resources/dist/filament-export-scheduler.js'),
+            //            Css::make('filament-export-scheduler-styles', __DIR__ . '/../resources/dist/filament-export-scheduler.css'),
+            //            Js::make('filament-export-scheduler-scripts', __DIR__ . '/../resources/dist/filament-export-scheduler.js'),
         ];
     }
-
 
     /**
      * @return array<class-string>

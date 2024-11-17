@@ -2,12 +2,12 @@
 
 namespace VisualBuilder\ExportScheduler\Models;
 
-use VisualBuilder\ExportScheduler\Enums\DateRange;
-use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use VisualBuilder\ExportScheduler\Enums\DateRange;
+use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 
 class ExportSchedule extends Model
 {
@@ -19,19 +19,19 @@ class ExportSchedule extends Model
      * @var array
      */
     protected $fillable = [
-            'name',
-            'columns',
-            'exporter',
-            'date_range',
-            'owner_id',
-            'owner_type',
-            'schedule_frequency',
-            'schedule_time',
-            'schedule_day_of_week',
-            'schedule_day_of_month',
-            'schedule_month',
-            'schedule_timezone',
-            'formats'
+        'name',
+        'columns',
+        'exporter',
+        'date_range',
+        'owner_id',
+        'owner_type',
+        'schedule_frequency',
+        'schedule_time',
+        'schedule_day_of_week',
+        'schedule_day_of_month',
+        'schedule_month',
+        'schedule_timezone',
+        'formats',
     ];
 
     /**
@@ -40,10 +40,10 @@ class ExportSchedule extends Model
      * @var array
      */
     protected $casts = [
-            'columns'            => 'array',
-            'formats'            => 'array',
-            'date_range'         => DateRange::class,
-            'schedule_frequency' => ScheduleFrequency::class,
+        'columns' => 'array',
+        'formats' => 'array',
+        'date_range' => DateRange::class,
+        'schedule_frequency' => ScheduleFrequency::class,
     ];
 
     /**
@@ -51,12 +51,10 @@ class ExportSchedule extends Model
      * Relations
      * *********************************
      */
-
     public function owner(): MorphTo
     {
         return $this->morphTo();
     }
-
 
     /**
      * *********************************
@@ -64,11 +62,8 @@ class ExportSchedule extends Model
      * *********************************
      */
 
-
     /**
      * Check if the export schedule is due to run.
-     *
-     * @return bool
      */
     public function isDue(): bool
     {
@@ -109,12 +104,10 @@ class ExportSchedule extends Model
 
     /**
      * Check if the export is due based on the cron expression.
-     *
-     * @return bool
      */
     protected function isCronDue(): bool
     {
-        if (!$this->custom_cron_expression) {
+        if (! $this->custom_cron_expression) {
             return false;
         }
 
@@ -124,39 +117,37 @@ class ExportSchedule extends Model
         return now()->greaterThanOrEqualTo($nextRunAt);
     }
 
-
-
     /**
      * ********************************
      * Attributes
      * ********************************
      */
-
-
-    public function getStartsAtAttribute():Carbon
+    public function getStartsAtAttribute(): Carbon
     {
         return $this->date_range->getDateRange()['start'];
     }
-    public function getEndsAtAttribute():Carbon
+
+    public function getEndsAtAttribute(): Carbon
     {
         return $this->date_range->getDateRange()['end'];
     }
 
-    public function getStartsAtFormattedAttribute():string
+    public function getStartsAtFormattedAttribute(): string
     {
-        return  $this->starts_at->format(config('company.readableDateTimeDisplayFormat'));
-    }
-    public function getEndsAtFormattedAttribute():string
-    {
-        return  $this->ends_at->format(config('company.readableDateTimeDisplayFormat'));
+        return $this->starts_at->format(config('company.readableDateTimeDisplayFormat'));
     }
 
-    public function getFrequencyAttribute():string
+    public function getEndsAtFormattedAttribute(): string
+    {
+        return $this->ends_at->format(config('company.readableDateTimeDisplayFormat'));
+    }
+
+    public function getFrequencyAttribute(): string
     {
         return $this->schedule_frequency->getLabel();
     }
 
-    public function getDateRangeLabelAttribute():string
+    public function getDateRangeLabelAttribute(): string
     {
         return $this->date_range->getLabel();
     }

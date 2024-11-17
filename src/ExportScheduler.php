@@ -8,7 +8,6 @@ use Illuminate\Support\Str;
 
 class ExportScheduler
 {
-
     public static function isValidCronExpression(string $expression): bool
     {
         return CronExpression::isValidExpression($expression);
@@ -16,8 +15,6 @@ class ExportScheduler
 
     /**
      * List all exporter classes in the configured directories recursively.
-     *
-     * @return array
      */
     public function listExporters(): array
     {
@@ -29,7 +26,7 @@ class ExportScheduler
             // Convert the namespace to a path relative to `app/`
             $path = app_path(str_replace('\\', DIRECTORY_SEPARATOR, Str::after($namespace, 'App\\')));
 
-            if (!is_dir($path)) {
+            if (! is_dir($path)) {
                 continue;
             }
 
@@ -41,10 +38,6 @@ class ExportScheduler
 
     /**
      * Recursively retrieve exporter classes from a given directory.
-     *
-     * @param string $namespace
-     * @param string $directory
-     * @return array
      */
     protected function getExportersFromDirectory(string $namespace, string $directory): array
     {
@@ -55,7 +48,7 @@ class ExportScheduler
             $className = Str::replace(DIRECTORY_SEPARATOR, '\\', $className);
 
             // Ensure the class exists and is not abstract
-            if (class_exists($className) && !(new \ReflectionClass($className))->isAbstract()) {
+            if (class_exists($className) && ! (new \ReflectionClass($className))->isAbstract()) {
                 // Remove the base namespace but keep subdirectories in the label
                 $relativePath = Str::after($className, $namespace . '\\');
                 $exporters[$className] = $relativePath;

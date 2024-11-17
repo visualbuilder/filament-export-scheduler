@@ -2,8 +2,8 @@
 
 namespace VisualBuilder\ExportScheduler\Enums;
 
-trait EnumSubset {
-
+trait EnumSubset
+{
     public static function values(): array
     {
         return array_column(self::cases(), 'value');
@@ -15,6 +15,7 @@ trait EnumSubset {
         foreach (self::cases() as $case) {
             $array[$case->value] = $case->getLabel();
         }
+
         return $array;
     }
 

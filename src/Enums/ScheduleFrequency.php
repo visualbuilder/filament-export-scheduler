@@ -6,7 +6,6 @@ use Filament\Support\Contracts\HasLabel;
 
 enum ScheduleFrequency: string implements HasLabel
 {
-
     use EnumSubset;
 
     case DAILY = 'daily';
@@ -29,6 +28,4 @@ enum ScheduleFrequency: string implements HasLabel
             self::CRON        => __('export-scheduler::schedule_frequency.cron'),
         };
     }
-
-
 }

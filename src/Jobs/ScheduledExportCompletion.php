@@ -1,34 +1,32 @@
 <?php
+
 namespace VisualBuilder\ExportScheduler\Jobs;
 
-use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 use App\Notifications\AdminScheduledExportCompleteNotification;
-use  VisualBuilder\ExportScheduler\Services\DynamicExporter;
 use Filament\Actions\Exports\Models\Export;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 
 class ScheduledExportCompletion implements ShouldQueue
 {
-    use Dispatchable, Queueable, SerializesModels;
+    use Dispatchable;
+    use Queueable;
+    use SerializesModels;
 
     /**
      * Create a new job instance.
      *
-     * @param Export $export
-     * @param array $columnMap
-     * @param array $formats
-     * @param array $options
-     * @param ExportSchedule $exportSchedule
+     * @param  array  $columnMap
+     * @param  array  $formats
+     * @param  array  $options
      */
     public function __construct(
         protected Export $export,
         protected ExportSchedule $exportSchedule,
-    ) {
-
-    }
+    ) {}
 
     /**
      * Execute the job.

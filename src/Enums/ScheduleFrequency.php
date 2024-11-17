@@ -30,9 +30,5 @@ enum ScheduleFrequency: string implements HasLabel
         };
     }
 
-    public function is(string $value): bool
-    {
-        return $this->value === $value;
-    }
 
 }

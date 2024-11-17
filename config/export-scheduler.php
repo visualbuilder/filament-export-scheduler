@@ -43,6 +43,10 @@ return [
      * Which authenticatable models should be allowed to receive exports
      */
     'user_models' => [
-        \VisualBuilder\ExportScheduler\Tests\Models\User::class ,
-    ]
+        [
+            'model' => \App\Models\User::class,
+            'title_attribute' => 'name',
+        ],
+    ],
+
 ];

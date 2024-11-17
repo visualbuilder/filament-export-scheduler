@@ -17,4 +17,18 @@ trait EnumSubset {
         }
         return $array;
     }
+
+
+    public function is(self|string|null $value): bool
+    {
+        if ($value === null) {
+            return false;
+        }
+
+        if ($value instanceof self) {
+            return $this === $value;
+        }
+
+        return $this->value === $value;
+    }
 }

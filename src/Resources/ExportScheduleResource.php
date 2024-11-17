@@ -25,6 +25,8 @@ use VisualBuilder\ExportScheduler\ExportSchedulerPlugin;
 use VisualBuilder\ExportScheduler\Facades\ExportScheduler;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 use VisualBuilder\ExportScheduler\Resources\ExportScheduleResource\Pages;
+use VisualBuilder\ExportScheduler\Support\ColumnHelper;
+use VisualBuilder\ExportScheduler\Support\MorphToSelectHelper;
 
 
 class ExportScheduleResource extends Resource
@@ -82,16 +84,14 @@ class ExportScheduleResource extends Resource
                                 ->hintColor('info')
                                 ->options(ExportScheduler::listExporters())
                                 ->native(false)
+                                ->reactive()
+                                ->afterStateUpdated(fn (callable $set, $state) => $set('columns', $state ? ColumnHelper::getDefaultColumns($state) : []))
                                 ->required(),
                         ])->columns(1)->columnSpan(1),
                         Grid::make()->schema([
-                            MorphToSelect::make('owner')
-                                ->label(__('export-scheduler::scheduler.owner'))
-                                ->types([
-                                    MorphToSelect\Type::make(\App\Models\Admin::class)
-                                        ->titleAttribute('email'),
-                                ])->native(false)
-                                ->searchable(),
+                            MorphToSelectHelper::createMorphToSelect(
+                                label: __('export-scheduler::scheduler.owner')
+                            )
                         ])->columns(1)->columnSpan(1)
                     ])->columns(2),
                     Tabs\Tab::make('Schedule')->schema([
@@ -103,6 +103,7 @@ class ExportScheduleResource extends Resource
                                     ->placeholder(__('export-scheduler::scheduler.schedule_time_hint'))
                                     ->hintIcon('heroicon-m-question-mark-circle', tooltip: __('export-scheduler::scheduler.schedule_time_hint'))
                                     ->options(ScheduleFrequency::selectArray())
+                                    ->default(ScheduleFrequency::MONTHLY->value)
                                     ->required()
                                     ->native(false)
                                     ->reactive()
@@ -228,12 +229,14 @@ class ExportScheduleResource extends Resource
                         ->schema([
                             Repeater::make('columns')
                                 ->label(__('export-scheduler::scheduler.columns'))
+                                ->addable(false)
+                                ->columns(3)
+                                ->columnSpanFull()
                                 ->schema([
                                     TextInput::make('name')->required(),
                                     TextInput::make('label'),
-                                    Select::make('formatter')
-                                ])
-                                ->columns(3)->columnSpanFull()
+                                ])->default(fn (Get $get) => $get('exporter') ? ColumnHelper::getDefaultColumns($get('exporter')) : [])
+
                         ]),
                 ])->columnSpanFull()
             ]);
@@ -248,6 +251,8 @@ class ExportScheduleResource extends Resource
                 Tables\Columns\TextColumn::make('schedule_frequency'),
                 Tables\Columns\TextColumn::make('date_range'),
                 Tables\Columns\TextColumn::make('owner.email'),
+                Tables\Columns\TextColumn::make('last_run_at')->label('Last Run')->date(),
+                Tables\Columns\TextColumn::make('last_successful_run_at')->label('Last Success')->date(),
             ])
             ->filters([
                 //

@@ -1,6 +1,6 @@
 <?php
 
-namespace VendorName\Skeleton;
+namespace VisualBuilder\ExportScheduler;
 
 use Filament\Support\Assets\AlpineComponent;
 use Filament\Support\Assets\Asset;
@@ -13,14 +13,14 @@ use Livewire\Features\SupportTesting\Testable;
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use VendorName\Skeleton\Commands\SkeletonCommand;
-use VendorName\Skeleton\Testing\TestsSkeleton;
+use VisualBuilder\ExportScheduler\Commands\ExportSchedulerCommand;
+use VisualBuilder\ExportScheduler\Testing\TestsExportScheduler;
 
-class SkeletonServiceProvider extends PackageServiceProvider
+class ExportSchedulerServiceProvider extends PackageServiceProvider
 {
-    public static string $name = 'skeleton';
+    public static string $name = 'export-scheduler';
 
-    public static string $viewNamespace = 'skeleton';
+    public static string $viewNamespace = 'export-scheduler';
 
     public function configurePackage(Package $package): void
     {
@@ -30,13 +30,17 @@ class SkeletonServiceProvider extends PackageServiceProvider
          * More info: https://github.com/spatie/laravel-package-tools
          */
         $package->name(static::$name)
+
+            ->hasViews('export-scheduler')
             ->hasCommands($this->getCommands())
-            ->hasInstallCommand(function (InstallCommand $command) {
+            ->hasInstallCommand(function(InstallCommand $command) {
                 $command
                     ->publishConfigFile()
+                    ->publishAssets()
                     ->publishMigrations()
                     ->askToRunMigrations()
-                    ->askToStarRepoOnGitHub(':vendor_slug/:package_slug');
+                    ->copyAndRegisterServiceProviderInApp()
+                    ->askToStarRepoOnGitHub('visualbuilder/filament-export-scheduler');
             });
 
         $configFileName = $package->shortName();
@@ -58,40 +62,54 @@ class SkeletonServiceProvider extends PackageServiceProvider
         }
     }
 
-    public function packageRegistered(): void {}
+    public function packageRegistered(): void {
+
+        parent::packageRegistered();
+
+        $this->loadJsonTranslationsFrom(__DIR__.'/../resources/lang/');
+
+        // Bind the ExportScheduler class to the container
+        $this->app->singleton(ExportScheduler::class, function () {
+            return new ExportScheduler();
+        });
+    }
 
     public function packageBooted(): void
     {
-        // Asset Registration
-        FilamentAsset::register(
-            $this->getAssets(),
-            $this->getAssetPackageName()
-        );
+        parent::packageBooted();
 
-        FilamentAsset::registerScriptData(
-            $this->getScriptData(),
-            $this->getAssetPackageName()
-        );
+//        // Asset Registration
+//        FilamentAsset::register(
+//            $this->getAssets(),
+//            $this->getAssetPackageName()
+//        );
+
+//        FilamentAsset::registerScriptData(
+//            $this->getScriptData(),
+//            $this->getAssetPackageName()
+//        );
 
         // Icon Registration
-        FilamentIcon::register($this->getIcons());
+//        FilamentIcon::register($this->getIcons());
 
         // Handle Stubs
         if (app()->runningInConsole()) {
             foreach (app(Filesystem::class)->files(__DIR__ . '/../stubs/') as $file) {
                 $this->publishes([
-                    $file->getRealPath() => base_path("stubs/skeleton/{$file->getFilename()}"),
-                ], 'skeleton-stubs');
+                    $file->getRealPath() => base_path("stubs/filament-export-scheduler/{$file->getFilename()}"),
+                ], 'filament-export-scheduler-stubs');
             }
+            $this->publishes([
+                __DIR__.'/../database/seeders/ExportScheduleSeeder.php' => database_path('seeders/ExportScheduleSeeder.php'),
+
+            ], 'filament-export-scheduler-seeds');
         }
 
-        // Testing
-        Testable::mixin(new TestsSkeleton);
     }
 
     protected function getAssetPackageName(): ?string
     {
-        return ':vendor_slug/:package_slug';
+        return 'visualbuilder/filament-export-scheduler';
     }
 
     /**
@@ -100,11 +118,12 @@ class SkeletonServiceProvider extends PackageServiceProvider
     protected function getAssets(): array
     {
         return [
-            // AlpineComponent::make('skeleton', __DIR__ . '/../resources/dist/components/skeleton.js'),
-            Css::make('skeleton-styles', __DIR__ . '/../resources/dist/skeleton.css'),
-            Js::make('skeleton-scripts', __DIR__ . '/../resources/dist/skeleton.js'),
+            // AlpineComponent::make('filament-export-scheduler', __DIR__ . '/../resources/dist/components/filament-export-scheduler.js'),
+//            Css::make('filament-export-scheduler-styles', __DIR__ . '/../resources/dist/filament-export-scheduler.css'),
+//            Js::make('filament-export-scheduler-scripts', __DIR__ . '/../resources/dist/filament-export-scheduler.js'),
         ];
     }
+
 
     /**
      * @return array<class-string>
@@ -112,7 +131,7 @@ class SkeletonServiceProvider extends PackageServiceProvider
     protected function getCommands(): array
     {
         return [
-            SkeletonCommand::class,
+            ExportSchedulerCommand::class,
         ];
     }
 
@@ -146,7 +165,7 @@ class SkeletonServiceProvider extends PackageServiceProvider
     protected function getMigrations(): array
     {
         return [
-            'create_skeleton_table',
+            'create_export_scheduler_table',
         ];
     }
 }

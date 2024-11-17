@@ -7,7 +7,6 @@ use Cron\CronExpression;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Support\Facades\Log;
 use VisualBuilder\ExportScheduler\Enums\DateRange;
 use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 
@@ -62,14 +61,12 @@ class ExportSchedule extends Model
 
     /**
      * Get the next due time for the schedule.
-     *
-     * @return Carbon|null
      */
     public function getNextDueAtAttribute(): ?Carbon
     {
         $baseTime = $this->getScheduleBaseTime();
 
-        if (!$baseTime) {
+        if (! $baseTime) {
             return null;
         }
 
@@ -104,8 +101,6 @@ class ExportSchedule extends Model
 
     /**
      * Get the base time for scheduling by combining last run and schedule time.
-     *
-     * @return Carbon|null
      */
     protected function getScheduleBaseTime(): ?Carbon
     {
@@ -123,11 +118,12 @@ class ExportSchedule extends Model
 
     protected function getNextCronRunAt(): ?Carbon
     {
-        if (!$this->custom_cron_expression) {
+        if (! $this->custom_cron_expression) {
             return null;
         }
 
         $cron = new CronExpression($this->custom_cron_expression);
+
         return Carbon::instance($cron->getNextRunDate($this->last_run_at ?? 'now'));
     }
 
@@ -160,5 +156,4 @@ class ExportSchedule extends Model
     {
         return $this->date_range->getLabel();
     }
-
 }

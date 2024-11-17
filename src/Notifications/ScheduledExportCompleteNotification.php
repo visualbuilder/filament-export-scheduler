@@ -2,27 +2,24 @@
 
 namespace VisualBuilder\ExportScheduler\Notifications;
 
-use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 use Filament\Actions\Exports\Models\Export;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use Illuminate\Queue\SerializesModels;
+use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 
 // implements ShouldQueue
 
 class ScheduledExportCompleteNotification extends Notification implements ShouldQueue
 {
-    use Queueable, SerializesModels;
-
+    use Queueable;
+    use SerializesModels;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(public Export $export, public ExportSchedule $exportSchedule)
-    {
-
-    }
+    public function __construct(public Export $export, public ExportSchedule $exportSchedule) {}
 
     /**
      * Get the notification's delivery channels.
@@ -43,8 +40,9 @@ class ScheduledExportCompleteNotification extends Notification implements Should
      */
     public function toMail($notifiable)
     {
-        $mailable=config('export-scheduler.mail.mailable');
-        return app(AdminExportReady::class, ['admin' => $notifiable,'export' => $this->export,'exportSchedule' => $this->exportSchedule]);
+        $mailable = config('export-scheduler.mail.mailable');
+
+        return app(AdminExportReady::class, ['admin' => $notifiable, 'export' => $this->export, 'exportSchedule' => $this->exportSchedule]);
     }
 
     /**
@@ -56,18 +54,18 @@ class ScheduledExportCompleteNotification extends Notification implements Should
     public function toArray($notifiable)
     {
         return [
-            "actions" => [],
-            "body" => 'Export Complete',
-            "color" => null,
-            "duration" => "persistent",
-            "icon" => 'heroicon-o-arrow-down-tray',
-            "iconColor" => 'success',
-            "status" => null,
-            "title" => "Export Complete",
-            "view" => "filament-notifications::notification",
-            "viewData" => [],
-            "format" => "filament",
-            "sent_via" => $this->via($notifiable),
+            'actions' => [],
+            'body' => 'Export Complete',
+            'color' => null,
+            'duration' => 'persistent',
+            'icon' => 'heroicon-o-arrow-down-tray',
+            'iconColor' => 'success',
+            'status' => null,
+            'title' => 'Export Complete',
+            'view' => 'filament-notifications::notification',
+            'viewData' => [],
+            'format' => 'filament',
+            'sent_via' => $this->via($notifiable),
         ];
     }
 }

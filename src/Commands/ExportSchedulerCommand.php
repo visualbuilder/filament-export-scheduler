@@ -2,7 +2,6 @@
 
 namespace VisualBuilder\ExportScheduler\Commands;
 
-
 use Illuminate\Console\Command;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 use VisualBuilder\ExportScheduler\Services\DynamicExporter;
@@ -17,11 +16,11 @@ class ExportSchedulerCommand extends Command
     {
 
         // Create an instance of the DynamicExporterService
-        $dynamicExporter = new DynamicExporter();
+        $dynamicExporter = new DynamicExporter;
 
         ExportSchedule::all()->each(function (ExportSchedule $exportSchedule) use ($dynamicExporter) {
             // Skip if the export is not due
-            if (!$exportSchedule->isDue()) {
+            if (! $exportSchedule->isDue()) {
                 return;
             }
 

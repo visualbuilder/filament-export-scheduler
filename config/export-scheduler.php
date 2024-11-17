@@ -10,19 +10,19 @@ return [
     /**
      * Which Schedule Definition Resource to Load if you want to extend put your own resource here
      */
-    'resources'            => [ExportScheduleResource::class],
+    'resources' => [ExportScheduleResource::class],
 
     /**
      * The success Notification and Mailable to use
      */
-    'notification'         => ScheduledExportCompleteNotification::class,
-    'mailable'             => ExportReady::class,
+    'notification' => ScheduledExportCompleteNotification::class,
+    'mailable' => ExportReady::class,
 
     /**
      * Allow users to choose from Exporters in these directories
      */
     'exporter_directories' => [
-        'App\Filament\Exporters'
+        'App\Filament\Exporters',
     ],
 
     /**
@@ -30,19 +30,19 @@ return [
      * See also Plugin options
      */
     'navigation' => [
-        'enabled'  => true,
-        'sort'     => 100,
-        'label'    => 'Export Schedules',
-        'icon'     => 'heroicon-o-clock',
-        'group'    => 'Reports',
-        'cluster'  => false,
-        'position' => \Filament\Pages\SubNavigationPosition::Top
+        'enabled' => true,
+        'sort' => 100,
+        'label' => 'Export Schedules',
+        'icon' => 'heroicon-o-clock',
+        'group' => 'Reports',
+        'cluster' => false,
+        'position' => \Filament\Pages\SubNavigationPosition::Top,
     ],
 
     /**
      * Which authenticatable models should be allowed to receive exports
      */
     'user_models' => [
-        \VisualBuilder\ExportScheduler\Tests\Models\User::class ,
-    ]
+        \VisualBuilder\ExportScheduler\Tests\Models\User::class,
+    ],
 ];

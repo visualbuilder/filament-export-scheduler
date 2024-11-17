@@ -2,10 +2,10 @@
 
 namespace VisualBuilder\ExportScheduler\Exporters;
 
-use VisualBuilder\ExportScheduler\Tests\Models\User;
 use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Exporter;
 use Filament\Actions\Exports\Models\Export;
+use VisualBuilder\ExportScheduler\Tests\Models\User;
 
 class UserExporter extends Exporter
 {
@@ -13,15 +13,11 @@ class UserExporter extends Exporter
 
     /**
      * Allow Setting a custom date attribute to use for filtering records
-     * @return string
      */
-
     public static function getDateColumn(): string
     {
         return 'created_at';
     }
-
-
 
     public static function getColumns(): array
     {

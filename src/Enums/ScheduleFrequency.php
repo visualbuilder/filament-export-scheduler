@@ -6,7 +6,6 @@ use Filament\Support\Contracts\HasLabel;
 
 enum ScheduleFrequency: string implements HasLabel
 {
-
     use EnumSubset;
 
     case DAILY = 'daily';
@@ -20,13 +19,13 @@ enum ScheduleFrequency: string implements HasLabel
     public function getLabel(): ?string
     {
         return match ($this) {
-            self::DAILY       => __('export-scheduler::schedule_frequency.daily'),
-            self::WEEKLY      => __('export-scheduler::schedule_frequency.weekly'),
-            self::MONTHLY     => __('export-scheduler::schedule_frequency.monthly'),
-            self::QUARTERLY   => __('export-scheduler::schedule_frequency.quarterly'),
+            self::DAILY => __('export-scheduler::schedule_frequency.daily'),
+            self::WEEKLY => __('export-scheduler::schedule_frequency.weekly'),
+            self::MONTHLY => __('export-scheduler::schedule_frequency.monthly'),
+            self::QUARTERLY => __('export-scheduler::schedule_frequency.quarterly'),
             self::HALF_YEARLY => __('export-scheduler::schedule_frequency.half_yearly'),
-            self::YEARLY      => __('export-scheduler::schedule_frequency.yearly'),
-            self::CRON        => __('export-scheduler::schedule_frequency.cron'),
+            self::YEARLY => __('export-scheduler::schedule_frequency.yearly'),
+            self::CRON => __('export-scheduler::schedule_frequency.cron'),
         };
     }
 
@@ -34,5 +33,4 @@ enum ScheduleFrequency: string implements HasLabel
     {
         return $this->value === $value;
     }
-
 }

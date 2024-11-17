@@ -3,8 +3,6 @@
 namespace VisualBuilder\ExportScheduler\Services;
 
 use AnourValar\EloquentSerialize\Facades\EloquentSerializeFacade;
-use VisualBuilder\ExportScheduler\Jobs\ScheduledExportCompletion;
-use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Actions\Exports\Jobs\CreateXlsxFile;
 use Filament\Actions\Exports\Jobs\PrepareCsvExport;
@@ -13,6 +11,8 @@ use Illuminate\Bus\PendingBatch;
 use Illuminate\Foundation\Bus\PendingChain;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Str;
+use VisualBuilder\ExportScheduler\Jobs\ScheduledExportCompletion;
+use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 
 class DynamicExporter
 {
@@ -45,7 +45,7 @@ class DynamicExporter
         $options = [];
 
         // Create Export instance
-        $export = new Export();
+        $export = new Export;
         $export->exporter = $exporter;
         $export->total_rows = $query->count();
         $export->file_disk = 'local';
@@ -54,8 +54,8 @@ class DynamicExporter
         $export->save();
 
         $exporterInstance = $export->getExporter(
-                columnMap: $columnMap,
-                options: $options,
+            columnMap: $columnMap,
+            options: $options,
         );
 
         $formats = $exporterInstance->getFormats();
@@ -73,38 +73,38 @@ class DynamicExporter
         $export->unsetRelation('user');
 
         $makeCreateXlsxFileJob = fn (): CreateXlsxFile => app(CreateXlsxFile::class, [
-                'export' => $export,
-                'columnMap' => $columnMap,
-                'options' => $options,
+            'export' => $export,
+            'columnMap' => $columnMap,
+            'options' => $options,
         ]);
 
         Bus::chain([
             // 1. Batch Job: Processes the export data (CSV).
-                Bus::batch([app($job, [
-                        'export' => $export,
-                        'query' => $serializedQuery,
-                        'columnMap' => $columnMap,
-                        'options' => $options,
-                        'chunkSize' => 100,
-                        'records' => null,
-                ])])
-                        ->when(filled($jobQueue), fn (PendingBatch $batch) => $batch->onQueue($jobQueue))
-                        ->when(filled($jobConnection), fn (PendingBatch $batch) => $batch->onConnection($jobConnection))
-                        ->when(filled($jobBatchName), fn (PendingBatch $batch) => $batch->name($jobBatchName))
-                        ->allowFailures(),
+            Bus::batch([app($job, [
+                'export' => $export,
+                'query' => $serializedQuery,
+                'columnMap' => $columnMap,
+                'options' => $options,
+                'chunkSize' => 100,
+                'records' => null,
+            ])])
+                ->when(filled($jobQueue), fn (PendingBatch $batch) => $batch->onQueue($jobQueue))
+                ->when(filled($jobConnection), fn (PendingBatch $batch) => $batch->onConnection($jobConnection))
+                ->when(filled($jobBatchName), fn (PendingBatch $batch) => $batch->name($jobBatchName))
+                ->allowFailures(),
 
             // 2. Conditional Job: CreateXlsxFile if XLSX format is requested.
-                ...($hasXlsx ? [$makeCreateXlsxFileJob()] : []),
+            ...($hasXlsx ? [$makeCreateXlsxFileJob()] : []),
 
             // 3. ScheduledExportCompletion Job: Marks export as complete after all files are ready.
-                new ScheduledExportCompletion(
-                        export: $export,
-                        exportSchedule: $exportSchedule,
-                ),
+            new ScheduledExportCompletion(
+                export: $export,
+                exportSchedule: $exportSchedule,
+            ),
         ])
-                ->when(filled($jobQueue), fn (PendingChain $chain) => $chain->onQueue($jobQueue))
-                ->when(filled($jobConnection), fn (PendingChain $chain) => $chain->onConnection($jobConnection))
-                ->dispatch();
+            ->when(filled($jobQueue), fn (PendingChain $chain) => $chain->onQueue($jobQueue))
+            ->when(filled($jobConnection), fn (PendingChain $chain) => $chain->onConnection($jobConnection))
+            ->dispatch();
 
         return $export->file_name;
 
@@ -114,5 +114,4 @@ class DynamicExporter
     {
         return Str::slug($exportSchedule->name . '_' . now()->format('Y-m-d_Hi'));
     }
-
 }

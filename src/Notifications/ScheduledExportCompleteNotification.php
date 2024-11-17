@@ -42,7 +42,7 @@ class ScheduledExportCompleteNotification extends Notification implements Should
     {
         $mailableClass = config('export-scheduler.mailable');
 
-        if (!class_exists($mailableClass)) {
+        if (! class_exists($mailableClass)) {
             throw new \InvalidArgumentException("The configured mailable class [{$mailableClass}] does not exist.");
         }
 

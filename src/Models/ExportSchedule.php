@@ -60,18 +60,14 @@ class ExportSchedule extends Model
         return $this->morphTo();
     }
 
-
-
     /**
      * Get the next due time for the schedule.
-     *
-     * @return Carbon|null
      */
     public function getNextDueAtAttribute(): ?Carbon
     {
         $baseTime = $this->getScheduleBaseTime();
         Log::info(print_r($baseTime, true));
-        if (!$baseTime) {
+        if (! $baseTime) {
             return null;
         }
 
@@ -134,12 +130,8 @@ class ExportSchedule extends Model
         return $this->date_range->getLabel();
     }
 
-
-
     /**
      * Get the base time for scheduling by combining last run and schedule time.
-     *
-     * @return Carbon|null
      */
     protected function getScheduleBaseTime(): ?Carbon
     {
@@ -157,16 +149,15 @@ class ExportSchedule extends Model
 
     /**
      * Calculate the next due time based on the cron expression.
-     *
-     * @return Carbon|null
      */
     protected function getNextCronRunAt(): ?Carbon
     {
-        if (!$this->custom_cron_expression) {
+        if (! $this->custom_cron_expression) {
             return null;
         }
 
         $cron = new CronExpression($this->custom_cron_expression);
+
         return Carbon::instance($cron->getNextRunDate($this->last_run_at ?? 'now'));
     }
 }

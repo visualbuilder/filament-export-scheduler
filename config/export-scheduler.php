@@ -10,13 +10,13 @@ return [
     /**
      * Which Schedule Definition Resource to Load if you want to extend put your own resource here
      */
-    'resources'            => [ExportScheduleResource::class],
+    'resources' => [ExportScheduleResource::class],
 
     /**
      * The success Notification and Mailable to use
      */
-    'notification'         => ScheduledExportCompleteNotification::class,
-    'mailable'             => ExportReady::class,
+    'notification' => ScheduledExportCompleteNotification::class,
+    'mailable' => ExportReady::class,
 
     /**
      * Allow users to choose from Exporters in these directories
@@ -25,18 +25,18 @@ return [
         'App\Filament\Exporters',
     ],
 
-    'file_disk'   => 'local',
+    'file_disk' => 'local',
     /**
      * Admin Panel Navigation
      * See also Plugin options
      */
-    'navigation'  => [
-        'enabled'  => true,
-        'sort'     => 100,
-        'label'    => 'Export Schedules',
-        'icon'     => 'heroicon-o-clock',
-        'group'    => 'Reports',
-        'cluster'  => false,
+    'navigation' => [
+        'enabled' => true,
+        'sort' => 100,
+        'label' => 'Export Schedules',
+        'icon' => 'heroicon-o-clock',
+        'group' => 'Reports',
+        'cluster' => false,
         'position' => \Filament\Pages\SubNavigationPosition::Top,
     ],
 
@@ -46,7 +46,7 @@ return [
     'user_models' => [
 
         [
-            'model'           => \App\Models\User::class,
+            'model' => \App\Models\User::class,
             'title_attribute' => 'name',
         ],
     ],

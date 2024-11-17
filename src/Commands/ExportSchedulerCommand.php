@@ -21,10 +21,9 @@ class ExportSchedulerCommand extends Command
 
         ExportSchedule::all()->each(function (ExportSchedule $exportSchedule) use ($dynamicExporter) {
             // Skip if the export is not due
-            if (!$exportSchedule->next_due_at || now()->lessThan($exportSchedule->next_due_at)) {
+            if (! $exportSchedule->next_due_at || now()->lessThan($exportSchedule->next_due_at)) {
                 return;
             }
-
 
             // Attempt to run the export
             try {

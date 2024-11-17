@@ -236,7 +236,7 @@ class ExportScheduleResource extends Resource
                             Repeater::make('columns')
                                 ->label(__('export-scheduler::scheduler.columns'))
                                 ->addable(false)
-                                ->columns(3)
+                                ->columns(2)
                                 ->columnSpanFull()
                                 ->schema([
                                     TextInput::make('name')->required(),

@@ -7,7 +7,6 @@ use Cron\CronExpression;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Support\Facades\Log;
 use VisualBuilder\ExportScheduler\Enums\DateRange;
 use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 
@@ -36,6 +35,8 @@ class ExportSchedule extends Model
         'schedule_month',
         'schedule_timezone',
         'formats',
+        'last_run_at',
+        'last_successful_run_at'
     ];
 
     /**
@@ -44,10 +45,12 @@ class ExportSchedule extends Model
      * @var array
      */
     protected $casts = [
-        'columns' => 'array',
-        'formats' => 'array',
-        'date_range' => DateRange::class,
-        'schedule_frequency' => ScheduleFrequency::class,
+        'columns'                => 'array',
+        'formats'                => 'array',
+        'last_run_at'            => 'datetime',
+        'last_successful_run_at' => 'datetime',
+        'date_range'             => DateRange::class,
+        'schedule_frequency'     => ScheduleFrequency::class,
     ];
 
     /**

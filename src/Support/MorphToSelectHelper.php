@@ -8,12 +8,6 @@ class MorphToSelectHelper
 {
     /**
      * Create a MorphToSelect field based on the configuration.
-     *
-     * @param string $label
-     * @param string $fieldName
-     * @param bool $native
-     * @param bool $searchable
-     * @return MorphToSelect
      */
     public static function createMorphToSelect(string $label, string $fieldName = 'owner', bool $native = false, bool $searchable = true): MorphToSelect
     {

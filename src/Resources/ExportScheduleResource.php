@@ -5,7 +5,6 @@ namespace VisualBuilder\ExportScheduler\Resources;
 use Closure;
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\MorphToSelect;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -91,8 +90,8 @@ class ExportScheduleResource extends Resource
 
                             MorphToSelectHelper::createMorphToSelect(
                                 label: __('export-scheduler::scheduler.owner')
-                            )
-                        ])->columns(1)->columnSpan(1)
+                            ),
+                        ])->columns(1)->columnSpan(1),
 
                     ])->columns(2),
                     Tabs\Tab::make('Schedule')->schema([
@@ -237,7 +236,7 @@ class ExportScheduleResource extends Resource
                                 ->schema([
                                     TextInput::make('name')->required(),
                                     TextInput::make('label'),
-                                ])->default(fn (Get $get) => $get('exporter') ? ColumnHelper::getDefaultColumns($get('exporter')) : [])
+                                ])->default(fn (Get $get) => $get('exporter') ? ColumnHelper::getDefaultColumns($get('exporter')) : []),
 
                         ]),
                 ])->columnSpanFull(),

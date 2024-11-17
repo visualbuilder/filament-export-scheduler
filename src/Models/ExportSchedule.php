@@ -62,33 +62,35 @@ class ExportSchedule extends Model
 
     /**
      * Get the next due time for the schedule.
+     *
+     * @return Carbon|null
      */
     public function getNextDueAtAttribute(): ?Carbon
     {
         $baseTime = $this->getScheduleBaseTime();
-        Log::info(print_r($baseTime, true));
-        if (! $baseTime) {
+
+        if (!$baseTime) {
             return null;
         }
 
         switch ($this->schedule_frequency) {
             case ScheduleFrequency::DAILY:
-                return $baseTime->addDay();
+                return now()->isSameDay($baseTime) ? $baseTime : $baseTime->addDay();
 
             case ScheduleFrequency::WEEKLY:
-                return $baseTime->addWeek()->next($this->schedule_day_of_week);
+                return now()->isSameDay($baseTime) ? $baseTime : $baseTime->addWeek()->next($this->schedule_day_of_week);
 
             case ScheduleFrequency::MONTHLY:
-                return $baseTime->addMonth()->day($this->schedule_day_of_month);
+                return now()->isSameDay($baseTime) ? $baseTime : $baseTime->addMonth()->day($this->schedule_day_of_month);
 
             case ScheduleFrequency::QUARTERLY:
-                return $baseTime->addMonths(3)->day($this->schedule_day_of_month);
+                return now()->isSameDay($baseTime) ? $baseTime : $baseTime->addMonths(3)->day($this->schedule_day_of_month);
 
             case ScheduleFrequency::HALF_YEARLY:
-                return $baseTime->addMonths(6)->day($this->schedule_day_of_month);
+                return now()->isSameDay($baseTime) ? $baseTime : $baseTime->addMonths(6)->day($this->schedule_day_of_month);
 
             case ScheduleFrequency::YEARLY:
-                return $baseTime->addYear()
+                return now()->isSameDay($baseTime) ? $baseTime : $baseTime->addYear()
                     ->month($this->schedule_month)
                     ->day($this->schedule_day_of_month);
 
@@ -98,6 +100,35 @@ class ExportSchedule extends Model
             default:
                 return null;
         }
+    }
+
+    /**
+     * Get the base time for scheduling by combining last run and schedule time.
+     *
+     * @return Carbon|null
+     */
+    protected function getScheduleBaseTime(): ?Carbon
+    {
+        // Use the last run time if available, otherwise start from now
+        $lastRun = $this->last_run_at ? Carbon::parse($this->last_run_at) : now();
+
+        if ($this->schedule_time) {
+            // Combine the date from $lastRun with the time from schedule_time
+            [$hour, $minute, $second] = explode(':', $this->schedule_time);
+            $lastRun->setTime($hour, $minute, $second);
+        }
+
+        return $lastRun;
+    }
+
+    protected function getNextCronRunAt(): ?Carbon
+    {
+        if (!$this->custom_cron_expression) {
+            return null;
+        }
+
+        $cron = new CronExpression($this->custom_cron_expression);
+        return Carbon::instance($cron->getNextRunDate($this->last_run_at ?? 'now'));
     }
 
     public function getStartsAtAttribute(): Carbon
@@ -130,34 +161,4 @@ class ExportSchedule extends Model
         return $this->date_range->getLabel();
     }
 
-    /**
-     * Get the base time for scheduling by combining last run and schedule time.
-     */
-    protected function getScheduleBaseTime(): ?Carbon
-    {
-        // Use the last run time if available, otherwise start from now
-        $lastRun = $this->last_run_at ? Carbon::parse($this->last_run_at) : now();
-
-        if ($this->schedule_time) {
-            // Combine the date from $lastRun with the time from schedule_time
-            [$hour, $minute, $second] = explode(':', $this->schedule_time);
-            $lastRun->setTime($hour, $minute, $second);
-        }
-
-        return $lastRun;
-    }
-
-    /**
-     * Calculate the next due time based on the cron expression.
-     */
-    protected function getNextCronRunAt(): ?Carbon
-    {
-        if (! $this->custom_cron_expression) {
-            return null;
-        }
-
-        $cron = new CronExpression($this->custom_cron_expression);
-
-        return Carbon::instance($cron->getNextRunDate($this->last_run_at ?? 'now'));
-    }
 }

@@ -38,6 +38,11 @@ class ExportScheduleResource extends Resource
         return ExportSchedulerPlugin::get()->shouldRegisterNavigation();
     }
 
+    public static function getNavigationGroup(): string
+    {
+        return config('export-scheduler.navigation.group');
+    }
+
     public static function getNavigationSort(): ?int
     {
         return config('export-scheduler.navigation.sort');

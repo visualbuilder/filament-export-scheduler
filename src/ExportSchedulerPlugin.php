@@ -11,7 +11,7 @@ class ExportSchedulerPlugin implements Plugin
 {
     use EvaluatesClosures;
 
-    protected bool | Closure $navigation = false;
+    protected bool | Closure $navigation = true;
 
     public function getId(): string
     {

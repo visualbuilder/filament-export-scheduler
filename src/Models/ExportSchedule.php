@@ -53,6 +53,7 @@ class ExportSchedule extends Model
         'schedule_frequency' => ScheduleFrequency::class,
     ];
 
+
     public function owner(): MorphTo
     {
         return $this->morphTo();
@@ -148,6 +149,7 @@ class ExportSchedule extends Model
         return $nextDue;
     }
 
+
     /**
      * Get the base time for scheduling by combining last run and schedule time.
      */
@@ -160,12 +162,12 @@ class ExportSchedule extends Model
         if ($this->schedule_time) {
             // Combine the date from $lastRun with the time from schedule_time
             [$hour, $minute, $second] = explode(':', $this->schedule_time);
-
             return $lastRun->copy()->setTime($hour, $minute, $second);
         }
 
         return $lastRun;
     }
+
 
     protected function getNextCronRunAt(): ?Carbon
     {

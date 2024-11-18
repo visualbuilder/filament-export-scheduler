@@ -31,13 +31,14 @@ return [
      * See also Plugin options
      */
     'navigation' => [
-        'enabled' => true,
-        'sort' => 100,
-        'label' => 'Export Schedules',
-        'icon' => 'heroicon-o-clock',
-        'group' => 'Reports',
-        'cluster' => false,
-        'position' => \Filament\Pages\SubNavigationPosition::Top,
+        'enabled'      => true,
+        'sort'         => 100,
+        'label'        => 'Scheduled Report',
+        'plural_label' => 'Scheduled Reports',
+        'icon'         => 'heroicon-o-paper-airplane',
+        'group'        => 'Reports',
+        'cluster'      => false,
+        'position'     => \Filament\Pages\SubNavigationPosition::Top
     ],
 
     /**

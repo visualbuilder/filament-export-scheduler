@@ -160,7 +160,10 @@ class ExportScheduleResource extends Resource
 
                                 Select::make('schedule_day_of_month')
                                     ->label(__('export-scheduler::scheduler.schedule_day_of_month'))
-                                    ->options(range(1, 31) + ['-1' => __('Last day of the month')])
+                                    ->options(array_replace(
+                                        array_combine(range(1, 31), range(1, 31)), // Ensure correct keys and values
+                                        ['-1' => __('Last day of the month')]      // Add the 'Last day of the month' option
+                                    ))
                                     ->native(false)
                                     ->visible(fn (Get $get) => in_array(
                                         $get('schedule_frequency'),

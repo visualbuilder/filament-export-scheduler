@@ -53,11 +53,7 @@ class ExportSchedule extends Model
         'schedule_frequency' => ScheduleFrequency::class,
     ];
 
-    /**
-     * *********************************
-     * Relations
-     * *********************************
-     */
+
     public function owner(): MorphTo
     {
         return $this->morphTo();
@@ -74,26 +70,24 @@ class ExportSchedule extends Model
             return null;
         }
 
+        // Ensure $baseTime isn't modified directly
+        $nextDue = $baseTime->copy();
+        $now = now();
+
         switch ($this->schedule_frequency) {
             case ScheduleFrequency::DAILY:
-                return now()->isSameDay($baseTime) ? $baseTime : $baseTime->addDay();
+                return $now->greaterThanOrEqualTo($nextDue) ? $nextDue->addDay() : $nextDue;
 
             case ScheduleFrequency::WEEKLY:
-                return now()->isSameDay($baseTime) ? $baseTime : $baseTime->addWeek()->next($this->schedule_day_of_week);
+                return $this->getNextWeeklyRun($nextDue, $now);
 
             case ScheduleFrequency::MONTHLY:
-                return now()->isSameDay($baseTime) ? $baseTime : $baseTime->addMonth()->day($this->schedule_day_of_month);
-
             case ScheduleFrequency::QUARTERLY:
-                return now()->isSameDay($baseTime) ? $baseTime : $baseTime->addMonths(3)->day($this->schedule_day_of_month);
-
             case ScheduleFrequency::HALF_YEARLY:
-                return now()->isSameDay($baseTime) ? $baseTime : $baseTime->addMonths(6)->day($this->schedule_day_of_month);
+                return $this->getNextMonthlyOrPeriodicRun($nextDue, $now);
 
             case ScheduleFrequency::YEARLY:
-                return now()->isSameDay($baseTime) ? $baseTime : $baseTime->addYear()
-                    ->month($this->schedule_month)
-                    ->day($this->schedule_day_of_month);
+                return $this->getNextYearlyRun($baseTime, $now);
 
             case ScheduleFrequency::CRON:
                 return $this->getNextCronRunAt();
@@ -104,21 +98,76 @@ class ExportSchedule extends Model
     }
 
     /**
+     * Get the next weekly run time.
+     */
+    protected function getNextWeeklyRun(Carbon $nextDue, Carbon $now): Carbon
+    {
+        return $now->greaterThanOrEqualTo($nextDue)
+            ? $nextDue->addWeek()->next($this->schedule_day_of_week)
+            : $nextDue->next($this->schedule_day_of_week);
+    }
+
+    /**
+     * Get the next monthly, quarterly, or half-yearly run time.
+     */
+    protected function getNextMonthlyOrPeriodicRun(Carbon $nextDue, Carbon $now): Carbon
+    {
+        $monthsToAdd = match ($this->schedule_frequency) {
+            ScheduleFrequency::MONTHLY => 1,
+            ScheduleFrequency::QUARTERLY => 3,
+            ScheduleFrequency::HALF_YEARLY => 6,
+        };
+
+        return $now->greaterThanOrEqualTo($nextDue)
+            ? $nextDue->addMonths($monthsToAdd)->day($this->schedule_day_of_month)
+            : $nextDue->day($this->schedule_day_of_month);
+    }
+
+    /**
+     * Get the next yearly run time.
+     */
+    protected function getNextYearlyRun(Carbon $baseTime, Carbon $now): Carbon
+    {
+        $month = is_numeric($this->schedule_month)
+            ? (int) $this->schedule_month
+            : Carbon::parse($this->schedule_month)->month;
+
+        $nextDue = Carbon::create(
+            $now->year,
+            $month,
+            $this->schedule_day_of_month,
+            $baseTime->hour,
+            $baseTime->minute,
+            $baseTime->second,
+            $baseTime->timezone
+        );
+
+        if ($now->greaterThanOrEqualTo($nextDue)) {
+            $nextDue->addYear();
+        }
+
+        return $nextDue;
+    }
+
+
+    /**
      * Get the base time for scheduling by combining last run and schedule time.
      */
     protected function getScheduleBaseTime(): ?Carbon
     {
-        // Use the last run time if available, otherwise start from now
-        $lastRun = $this->last_run_at ? Carbon::parse($this->last_run_at) : now();
+        $lastRun = $this->last_run_at
+            ? Carbon::parse($this->last_run_at)
+            : now();
 
         if ($this->schedule_time) {
             // Combine the date from $lastRun with the time from schedule_time
             [$hour, $minute, $second] = explode(':', $this->schedule_time);
-            $lastRun->setTime($hour, $minute, $second);
+            return $lastRun->copy()->setTime($hour, $minute, $second);
         }
 
         return $lastRun;
     }
+
 
     protected function getNextCronRunAt(): ?Carbon
     {
@@ -143,12 +192,12 @@ class ExportSchedule extends Model
 
     public function getStartsAtFormattedAttribute(): string
     {
-        return $this->starts_at->format(config('company.readableDateTimeDisplayFormat'));
+        return $this->starts_at->format("l jS F Y \a\t h:i A");
     }
 
     public function getEndsAtFormattedAttribute(): string
     {
-        return $this->ends_at->format(config('company.readableDateTimeDisplayFormat'));
+        return $this->ends_at->format("l jS F Y \a\t h:i A");
     }
 
     public function getFrequencyAttribute(): string

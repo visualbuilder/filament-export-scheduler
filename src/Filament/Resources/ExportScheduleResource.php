@@ -3,7 +3,6 @@
 namespace VisualBuilder\ExportScheduler\Filament\Resources;
 
 use Closure;
-use Filament\Actions\Action;
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Repeater;
@@ -19,9 +18,10 @@ use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Pages\SubNavigationPosition;
 use Filament\Resources\Resource;
+use Filament\Support\Enums\Alignment;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\Number;
 use VisualBuilder\ExportScheduler\Enums\DateRange;
 use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
@@ -283,7 +283,7 @@ class ExportScheduleResource extends Resource
                 Tables\Columns\TextColumn::make('last_run_at')->label(__('export-scheduler::scheduler.last_run'))->date(),
                 Tables\Columns\TextColumn::make('last_successful_run_at')->label(__('export-scheduler::scheduler.last_success'))->date(),
                 Tables\Columns\TextColumn::make('next_due_at')->label(__('export-scheduler::scheduler.next_due'))->date(),
-                Tables\Columns\ToggleColumn::make('enabled'),
+                Tables\Columns\ToggleColumn::make('enabled')->label(__('export-scheduler::scheduler.enabled')),
 
             ])
             ->filters([
@@ -294,16 +294,22 @@ class ExportScheduleResource extends Resource
                 Tables\Actions\Action::make('run')
                     ->icon('heroicon-s-play')
                     ->color('success')
-                    ->action(function($record) {
-                        Log::info('Starting '.$record->name);
-
-                       ScheduledExporter::runExport($record);
-                        Log::info('Finished '.$record->name);
+                    ->requiresConfirmation(fn (ExportSchedule $record) => $record->willLogoutUser())
+                    ->modalHeading(fn (ExportSchedule $record) => $record->willLogoutUser()?"Run Export for other user.":false)
+                    ->modalDescription(fn(ExportSchedule $record) =>
+                            $record->willLogoutUser()
+                                    ?new HtmlString("<p style='line-height: 2'>".__('export-scheduler::scheduler.logout_warning')."</p>")
+                                    :false)
+                    ->modalSubmitActionLabel(fn(ExportSchedule $record) => $record->willLogoutUser()?'Run the Export':false)
+                    ->modalFooterActionsAlignment(Alignment::End)
+                    ->action(function ($record) {
+                        $exporter = (new ScheduledExporter($record));
+                        $exporter->run();
                         Notification::make()
                             ->title($record->name.' started')
-//                            ->body(trans_choice('filament-actions::export.notifications.started.body', $export->total_rows, [
-//                                'count' => Number::format($export->total_rows),
-//                            ]))
+                            ->body(trans_choice('export-scheduler::scheduler.started.body', $exporter->getTotalRows(), [
+                                'count' => Number::format($exporter->getTotalRows()),
+                            ]))
                             ->success()
                             ->send();
                     })

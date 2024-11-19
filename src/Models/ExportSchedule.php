@@ -4,10 +4,12 @@ namespace VisualBuilder\ExportScheduler\Models;
 
 use Carbon\Carbon;
 use Cron\CronExpression;
+use Filament\Actions\Exports\Models\Export;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Facades\Log;
 use VisualBuilder\ExportScheduler\Enums\DateRange;
 use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 
@@ -214,5 +216,26 @@ class ExportSchedule extends Model
         $cron = new CronExpression($this->custom_cron_expression);
 
         return Carbon::instance($cron->getNextRunDate($this->last_run_at ?? 'now'));
+    }
+
+    public function isForThisUser(): bool
+    {
+        return auth()->user()
+            && auth()->id() == $this->owner->id
+            && get_class(auth()->user()) === get_class($this->owner);
+    }
+
+    public function isSyncQueue(): bool
+    {
+        $export = new Export();
+        $export->exporter = $this->exporter;
+        $exporter  = $export->getExporter([],[]);
+        return $exporter->getJobQueue() === 'sync' || (config('queue.default') === 'sync');
+    }
+
+    public function willLogoutUser(): bool
+    {
+
+        return !$this->isForThisUser() && $this->isSyncQueue();
     }
 }

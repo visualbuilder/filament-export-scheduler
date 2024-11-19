@@ -55,4 +55,12 @@ return [
     'CSV' => 'CSV',
     'XLSX' => 'XLSX',
 
+    'started' => [
+        'title' => 'Export started',
+        'body' => 'The export has begun and 1 row will be processed in the background. An email notification with the download link will be sent to the owner when it is complete.|The export has begun and :count rows will be processed in the background. The owner will receive a notification with the download link when it is complete.',
+    ],
+
+    'logout_warning' =>  'This export is for someone else and will be emailed to them. You will be logged out  if you run this export. To prevent this message change from the sync queue to database or other.'
+
+
 ];

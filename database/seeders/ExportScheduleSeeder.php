@@ -4,7 +4,6 @@ namespace VisualBuilder\ExportScheduler\Database\Seeders;
 
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Illuminate\Database\Seeder;
-use VisualBuilder\ExportScheduler\Enums\DateRange;
 use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 use VisualBuilder\ExportScheduler\Exporters\UserExporter;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;

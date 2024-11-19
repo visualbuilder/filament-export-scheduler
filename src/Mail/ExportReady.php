@@ -19,7 +19,7 @@ class ExportReady extends Mailable
      *
      * @return void
      */
-    public function __construct($notifiable,public Export $export, public ExportSchedule $exportSchedule )
+    public function __construct($notifiable, public Export $export, public ExportSchedule $exportSchedule)
     {
         $hasXlsx = in_array(ExportFormat::Xlsx, $exportSchedule->formats);
         $url = route('filament.exports.download', ['export' => $export, 'format' => $hasXlsx ? ExportFormat::Xlsx : ExportFormat::Csv]);

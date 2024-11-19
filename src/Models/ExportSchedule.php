@@ -38,7 +38,7 @@ class ExportSchedule extends Model
         'formats',
         'last_run_at',
         'last_successful_run_at',
-        'enabled'
+        'enabled',
     ];
 
     /**
@@ -50,7 +50,7 @@ class ExportSchedule extends Model
         'columns' => 'array',
         'formats' => 'array',
         'last_run_at' => 'datetime',
-        'enabled'=>'boolean',
+        'enabled' => 'boolean',
         'last_successful_run_at' => 'datetime',
         'date_range' => DateRange::class,
         'schedule_frequency' => ScheduleFrequency::class,
@@ -61,12 +61,10 @@ class ExportSchedule extends Model
         return $this->morphTo();
     }
 
-
     public function scopeEnabled(Builder $query): Builder
     {
         return $query->where('enabled', true);
     }
-
 
     public function getStartsAtAttribute(): Carbon
     {
@@ -97,7 +95,6 @@ class ExportSchedule extends Model
     {
         return $this->date_range->getLabel();
     }
-
 
     /**
      * Get the next due time for the schedule.

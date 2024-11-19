@@ -38,7 +38,6 @@ class ScheduledExportCompletion implements ShouldQueue
         $this->export->touch('completed_at');
         $notificationClass = config('export-scheduler.notification');
 
-
         // Check if the user object exists and uses the Notifiable trait
         if ($this->export->user && in_array(Notifiable::class, class_uses_recursive($this->export->user))) {
             // Check if the notification class exists to avoid further errors

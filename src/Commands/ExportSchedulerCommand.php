@@ -22,13 +22,14 @@ class ExportSchedulerCommand extends Command
         ExportSchedule::enabled()->each(function (ExportSchedule $exportSchedule) use ($scheduledExporter) {
             // Skip if the export is not due
             if (! $exportSchedule->next_due_at || now()->lessThan($exportSchedule->next_due_at)) {
-                $this->warn($exportSchedule->name . 'next due at'. $exportSchedule->next_due_at);
+                $this->warn($exportSchedule->name . 'next due at' . $exportSchedule->next_due_at);
+
                 return;
             }
 
             // Attempt to run the export
             try {
-                $this->info('Running ' .$exportSchedule->name);
+                $this->info('Running ' . $exportSchedule->name);
                 $scheduledExporter->runExport($exportSchedule);
 
                 $exportSchedule->update([
@@ -36,7 +37,7 @@ class ExportSchedulerCommand extends Command
                     'last_successful_run_at' => now(),
                 ]);
 
-                $this->alert('Finished ' .$exportSchedule->name);
+                $this->alert('Finished ' . $exportSchedule->name);
             } catch (\Exception $e) {
 
                 $exportSchedule->update([

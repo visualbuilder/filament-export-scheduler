@@ -12,6 +12,61 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use VisualBuilder\ExportScheduler\Enums\DateRange;
 use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 
+
+/**
+ * App\Models\ExportSchedule
+ *
+ * @property int $id
+ * @property string $name
+ * @property string $exporter
+ * @property array $columns
+ * @property bool $enabled
+ * @property ScheduleFrequency $schedule_frequency
+ * @property string $schedule_time
+ * @property string|null $cron
+ * @property string|null $schedule_day_of_week
+ * @property int|null $schedule_day_of_month
+ * @property string|null $schedule_month
+ * @property string $schedule_timezone
+ * @property array|null $formats
+ * @property DateRange|null $date_range
+ * @property string|null $owner_type
+ * @property int|null $owner_id
+ * @property \Illuminate\Support\Carbon|null $last_run_at
+ * @property \Illuminate\Support\Carbon|null $last_successful_run_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read string $date_range_label
+ * @property-read Carbon $ends_at
+ * @property-read string $ends_at_formatted
+ * @property-read string $frequency
+ * @property-read Carbon|null $next_due_at
+ * @property-read Carbon|null $starts_at
+ * @property-read string $starts_at_formatted
+ * @method static Builder|ExportSchedule newModelQuery()
+ * @method static Builder|ExportSchedule newQuery()
+ * @method static Builder|ExportSchedule query()
+ * @method static Builder|ExportSchedule whereColumns($value)
+ * @method static Builder|ExportSchedule whereCreatedAt($value)
+ * @method static Builder|ExportSchedule whereCron($value)
+ * @method static Builder|ExportSchedule whereDateRange($value)
+ * @method static Builder|ExportSchedule whereEnabled($value)
+ * @method static Builder|ExportSchedule whereExporter($value)
+ * @method static Builder|ExportSchedule whereFormats($value)
+ * @method static Builder|ExportSchedule whereId($value)
+ * @method static Builder|ExportSchedule whereLastRunAt($value)
+ * @method static Builder|ExportSchedule whereLastSuccessfulRunAt($value)
+ * @method static Builder|ExportSchedule whereName($value)
+ * @method static Builder|ExportSchedule whereOwnerId($value)
+ * @method static Builder|ExportSchedule whereOwnerType($value)
+ * @method static Builder|ExportSchedule whereScheduleDayOfMonth($value)
+ * @method static Builder|ExportSchedule whereScheduleDayOfWeek($value)
+ * @method static Builder|ExportSchedule whereScheduleFrequency($value)
+ * @method static Builder|ExportSchedule whereScheduleMonth($value)
+ * @method static Builder|ExportSchedule whereScheduleTime($value)
+ * @method static Builder|ExportSchedule whereScheduleTimezone($value)
+ * @method static Builder|ExportSchedule whereUpdatedAt($value)
+ */
 class ExportSchedule extends Model
 {
     use HasFactory;

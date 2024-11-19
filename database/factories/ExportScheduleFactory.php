@@ -10,9 +10,7 @@ use VisualBuilder\ExportScheduler\Filament\Exporters\UserExporter;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 use VisualBuilder\ExportScheduler\Tests\Models\User;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\VisualBuilder\ExportScheduler\Models\ExportSchedule>
- */
+
 class ExportScheduleFactory extends Factory
 {
     /**

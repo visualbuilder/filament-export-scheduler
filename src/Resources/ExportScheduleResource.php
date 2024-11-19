@@ -32,7 +32,6 @@ class ExportScheduleResource extends Resource
 {
     protected static ?string $model = ExportSchedule::class;
 
-
     public static function shouldRegisterNavigation(): bool
     {
         return ExportSchedulerPlugin::get()->shouldRegisterNavigation();
@@ -93,7 +92,7 @@ class ExportScheduleResource extends Resource
                                 ->options(ExportScheduler::listExporters())
                                 ->native(false)
                                 ->reactive()
-                                ->afterStateUpdated(fn(callable $set, $state) => $set('columns', $state ? ColumnHelper::getDefaultColumns($state) : []))
+                                ->afterStateUpdated(fn (callable $set, $state) => $set('columns', $state ? ColumnHelper::getDefaultColumns($state) : []))
                                 ->required(),
                         ])->columns(1)->columnSpan(1),
                         Grid::make()->schema([
@@ -123,7 +122,7 @@ class ExportScheduleResource extends Resource
                                             if ($state !== ScheduleFrequency::YEARLY->value) {
                                                 $set('schedule_month', null);
                                             }
-                                            if (!in_array(
+                                            if (! in_array(
                                                 $state,
                                                 [ScheduleFrequency::MONTHLY->value, ScheduleFrequency::QUARTERLY->value, ScheduleFrequency::HALF_YEARLY->value,
                                                     ScheduleFrequency::YEARLY->value]
@@ -146,11 +145,11 @@ class ExportScheduleResource extends Resource
 
                                 TextInput::make('custom_cron_expression')
                                     ->label(__('export-scheduler::scheduler.custom_cron_expression'))
-                                    ->visible(fn(Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))
-                                    ->required(fn(Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))
+                                    ->visible(fn (Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))
+                                    ->required(fn (Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))
                                     ->rules([
-                                        fn(): Closure => function (string $attribute, $value, Closure $fail) {
-                                            if (!ExportScheduler::isValidCronExpression($value)) {
+                                        fn (): Closure => function (string $attribute, $value, Closure $fail) {
+                                            if (! ExportScheduler::isValidCronExpression($value)) {
                                                 $fail(__('Invalid cron expression'));
                                             }
                                         },
@@ -159,16 +158,16 @@ class ExportScheduleResource extends Resource
                                 Select::make('schedule_day_of_week')
                                     ->label(__('export-scheduler::scheduler.schedule_day_of_week'))
                                     ->options([
-                                        'Monday'    => __('Monday'),
-                                        'Tuesday'   => __('Tuesday'),
+                                        'Monday' => __('Monday'),
+                                        'Tuesday' => __('Tuesday'),
                                         'Wednesday' => __('Wednesday'),
-                                        'Thursday'  => __('Thursday'),
-                                        'Friday'    => __('Friday'),
-                                        'Saturday'  => __('Saturday'),
-                                        'Sunday'    => __('Sunday'),
+                                        'Thursday' => __('Thursday'),
+                                        'Friday' => __('Friday'),
+                                        'Saturday' => __('Saturday'),
+                                        'Sunday' => __('Sunday'),
                                     ])
                                     ->native(false)
-                                    ->visible(fn(Get $get) => $get('schedule_frequency') === ScheduleFrequency::WEEKLY->value)
+                                    ->visible(fn (Get $get) => $get('schedule_frequency') === ScheduleFrequency::WEEKLY->value)
                                     ->nullable(),
 
                                 Select::make('schedule_day_of_month')
@@ -178,7 +177,7 @@ class ExportScheduleResource extends Resource
                                         ['-1' => __('Last day of the month')]      // Add the 'Last day of the month' option
                                     ))
                                     ->native(false)
-                                    ->visible(fn(Get $get) => in_array(
+                                    ->visible(fn (Get $get) => in_array(
                                         $get('schedule_frequency'),
                                         [ScheduleFrequency::MONTHLY->value, ScheduleFrequency::QUARTERLY->value, ScheduleFrequency::HALF_YEARLY->value,
                                             ScheduleFrequency::YEARLY->value]
@@ -188,21 +187,21 @@ class ExportScheduleResource extends Resource
                                 Select::make('schedule_month')
                                     ->label(__('export-scheduler::scheduler.schedule_month'))
                                     ->options([
-                                        'January'   => __('January'),
-                                        'February'  => __('February'),
-                                        'March'     => __('March'),
-                                        'April'     => __('April'),
-                                        'May'       => __('May'),
-                                        'June'      => __('June'),
-                                        'July'      => __('July'),
-                                        'August'    => __('August'),
+                                        'January' => __('January'),
+                                        'February' => __('February'),
+                                        'March' => __('March'),
+                                        'April' => __('April'),
+                                        'May' => __('May'),
+                                        'June' => __('June'),
+                                        'July' => __('July'),
+                                        'August' => __('August'),
                                         'September' => __('September'),
-                                        'October'   => __('October'),
-                                        'November'  => __('November'),
-                                        'December'  => __('December'),
+                                        'October' => __('October'),
+                                        'November' => __('November'),
+                                        'December' => __('December'),
                                     ])
                                     ->native(false)
-                                    ->visible(fn(Get $get) => $get('schedule_frequency') === ScheduleFrequency::YEARLY->value)
+                                    ->visible(fn (Get $get) => $get('schedule_frequency') === ScheduleFrequency::YEARLY->value)
                                     ->nullable(),
 
                                 Grid::make()
@@ -239,7 +238,7 @@ class ExportScheduleResource extends Resource
                                 Select::make('formats')
                                     ->label(__('export-scheduler::scheduler.formats'))
                                     ->options([
-                                        'csv'  => __('CSV'),
+                                        'csv' => __('CSV'),
                                         'xlsx' => __('XLSX'),
                                     ])
                                     ->default([ExportFormat::Xlsx])
@@ -260,7 +259,7 @@ class ExportScheduleResource extends Resource
                                 ->schema([
                                     TextInput::make('name')->required(),
                                     TextInput::make('label'),
-                                ])->default(fn(Get $get) => $get('exporter') ? ColumnHelper::getDefaultColumns($get('exporter')) : []),
+                                ])->default(fn (Get $get) => $get('exporter') ? ColumnHelper::getDefaultColumns($get('exporter')) : []),
 
                         ]),
                 ])->columnSpanFull(),
@@ -298,9 +297,9 @@ class ExportScheduleResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListExportSchedules::route('/'),
+            'index' => Pages\ListExportSchedules::route('/'),
             'create' => Pages\CreateExportSchedule::route('/create'),
-            'edit'   => Pages\EditExportSchedule::route('/{record}/edit'),
+            'edit' => Pages\EditExportSchedule::route('/{record}/edit'),
         ];
     }
 }

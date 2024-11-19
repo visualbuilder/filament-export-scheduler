@@ -78,7 +78,7 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
     {
         parent::packageRegistered();
 
-        $this->loadJsonTranslationsFrom(__DIR__.'/../resources/lang/');
+        $this->loadJsonTranslationsFrom(__DIR__ . '/../resources/lang/');
 
         // Bind the ExportScheduler class to the container
         $this->app->singleton(ExportScheduler::class, function () {
@@ -106,13 +106,13 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
 
         // Handle Stubs
         if (app()->runningInConsole()) {
-            foreach (app(Filesystem::class)->files(__DIR__.'/../stubs/') as $file) {
+            foreach (app(Filesystem::class)->files(__DIR__ . '/../stubs/') as $file) {
                 $this->publishes([
                     $file->getRealPath() => base_path("stubs/filament-export-scheduler/{$file->getFilename()}"),
                 ], 'filament-export-scheduler-stubs');
             }
             $this->publishes([
-                __DIR__.'/../database/seeders/ExportScheduleSeeder.php' => database_path('seeders/ExportScheduleSeeder.php'),
+                __DIR__ . '/../database/seeders/ExportScheduleSeeder.php' => database_path('seeders/ExportScheduleSeeder.php'),
 
             ], 'filament-export-scheduler-seeds');
         }

@@ -31,14 +31,14 @@ return [
      * See also Plugin options
      */
     'navigation' => [
-        'enabled'      => true,
-        'sort'         => 100,
-        'label'        => 'Scheduled Report',
+        'enabled' => true,
+        'sort' => 100,
+        'label' => 'Scheduled Report',
         'plural_label' => 'Scheduled Reports',
-        'icon'         => 'heroicon-o-paper-airplane',
-        'group'        => 'Reports',
-        'cluster'      => false,
-        'position'     => \Filament\Pages\SubNavigationPosition::Top
+        'icon' => 'heroicon-o-paper-airplane',
+        'group' => 'Reports',
+        'cluster' => false,
+        'position' => \Filament\Pages\SubNavigationPosition::Top,
     ],
 
     /**

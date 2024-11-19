@@ -11,19 +11,7 @@ class ExportSchedulerPlugin implements Plugin
 {
     use EvaluatesClosures;
 
-    protected bool | Closure $navigation = true;
-
-    public function getId(): string
-    {
-        return 'filament-export-scheduler';
-    }
-
-    public function register(Panel $panel): void
-    {
-        $panel->resources(config('export-scheduler.resources'));
-    }
-
-    public function boot(Panel $panel): void {}
+    protected bool|Closure $navigation = true;
 
     public static function make(): static
     {
@@ -38,7 +26,21 @@ class ExportSchedulerPlugin implements Plugin
         return $plugin;
     }
 
-    public function enableNavigation(bool | Closure $callback = true): static
+    public function getId(): string
+    {
+        return 'filament-export-scheduler';
+    }
+
+    public function register(Panel $panel): void
+    {
+        $panel->resources(config('export-scheduler.resources'));
+    }
+
+    public function boot(Panel $panel): void
+    {
+    }
+
+    public function enableNavigation(bool|Closure $callback = true): static
     {
         $this->navigation = $callback;
 

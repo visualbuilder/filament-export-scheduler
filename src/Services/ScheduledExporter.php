@@ -27,8 +27,8 @@ class ScheduledExporter
         // Apply custom date range filter if available
         if ($exportSchedule->date_range) {
             $dateColumn = method_exists($exporter, 'getDateColumn')
-                    ? $exporter::getDateColumn()
-                    : 'created_at'; // Default to 'created_at' if method doesn't exist
+                ? $exporter::getDateColumn()
+                : 'created_at'; // Default to 'created_at' if method doesn't exist
 
             ['start' => $startDate, 'end' => $endDate] = $exportSchedule->date_range->getDateRange();
             $query->whereBetween($dateColumn, [$startDate, $endDate]);
@@ -75,25 +75,25 @@ class ScheduledExporter
         // in case it contains attributes that are not serializable, such as binary columns.
         $export->unsetRelation('user');
 
-        $makeCreateXlsxFileJob = fn (): CreateXlsxFile => app(CreateXlsxFile::class, [
-            'export' => $export,
+        $makeCreateXlsxFileJob = fn(): CreateXlsxFile => app(CreateXlsxFile::class, [
+            'export'    => $export,
             'columnMap' => $columnMap,
-            'options' => $options,
+            'options'   => $options,
         ]);
 
         Bus::chain([
             // 1. Batch Job: Processes the export data (CSV).
             Bus::batch([app($job, [
-                'export' => $export,
-                'query' => $serializedQuery,
+                'export'    => $export,
+                'query'     => $serializedQuery,
                 'columnMap' => $columnMap,
-                'options' => $options,
+                'options'   => $options,
                 'chunkSize' => 100,
-                'records' => null,
+                'records'   => null,
             ])])
-                ->when(filled($jobQueue), fn (PendingBatch $batch) => $batch->onQueue($jobQueue))
-                ->when(filled($jobConnection), fn (PendingBatch $batch) => $batch->onConnection($jobConnection))
-                ->when(filled($jobBatchName), fn (PendingBatch $batch) => $batch->name($jobBatchName))
+                ->when(filled($jobQueue), fn(PendingBatch $batch) => $batch->onQueue($jobQueue))
+                ->when(filled($jobConnection), fn(PendingBatch $batch) => $batch->onConnection($jobConnection))
+                ->when(filled($jobBatchName), fn(PendingBatch $batch) => $batch->name($jobBatchName))
                 ->allowFailures(),
 
             // 2. Conditional Job: CreateXlsxFile if XLSX format is requested.
@@ -105,8 +105,8 @@ class ScheduledExporter
                 exportSchedule: $exportSchedule,
             ),
         ])
-            ->when(filled($jobQueue), fn (PendingChain $chain) => $chain->onQueue($jobQueue))
-            ->when(filled($jobConnection), fn (PendingChain $chain) => $chain->onConnection($jobConnection))
+            ->when(filled($jobQueue), fn(PendingChain $chain) => $chain->onQueue($jobQueue))
+            ->when(filled($jobConnection), fn(PendingChain $chain) => $chain->onConnection($jobConnection))
             ->dispatch();
 
         return $export->file_name;
@@ -115,6 +115,6 @@ class ScheduledExporter
 
     protected function generateFileName(ExportSchedule $exportSchedule): string
     {
-        return Str::slug($exportSchedule->name . '_' . now()->format('Y-m-d_Hi'));
+        return Str::slug($exportSchedule->name.'_'.now()->format('Y-m-d_Hi'));
     }
 }

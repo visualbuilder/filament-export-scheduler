@@ -2,12 +2,7 @@
 
 namespace VisualBuilder\ExportScheduler;
 
-use Filament\Support\Assets\AlpineComponent;
 use Filament\Support\Assets\Asset;
-use Filament\Support\Assets\Css;
-use Filament\Support\Assets\Js;
-use Filament\Support\Facades\FilamentAsset;
-use Filament\Support\Facades\FilamentIcon;
 use Illuminate\Filesystem\Filesystem;
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
 use Spatie\LaravelPackageTools\Package;
@@ -28,7 +23,6 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
          * More info: https://github.com/spatie/laravel-package-tools
          */
         $package->name(static::$name)
-
             ->hasViews('export-scheduler')
             ->hasCommands($this->getCommands())
             ->hasInstallCommand(function (InstallCommand $command) {
@@ -60,12 +54,31 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
         }
     }
 
+    /**
+     * @return array<class-string>
+     */
+    protected function getCommands(): array
+    {
+        return [
+            ExportSchedulerCommand::class,
+        ];
+    }
+
+    /**
+     * @return array<string>
+     */
+    protected function getMigrations(): array
+    {
+        return [
+            'create_export_scheduler_table',
+        ];
+    }
+
     public function packageRegistered(): void
     {
-
         parent::packageRegistered();
 
-        $this->loadJsonTranslationsFrom(__DIR__ . '/../resources/lang/');
+        $this->loadJsonTranslationsFrom(__DIR__.'/../resources/lang/');
 
         // Bind the ExportScheduler class to the container
         $this->app->singleton(ExportScheduler::class, function () {
@@ -93,13 +106,13 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
 
         // Handle Stubs
         if (app()->runningInConsole()) {
-            foreach (app(Filesystem::class)->files(__DIR__ . '/../stubs/') as $file) {
+            foreach (app(Filesystem::class)->files(__DIR__.'/../stubs/') as $file) {
                 $this->publishes([
                     $file->getRealPath() => base_path("stubs/filament-export-scheduler/{$file->getFilename()}"),
                 ], 'filament-export-scheduler-stubs');
             }
             $this->publishes([
-                __DIR__ . '/../database/seeders/ExportScheduleSeeder.php' => database_path('seeders/ExportScheduleSeeder.php'),
+                __DIR__.'/../database/seeders/ExportScheduleSeeder.php' => database_path('seeders/ExportScheduleSeeder.php'),
 
             ], 'filament-export-scheduler-seeds');
         }
@@ -120,16 +133,6 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
             // AlpineComponent::make('filament-export-scheduler', __DIR__ . '/../resources/dist/components/filament-export-scheduler.js'),
             //            Css::make('filament-export-scheduler-styles', __DIR__ . '/../resources/dist/filament-export-scheduler.css'),
             //            Js::make('filament-export-scheduler-scripts', __DIR__ . '/../resources/dist/filament-export-scheduler.js'),
-        ];
-    }
-
-    /**
-     * @return array<class-string>
-     */
-    protected function getCommands(): array
-    {
-        return [
-            ExportSchedulerCommand::class,
         ];
     }
 
@@ -155,15 +158,5 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
     protected function getScriptData(): array
     {
         return [];
-    }
-
-    /**
-     * @return array<string>
-     */
-    protected function getMigrations(): array
-    {
-        return [
-            'create_export_scheduler_table',
-        ];
     }
 }

@@ -47,13 +47,13 @@ class ExportSchedule extends Model
      * @var array
      */
     protected $casts = [
-        'columns' => 'array',
-        'formats' => 'array',
-        'last_run_at' => 'datetime',
-        'enabled'=>'boolean',
+        'columns'                => 'array',
+        'formats'                => 'array',
+        'last_run_at'            => 'datetime',
+        'enabled'                => 'boolean',
         'last_successful_run_at' => 'datetime',
-        'date_range' => DateRange::class,
-        'schedule_frequency' => ScheduleFrequency::class,
+        'date_range'             => DateRange::class,
+        'schedule_frequency'     => ScheduleFrequency::class,
     ];
 
     public function owner(): MorphTo
@@ -106,7 +106,7 @@ class ExportSchedule extends Model
     {
         $baseTime = $this->getScheduleBaseTime();
 
-        if (! $baseTime) {
+        if (!$baseTime) {
             return null;
         }
 
@@ -138,6 +138,25 @@ class ExportSchedule extends Model
     }
 
     /**
+     * Get the base time for scheduling by combining last run and schedule time.
+     */
+    protected function getScheduleBaseTime(): ?Carbon
+    {
+        $lastRun = $this->last_run_at
+            ? Carbon::parse($this->last_run_at)
+            : now();
+
+        if ($this->schedule_time) {
+            // Combine the date from $lastRun with the time from schedule_time
+            [$hour, $minute, $second] = explode(':', $this->schedule_time);
+
+            return $lastRun->copy()->setTime($hour, $minute, $second);
+        }
+
+        return $lastRun;
+    }
+
+    /**
      * Get the next weekly run time.
      */
     protected function getNextWeeklyRun(Carbon $nextDue, Carbon $now): Carbon
@@ -153,8 +172,8 @@ class ExportSchedule extends Model
     protected function getNextMonthlyOrPeriodicRun(Carbon $nextDue, Carbon $now): Carbon
     {
         $monthsToAdd = match ($this->schedule_frequency) {
-            ScheduleFrequency::MONTHLY => 1,
-            ScheduleFrequency::QUARTERLY => 3,
+            ScheduleFrequency::MONTHLY     => 1,
+            ScheduleFrequency::QUARTERLY   => 3,
             ScheduleFrequency::HALF_YEARLY => 6,
         };
 
@@ -189,28 +208,9 @@ class ExportSchedule extends Model
         return $nextDue;
     }
 
-    /**
-     * Get the base time for scheduling by combining last run and schedule time.
-     */
-    protected function getScheduleBaseTime(): ?Carbon
-    {
-        $lastRun = $this->last_run_at
-            ? Carbon::parse($this->last_run_at)
-            : now();
-
-        if ($this->schedule_time) {
-            // Combine the date from $lastRun with the time from schedule_time
-            [$hour, $minute, $second] = explode(':', $this->schedule_time);
-
-            return $lastRun->copy()->setTime($hour, $minute, $second);
-        }
-
-        return $lastRun;
-    }
-
     protected function getNextCronRunAt(): ?Carbon
     {
-        if (! $this->custom_cron_expression) {
+        if (!$this->custom_cron_expression) {
             return null;
         }
 

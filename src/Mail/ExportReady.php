@@ -25,17 +25,15 @@ class ExportReady extends Mailable
     {
         $hasXlsx = in_array(ExportFormat::Xlsx, $exportSchedule->formats);
         $this->url = route('filament.exports.download', ['export' => $export, 'format' => $hasXlsx ? ExportFormat::Xlsx : ExportFormat::Csv]);
-        $this->name = $this->export->user->name;
-
-
     }
 
     public function build()
     {
-        return $this->subject('Your Export is Ready')
-            ->view('emails.export-ready')
+        return $this->subject("Download your {$this->exportSchedule->name}")
+            ->to($this->exportSchedule->owner->email)
+            ->view('export-scheduler::emails.export-ready')
             ->with([
-                'name'=> $this->name,
+                'user' => $this->exportSchedule->owner,
                 'url'=> $this->url,
                 'export' => $this->export,
                 'exportSchedule' => $this->exportSchedule

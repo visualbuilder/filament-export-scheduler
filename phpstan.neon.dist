@@ -1,12 +1,12 @@
+---
 includes:
-    - phpstan-baseline.neon
-
+  - phpstan-baseline.neon
 parameters:
-    level: 0
-    paths:
-        - src
-        - config
-        - database
-    ignoreErrors:
-        - '#^Class App\\Models\\User not found$#'
-    tmpDir: build/phpstan
+  level: 0
+  paths:
+    - src
+    - config
+    - database
+  ignoreErrors:
+    - "#^Class App\\\\Models\\\\User not found$#"
+  tmpDir: build/phpstan

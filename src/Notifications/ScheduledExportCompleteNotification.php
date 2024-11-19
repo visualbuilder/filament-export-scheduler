@@ -8,6 +8,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 
@@ -36,7 +37,7 @@ class ScheduledExportCompleteNotification extends Notification implements Should
         if (! class_exists($mailableClass)) {
             throw new InvalidArgumentException("The configured mailable class [{$mailableClass}] does not exist.");
         }
-
+        Log::info('Sending Email');
         return new $mailableClass($notifiable, $this->export, $this->exportSchedule);
     }
 

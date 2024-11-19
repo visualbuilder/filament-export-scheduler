@@ -7,17 +7,21 @@ use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Actions\Exports\Jobs\CreateXlsxFile;
 use Filament\Actions\Exports\Jobs\PrepareCsvExport;
 use Filament\Actions\Exports\Models\Export;
+use Filament\Notifications\Notification;
 use Illuminate\Bus\PendingBatch;
 use Illuminate\Foundation\Bus\PendingChain;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Number;
 use Illuminate\Support\Str;
 use VisualBuilder\ExportScheduler\Jobs\ScheduledExportCompletion;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 
 class ScheduledExporter
 {
-    public function runExport(ExportSchedule $exportSchedule)
+    public static function runExport(ExportSchedule $exportSchedule)
     {
+        Log::info('Loading Exporter');
         $exporter = $exportSchedule->exporter;
 
         // Get the query from the exporter class
@@ -34,6 +38,7 @@ class ScheduledExporter
             $query->whereBetween($dateColumn, [$startDate, $endDate]);
         }
 
+        Log::info('PReparing COlumns');
         // Prepare column mappings
         $columnMap = [];
         foreach ($exportSchedule->columns as $column) {
@@ -48,20 +53,25 @@ class ScheduledExporter
         $export->exporter = $exporter;
         $export->total_rows = $query->count();
         $export->file_disk = config('export-scheduler.file_disk');
-        $export->file_name = $this->generateFileName($exportSchedule);
+        $export->file_name = self::generateFileName($exportSchedule);
         $export->user()->associate($exportSchedule->owner);
         $export->save();
+
+        Log::info('Exporter saved');
 
         $exporterInstance = $export->getExporter(
             columnMap: $columnMap,
             options: $options,
         );
 
+        Log::info('Exporter instance created');
+
         $formats = $exportSchedule->formats;
         $hasXlsx = in_array(ExportFormat::Xlsx, $formats);
 
+        Log::info('Serializing Query');
         $serializedQuery = EloquentSerializeFacade::serialize($query);
-
+        Log::info('Query Serialized ');
         /**
          * Enhancement add queue, connection and batchName to ExportSchedule
          * Maybe not needed as can be set in the Exporter by a dev.
@@ -73,7 +83,9 @@ class ScheduledExporter
 
         // We do not want to send the loaded user relationship to the queue in job payloads,
         // in case it contains attributes that are not serializable, such as binary columns.
+        Log::info('Unsetting User');
         $export->unsetRelation('user');
+
 
         $makeCreateXlsxFileJob = fn (): CreateXlsxFile => app(CreateXlsxFile::class, [
             'export' => $export,
@@ -81,6 +93,7 @@ class ScheduledExporter
             'options' => $options,
         ]);
 
+        Log::info('Starting The Bus Chain');
         Bus::chain([
             // 1. Batch Job: Processes the export data (CSV).
             Bus::batch([app($job, [
@@ -109,11 +122,12 @@ class ScheduledExporter
             ->when(filled($jobConnection), fn (PendingChain $chain) => $chain->onConnection($jobConnection))
             ->dispatch();
 
-        return $export->file_name;
+        Log::info('Returning Export');
+        return;
 
     }
 
-    protected function generateFileName(ExportSchedule $exportSchedule): string
+    protected static function generateFileName(ExportSchedule $exportSchedule): string
     {
         return Str::slug($exportSchedule->name . '_' . now()->format('Y-m-d_Hi'));
     }

@@ -2,29 +2,29 @@
 
 namespace VisualBuilder\ExportScheduler;
 
-use Filament\Support\Assets\Asset;
-use Illuminate\Filesystem\Filesystem;
-use Spatie\LaravelPackageTools\Commands\InstallCommand;
-use Spatie\LaravelPackageTools\Package;
-use Spatie\LaravelPackageTools\PackageServiceProvider;
-use VisualBuilder\ExportScheduler\Commands\ExportSchedulerCommand;
+    use Filament\Support\Assets\Asset;
+    use Illuminate\Filesystem\Filesystem;
+    use Spatie\LaravelPackageTools\Commands\InstallCommand;
+    use Spatie\LaravelPackageTools\Package;
+    use Spatie\LaravelPackageTools\PackageServiceProvider;
+    use VisualBuilder\ExportScheduler\Commands\ExportSchedulerCommand;
 
-class ExportSchedulerServiceProvider extends PackageServiceProvider
-{
-    public static string $name = 'export-scheduler';
-
-    public static string $viewNamespace = 'export-scheduler';
-
-    public function configurePackage(Package $package): void
+    class ExportSchedulerServiceProvider extends PackageServiceProvider
     {
-        /*
-         * This class is a Package Service Provider
-         *
-         * More info: https://github.com/spatie/laravel-package-tools
-         */
-        $package->name(static::$name)
-            ->hasViews('export-scheduler')
-            ->hasCommands($this->getCommands())
+        public static string $name = 'export-scheduler';
+
+        public static string $viewNamespace = 'export-scheduler';
+
+        public function configurePackage(Package $package): void
+        {
+            /*
+             * This class is a Package Service Provider
+             *
+             * More info: https://github.com/spatie/laravel-package-tools
+             */
+            $package->name(static::$name)
+                ->hasViews('export-scheduler')
+                ->hasCommands($this->getCommands())
             ->hasInstallCommand(function (InstallCommand $command) {
                 $command
                     ->publishConfigFile()

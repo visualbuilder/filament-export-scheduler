@@ -14,6 +14,8 @@ class ExportReady extends Mailable
     use Queueable;
     use SerializesModels;
 
+    public $name;
+    public $url;
     /**
      * Create a new message instance.
      *
@@ -22,9 +24,21 @@ class ExportReady extends Mailable
     public function __construct($notifiable, public Export $export, public ExportSchedule $exportSchedule)
     {
         $hasXlsx = in_array(ExportFormat::Xlsx, $exportSchedule->formats);
-        $url = route('filament.exports.download', ['export' => $export, 'format' => $hasXlsx ? ExportFormat::Xlsx : ExportFormat::Csv]);
-        $this->sendTo = $notifiable->email;
-        $this->export->url = $url;
+        $this->url = route('filament.exports.download', ['export' => $export, 'format' => $hasXlsx ? ExportFormat::Xlsx : ExportFormat::Csv]);
+        $this->name = $this->export->user->name;
 
+
+    }
+
+    public function build()
+    {
+        return $this->subject('Your Export is Ready')
+            ->view('emails.export-ready')
+            ->with([
+                'name'=> $this->name,
+                'url'=> $this->url,
+                'export' => $this->export,
+                'exportSchedule' => $this->exportSchedule
+            ]);
     }
 }

@@ -16,10 +16,8 @@ class ExportSchedulerCommand extends Command
 
     public function handle(): int
     {
-        // Create an instance of the DynamicExporterService
-        $scheduledExporter = new ScheduledExporter;
 
-        ExportSchedule::enabled()->each(function (ExportSchedule $exportSchedule) use ($scheduledExporter) {
+        ExportSchedule::enabled()->each(function (ExportSchedule $exportSchedule) {
             // Skip if the export is not due
             if (! $exportSchedule->next_due_at || now()->lessThan($exportSchedule->next_due_at)) {
                 $this->warn($exportSchedule->name . 'next due at' . $exportSchedule->next_due_at);
@@ -30,7 +28,7 @@ class ExportSchedulerCommand extends Command
             // Attempt to run the export
             try {
                 $this->info('Running ' . $exportSchedule->name);
-                $scheduledExporter->runExport($exportSchedule);
+                ScheduledExporter::runExport($exportSchedule);
 
                 $exportSchedule->update([
                     'last_run_at' => now(),

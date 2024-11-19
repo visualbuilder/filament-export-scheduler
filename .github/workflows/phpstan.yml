@@ -25,4 +25,4 @@ jobs:
           composer-options: "--ignore-platform-reqs --optimize-autoloader"
 
       - name: Run PHPStan
-        run: ./vendor/bin/phpstan vendor/visualbuilder/filament-export-scheduler --error-format=github
+        run: ./vendor/bin/phpstan analyse vendor/visualbuilder/filament-export-scheduler --error-format=github

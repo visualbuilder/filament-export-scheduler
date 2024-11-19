@@ -27,7 +27,8 @@ class ExportSchedulerCommand extends Command
             // Attempt to run the export
             try {
                 $this->info('Running '.$exportSchedule->name);
-                ScheduledExporter::runExport($exportSchedule);
+
+                (new ScheduledExporter($exportSchedule))->run();
 
                 $exportSchedule->update([
                     'last_run_at'            => now(),

@@ -11,7 +11,8 @@ class ExportSchedulerPlugin implements Plugin
 {
     use EvaluatesClosures;
 
-    protected bool|Closure $navigation = true;
+    protected bool|Closure|null $navigation = null;
+
 
     public static function make(): static
     {
@@ -49,6 +50,8 @@ class ExportSchedulerPlugin implements Plugin
 
     public function shouldRegisterNavigation(): bool
     {
-        return $this->evaluate($this->navigation) === true ?? config('export-scheduler.navigation.enabled', true);
+        return $this->evaluate($this->navigation) ?? config('export-scheduler.navigation.enabled', true);
     }
+
+
 }

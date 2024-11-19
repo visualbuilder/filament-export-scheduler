@@ -141,6 +141,20 @@ return [
 ];
 ```
 
+
+Add the plugin to your filament panel provider
+```php
+use VisualBuilder\ExportScheduler\ExportSchedulerPlugin;
+
+public function panel(Panel $panel): Panel
+    {
+        return $panel
+            ->default()
+            ->plugins([
+                ExportSchedulerPlugin::make(),
+
+```
+
 ## Testing
 
 ```bash

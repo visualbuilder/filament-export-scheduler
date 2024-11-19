@@ -44,32 +44,32 @@ class ExportScheduleResource extends Resource
 
     public static function getNavigationGroup(): string
     {
-        return config('export-scheduler.navigation.group') ?? 'Reports';
+        return config('export-scheduler.navigation.group');
     }
 
     public static function getNavigationIcon(): string
     {
-        return config('export-scheduler.navigation.icon') ?? 'Reports';
+        return config('export-scheduler.navigation.icon');
     }
 
     public static function getNavigationSort(): ?int
     {
-        return config('export-scheduler.navigation.sort') ?? 200;
+        return config('export-scheduler.navigation.sort');
     }
 
     public static function getModelLabel(): string
     {
-        return __(config('export-scheduler.navigation.label')) ?? 'Scheduled Report';
+        return __(config('export-scheduler.navigation.label'));
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __(config('export-scheduler.navigation.plural_label')) ?? 'Scheduled Reports';
+        return __(config('export-scheduler.navigation.plural_label'));
     }
 
     public static function getCluster(): string
     {
-        return config('export-scheduler.navigation.cluster') ?? false;
+        return config('export-scheduler.navigation.cluster');
     }
 
     public static function getSubNavigationPosition(): SubNavigationPosition

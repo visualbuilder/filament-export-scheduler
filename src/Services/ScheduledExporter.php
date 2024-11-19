@@ -36,16 +36,15 @@ class ScheduledExporter
 
     public function run(): bool
     {
-        return $this->init() && $this->runExporter();
+        return $this->init() && $this->buildJobChain();
     }
 
 
     /**
-     * Create the export record and get the query results count
+     * Create the export record and calculate the query results count
      *
-     * @return $this|null
      */
-    protected function init()
+    protected function init(): bool
     {
         try {
             $exporter = $this->exportSchedule->exporter;
@@ -63,7 +62,6 @@ class ScheduledExporter
                 ['start' => $startDate, 'end' => $endDate] = $this->exportSchedule->date_range->getDateRange();
                 $this->query->whereBetween($dateColumn, [$startDate, $endDate]);
             }
-
 
             // Prepare column mappings
             $this->columnMap = [];
@@ -84,36 +82,31 @@ class ScheduledExporter
             $export->save();
             $this->export = $export;
 
-            Log::info('Exporter saved');
-
             $this->exporterInstance = $export->getExporter(
                 columnMap: $this->columnMap,
                 options: $this->options,
             );
-            return $this;
+
+            return true;
         } catch (\Exception $exception) {
             Log::error($exception->getMessage());
+            return false;
         }
-        return null;
     }
+
 
     protected function generateFileName(): string
     {
         return Str::slug($this->exportSchedule->name.'_'.now()->format('Y-m-d_Hi'));
     }
 
-    public function runExporter()
+    public function buildJobChain():bool
     {
         try {
             $formats = $this->exportSchedule->formats;
             $hasXlsx = in_array(ExportFormat::Xlsx, $formats);
             $serializedQuery = EloquentSerializeFacade::serialize($this->query);
 
-            /**
-             * Enhancement add connection and batchName to ExportSchedule
-             * Maybe not needed as can be set in the Exporter by a dev.
-             * Using queue on the exportSchedule model so we can easily k
-             */
             $job = PrepareCsvExport::class;
             $jobQueue = $this->exporterInstance->getJobQueue();
             $jobConnection = $this->exporterInstance->getJobConnection();
@@ -157,13 +150,14 @@ class ScheduledExporter
                 ->when(filled($jobQueue), fn(PendingChain $chain) => $chain->onQueue($jobQueue))
                 ->when(filled($jobConnection), fn(PendingChain $chain) => $chain->onConnection($jobConnection))
                 ->dispatch();
-            return $this;
+            return true;
 
 
         } catch (\Exception $exception) {
             Log::error($exception->getMessage());
+            return false;
         }
-        return null;
+
 
     }
 

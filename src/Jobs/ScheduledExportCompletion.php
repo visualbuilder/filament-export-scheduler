@@ -19,10 +19,6 @@ class ScheduledExportCompletion implements ShouldQueue
 
     /**
      * Create a new job instance.
-     *
-     * @param  array  $columnMap
-     * @param  array  $formats
-     * @param  array  $options
      */
     public function __construct(
         protected Export $export,
@@ -35,20 +31,19 @@ class ScheduledExportCompletion implements ShouldQueue
      */
     public function handle()
     {
-        Log::info('Completing the Export');
+
         // Mark the export as completed
         $this->export->touch('completed_at');
+
         $notificationClass = config('export-scheduler.notification');
 
         // Check if the user object exists and uses the Notifiable trait
         if ($this->export->user && in_array(Notifiable::class, class_uses_recursive($this->export->user))) {
-            Log::info('User Found');
-            // Check if the notification class exists to avoid further errors
+
             if (class_exists($notificationClass)) {
                 // The user can be notified
-                Log::info('Notifying User');
                 $this->export->user->notify(new $notificationClass($this->export, $this->exportSchedule));
-                Log::info('User Notified');
+
             } else {
                 // Log error if the notification class does not exist
                 Log::error('Notification class does not exist.  Check the config/export-scheduler.php to add a notification class.', [

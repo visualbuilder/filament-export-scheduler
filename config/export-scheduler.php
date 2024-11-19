@@ -42,11 +42,16 @@ return [
 
     /**
      * Which authenticatable models should be allowed to receive exports
+     * What you set here will define what appears on the user dropdown list
      */
     'user_models' => [
 
         [
-            'model'           => \App\Models\User::class,
+            /**
+             * Change this to your own model maybe \App\Models\User::class
+             *
+             */
+            'model'           => \VisualBuilder\ExportScheduler\Tests\Models\User::class,
             'title_attribute' => 'email',
         ],
     ],

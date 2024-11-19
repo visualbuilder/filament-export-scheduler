@@ -4,6 +4,7 @@ namespace VisualBuilder\ExportScheduler\Models;
 
 use Carbon\Carbon;
 use Cron\CronExpression;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -37,6 +38,7 @@ class ExportSchedule extends Model
         'formats',
         'last_run_at',
         'last_successful_run_at',
+        'enabled'
     ];
 
     /**
@@ -48,6 +50,7 @@ class ExportSchedule extends Model
         'columns' => 'array',
         'formats' => 'array',
         'last_run_at' => 'datetime',
+        'enabled'=>'boolean',
         'last_successful_run_at' => 'datetime',
         'date_range' => DateRange::class,
         'schedule_frequency' => ScheduleFrequency::class,
@@ -58,6 +61,44 @@ class ExportSchedule extends Model
     {
         return $this->morphTo();
     }
+
+
+    public function scopeEnabled(Builder $query): Builder
+    {
+        return $query->where('enabled', true);
+    }
+
+
+    public function getStartsAtAttribute(): Carbon
+    {
+        return $this->date_range->getDateRange()['start'];
+    }
+
+    public function getEndsAtAttribute(): Carbon
+    {
+        return $this->date_range->getDateRange()['end'];
+    }
+
+    public function getStartsAtFormattedAttribute(): string
+    {
+        return $this->starts_at->format("l jS F Y \a\t h:i A");
+    }
+
+    public function getEndsAtFormattedAttribute(): string
+    {
+        return $this->ends_at->format("l jS F Y \a\t h:i A");
+    }
+
+    public function getFrequencyAttribute(): string
+    {
+        return $this->schedule_frequency->getLabel();
+    }
+
+    public function getDateRangeLabelAttribute(): string
+    {
+        return $this->date_range->getLabel();
+    }
+
 
     /**
      * Get the next due time for the schedule.
@@ -168,7 +209,6 @@ class ExportSchedule extends Model
         return $lastRun;
     }
 
-
     protected function getNextCronRunAt(): ?Carbon
     {
         if (! $this->custom_cron_expression) {
@@ -178,35 +218,5 @@ class ExportSchedule extends Model
         $cron = new CronExpression($this->custom_cron_expression);
 
         return Carbon::instance($cron->getNextRunDate($this->last_run_at ?? 'now'));
-    }
-
-    public function getStartsAtAttribute(): Carbon
-    {
-        return $this->date_range->getDateRange()['start'];
-    }
-
-    public function getEndsAtAttribute(): Carbon
-    {
-        return $this->date_range->getDateRange()['end'];
-    }
-
-    public function getStartsAtFormattedAttribute(): string
-    {
-        return $this->starts_at->format("l jS F Y \a\t h:i A");
-    }
-
-    public function getEndsAtFormattedAttribute(): string
-    {
-        return $this->ends_at->format("l jS F Y \a\t h:i A");
-    }
-
-    public function getFrequencyAttribute(): string
-    {
-        return $this->schedule_frequency->getLabel();
-    }
-
-    public function getDateRangeLabelAttribute(): string
-    {
-        return $this->date_range->getLabel();
     }
 }

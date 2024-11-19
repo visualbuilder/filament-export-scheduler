@@ -48,7 +48,9 @@ return [
 
         [
             'model' => \App\Models\User::class,
-            'title_attribute' => 'name',
+            'title_attribute' => 'email',
         ],
     ],
+
+
 ];

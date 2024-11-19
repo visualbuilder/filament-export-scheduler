@@ -2,12 +2,13 @@
 
 namespace VisualBuilder\ExportScheduler\Jobs;
 
-use App\Notifications\AdminScheduledExportCompleteNotification;
 use Filament\Actions\Exports\Models\Export;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 
 class ScheduledExportCompletion implements ShouldQueue
@@ -35,8 +36,28 @@ class ScheduledExportCompletion implements ShouldQueue
     {
         // Mark the export as completed
         $this->export->touch('completed_at');
-        // Send the email notification
-        $this->export->user->notify(new AdminScheduledExportCompleteNotification($this->export, $this->exportSchedule));
+        $notificationClass = config('export-scheduler.notification');
+
+
+        // Check if the user object exists and uses the Notifiable trait
+        if ($this->export->user && in_array(Notifiable::class, class_uses_recursive($this->export->user))) {
+            // Check if the notification class exists to avoid further errors
+            if (class_exists($notificationClass)) {
+                // The user can be notified
+                $this->export->user->notify(new $notificationClass($this->export, $this->exportSchedule));
+            } else {
+                // Log error if the notification class does not exist
+                Log::error('Notification class does not exist.  Check the config/export-scheduler.php to add a notification class.', [
+                    'class' => $notificationClass,
+                    'user_id' => $this->export->user->id,
+                ]);
+            }
+        } else {
+            // Log error if the user cannot be notified
+            Log::error('Attempted to notify a user that does not use the Notifiable trait or user is null.', [
+                'user_id' => $this->export->user->id ?? null,
+            ]);
+        }
 
     }
 }

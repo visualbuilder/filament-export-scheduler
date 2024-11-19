@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 use VisualBuilder\ExportScheduler\Jobs\ScheduledExportCompletion;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 
-class DynamicExporter
+class ScheduledExporter
 {
     public function runExport(ExportSchedule $exportSchedule)
     {
@@ -57,11 +57,15 @@ class DynamicExporter
             options: $options,
         );
 
-        $formats = $exporterInstance->getFormats();
+        $formats = $exportSchedule->formats;
         $hasXlsx = in_array(ExportFormat::Xlsx, $formats);
 
         $serializedQuery = EloquentSerializeFacade::serialize($query);
 
+        /**
+         * Enhancement add queue, connection and batchName to ExportSchedule
+         * Maybe not needed as can be set in the Exporter by a dev.
+         */
         $job = PrepareCsvExport::class;
         $jobQueue = $exporterInstance->getJobQueue();
         $jobConnection = $exporterInstance->getJobConnection();

@@ -29,6 +29,9 @@ return new class extends Migration
             $table->string('date_range')->nullable(); //Relative date range to use for the query
 
             $table->nullableMorphs('owner');
+
+            $table->boolean('enabled')->default(1);
+
             $table->timestamp('last_run_at')->nullable(); // Last time the export was attempted
             $table->timestamp('last_successful_run_at')->nullable();
             $table->timestamps();

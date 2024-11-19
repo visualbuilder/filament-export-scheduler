@@ -11,6 +11,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
@@ -107,34 +108,41 @@ class ExportScheduleResource extends Resource
 
                                         Section::make('When to Run')
                                                 ->schema([
+                                                    Grid::make()->schema([
                                                         Select::make('schedule_frequency')
-                                                                ->label(__('export-scheduler::scheduler.schedule_frequency'))
-                                                                ->placeholder(__('export-scheduler::scheduler.schedule_time_hint'))
-                                                                ->hintIcon('heroicon-m-question-mark-circle', tooltip: __('export-scheduler::scheduler.schedule_time_hint'))
-                                                                ->options(ScheduleFrequency::selectArray())
-                                                                ->default(ScheduleFrequency::MONTHLY->value)
-                                                                ->required()
-                                                                ->native(false)
-                                                                ->reactive()
-                                                                ->afterStateUpdated(function (Set $set, $state) {
-                                                                    // Reset dependent fields when frequency changes
-                                                                    if ($state !== ScheduleFrequency::YEARLY->value) {
-                                                                        $set('schedule_month', null);
-                                                                    }
-                                                                    if (!in_array(
-                                                                            $state,
-                                                                            [ScheduleFrequency::MONTHLY->value, ScheduleFrequency::QUARTERLY->value, ScheduleFrequency::HALF_YEARLY->value,
-                                                                                    ScheduleFrequency::YEARLY->value]
-                                                                    )) {
-                                                                        $set('schedule_day_of_month', null);
-                                                                    }
-                                                                    if ($state !== ScheduleFrequency::WEEKLY->value) {
-                                                                        $set('schedule_day_of_week', null);
-                                                                    }
-                                                                    if ($state !== ScheduleFrequency::CRON->value) {
-                                                                        $set('custom_cron_expression', null);
-                                                                    }
-                                                                }),
+                                                            ->label(__('export-scheduler::scheduler.schedule_frequency'))
+                                                            ->placeholder(__('export-scheduler::scheduler.schedule_time_hint'))
+                                                            ->hintIcon('heroicon-m-question-mark-circle', tooltip: __('export-scheduler::scheduler.schedule_time_hint'))
+                                                            ->options(ScheduleFrequency::selectArray())
+                                                            ->default(ScheduleFrequency::MONTHLY->value)
+                                                            ->required()
+                                                            ->native(false)
+                                                            ->reactive()
+                                                            ->afterStateUpdated(function (Set $set, $state) {
+                                                                // Reset dependent fields when frequency changes
+                                                                if ($state !== ScheduleFrequency::YEARLY->value) {
+                                                                    $set('schedule_month', null);
+                                                                }
+                                                                if (!in_array(
+                                                                    $state,
+                                                                    [ScheduleFrequency::MONTHLY->value, ScheduleFrequency::QUARTERLY->value, ScheduleFrequency::HALF_YEARLY->value,
+                                                                        ScheduleFrequency::YEARLY->value]
+                                                                )) {
+                                                                    $set('schedule_day_of_month', null);
+                                                                }
+                                                                if ($state !== ScheduleFrequency::WEEKLY->value) {
+                                                                    $set('schedule_day_of_week', null);
+                                                                }
+                                                                if ($state !== ScheduleFrequency::CRON->value) {
+                                                                    $set('custom_cron_expression', null);
+                                                                }
+                                                            }),
+
+                                                        Toggle::make('enabled')
+                                                            ->inline(false)
+                                                            ->label(__('export-scheduler::scheduler.enabled')),
+
+                                                    ])->columns(2),
 
                                                         TextInput::make('custom_cron_expression')
                                                                 ->label(__('export-scheduler::scheduler.custom_cron_expression'))
@@ -217,10 +225,12 @@ class ExportScheduleResource extends Resource
                                                 ->schema([
 
                                                         Select::make('date_range')
+                                                                ->placeholder(__('export-scheduler::scheduler.date_range_placeholder'))
+                                                                ->hintIcon('heroicon-m-question-mark-circle', tooltip:__('export-scheduler::scheduler.date_range_tooltip'))
+                                                                ->hintColor('info')
                                                                 ->label(__('export-scheduler::scheduler.date_range'))
                                                                 ->options(DateRange::selectArray())
-                                                                ->native(false)
-                                                                ->required(),
+                                                                ->native(false),
 
                                                 ]),
 
@@ -263,12 +273,14 @@ class ExportScheduleResource extends Resource
                 ->columns([
                         Tables\Columns\TextColumn::make('id'),
                         Tables\Columns\TextColumn::make('name')->label(__('export-scheduler::scheduler.name')),
-                        Tables\Columns\TextColumn::make('schedule_frequency')->label(__('export-scheduler::scheduler.schedule_frequency')),
-                        Tables\Columns\TextColumn::make('date_range')->label(__('export-scheduler::scheduler.date_range')),
+                        Tables\Columns\TextColumn::make('schedule_frequency')->label(__('export-scheduler::scheduler.schedule_frequency'))->badge(),
+                        Tables\Columns\TextColumn::make('date_range')->label(__('export-scheduler::scheduler.date_range'))->badge()->color('warning'),
                         Tables\Columns\TextColumn::make('owner.email')->label(__('export-scheduler::scheduler.recipient')),
                         Tables\Columns\TextColumn::make('last_run_at')->label(__('export-scheduler::scheduler.last_run'))->date(),
                         Tables\Columns\TextColumn::make('last_successful_run_at')->label(__('export-scheduler::scheduler.last_success'))->date(),
                         Tables\Columns\TextColumn::make('next_due_at')->label(__('export-scheduler::scheduler.next_due'))->date(),
+                        Tables\Columns\ToggleColumn::make('enabled'),
+
                 ])
                 ->filters([
                     //

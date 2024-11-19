@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Support\Facades\Log;
 use VisualBuilder\ExportScheduler\Enums\DateRange;
 use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 
@@ -49,13 +48,13 @@ class ExportSchedule extends Model
      * @var array
      */
     protected $casts = [
-        'columns' => 'array',
-        'formats' => 'array',
-        'last_run_at' => 'datetime',
-        'enabled' => 'boolean',
+        'columns'                => 'array',
+        'formats'                => 'array',
+        'last_run_at'            => 'datetime',
+        'enabled'                => 'boolean',
         'last_successful_run_at' => 'datetime',
-        'date_range' => DateRange::class,
-        'schedule_frequency' => ScheduleFrequency::class,
+        'date_range'             => DateRange::class,
+        'schedule_frequency'     => ScheduleFrequency::class,
     ];
 
     public function owner(): MorphTo
@@ -105,7 +104,7 @@ class ExportSchedule extends Model
     {
         $baseTime = $this->getScheduleBaseTime();
 
-        if (! $baseTime) {
+        if (!$baseTime) {
             return null;
         }
 
@@ -171,8 +170,8 @@ class ExportSchedule extends Model
     protected function getNextMonthlyOrPeriodicRun(Carbon $nextDue, Carbon $now): Carbon
     {
         $monthsToAdd = match ($this->schedule_frequency) {
-            ScheduleFrequency::MONTHLY => 1,
-            ScheduleFrequency::QUARTERLY => 3,
+            ScheduleFrequency::MONTHLY     => 1,
+            ScheduleFrequency::QUARTERLY   => 3,
             ScheduleFrequency::HALF_YEARLY => 6,
         };
 
@@ -209,13 +208,18 @@ class ExportSchedule extends Model
 
     protected function getNextCronRunAt(): ?Carbon
     {
-        if (! $this->custom_cron_expression) {
+        if (!$this->custom_cron_expression) {
             return null;
         }
 
         $cron = new CronExpression($this->custom_cron_expression);
 
         return Carbon::instance($cron->getNextRunDate($this->last_run_at ?? 'now'));
+    }
+
+    public function willLogoutUser(): bool
+    {
+        return !$this->isForThisUser() && $this->isSyncQueue();
     }
 
     public function isForThisUser(): bool
@@ -229,13 +233,7 @@ class ExportSchedule extends Model
     {
         $export = new Export();
         $export->exporter = $this->exporter;
-        $exporter  = $export->getExporter([],[]);
+        $exporter = $export->getExporter([], []);
         return $exporter->getJobQueue() === 'sync' || (config('queue.default') === 'sync');
-    }
-
-    public function willLogoutUser(): bool
-    {
-
-        return !$this->isForThisUser() && $this->isSyncQueue();
     }
 }

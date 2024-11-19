@@ -2,29 +2,29 @@
 
 namespace VisualBuilder\ExportScheduler;
 
-    use Filament\Support\Assets\Asset;
-    use Illuminate\Filesystem\Filesystem;
-    use Spatie\LaravelPackageTools\Commands\InstallCommand;
-    use Spatie\LaravelPackageTools\Package;
-    use Spatie\LaravelPackageTools\PackageServiceProvider;
-    use VisualBuilder\ExportScheduler\Commands\ExportSchedulerCommand;
+use Filament\Support\Assets\Asset;
+use Illuminate\Filesystem\Filesystem;
+use Spatie\LaravelPackageTools\Commands\InstallCommand;
+use Spatie\LaravelPackageTools\Package;
+use Spatie\LaravelPackageTools\PackageServiceProvider;
+use VisualBuilder\ExportScheduler\Commands\ExportSchedulerCommand;
 
-    class ExportSchedulerServiceProvider extends PackageServiceProvider
+class ExportSchedulerServiceProvider extends PackageServiceProvider
+{
+    public static string $name = 'export-scheduler';
+
+    public static string $viewNamespace = 'export-scheduler';
+
+    public function configurePackage(Package $package): void
     {
-        public static string $name = 'export-scheduler';
-
-        public static string $viewNamespace = 'export-scheduler';
-
-        public function configurePackage(Package $package): void
-        {
-            /*
-             * This class is a Package Service Provider
-             *
-             * More info: https://github.com/spatie/laravel-package-tools
-             */
-            $package->name(static::$name)
-                ->hasViews('export-scheduler')
-                ->hasCommands($this->getCommands())
+        /*
+         * This class is a Package Service Provider
+         *
+         * More info: https://github.com/spatie/laravel-package-tools
+         */
+        $package->name(static::$name)
+            ->hasViews('export-scheduler')
+            ->hasCommands($this->getCommands())
             ->hasInstallCommand(function (InstallCommand $command) {
                 $command
                     ->publishConfigFile()
@@ -78,7 +78,7 @@ namespace VisualBuilder\ExportScheduler;
     {
         parent::packageRegistered();
 
-        $this->loadJsonTranslationsFrom(__DIR__ . '/../resources/lang/');
+        $this->loadJsonTranslationsFrom(__DIR__.'/../resources/lang/');
 
         // Bind the ExportScheduler class to the container
         $this->app->singleton(ExportScheduler::class, function () {
@@ -106,13 +106,13 @@ namespace VisualBuilder\ExportScheduler;
 
         // Handle Stubs
         if (app()->runningInConsole()) {
-            foreach (app(Filesystem::class)->files(__DIR__ . '/../stubs/') as $file) {
+            foreach (app(Filesystem::class)->files(__DIR__.'/../stubs/') as $file) {
                 $this->publishes([
                     $file->getRealPath() => base_path("stubs/filament-export-scheduler/{$file->getFilename()}"),
                 ], 'filament-export-scheduler-stubs');
             }
             $this->publishes([
-                __DIR__ . '/../database/seeders/ExportScheduleSeeder.php' => database_path('seeders/ExportScheduleSeeder.php'),
+                __DIR__.'/../database/seeders/ExportScheduleSeeder.php' => database_path('seeders/ExportScheduleSeeder.php'),
 
             ], 'filament-export-scheduler-seeds');
         }

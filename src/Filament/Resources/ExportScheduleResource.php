@@ -294,13 +294,12 @@ class ExportScheduleResource extends Resource
                 Tables\Actions\Action::make('run')
                     ->icon('heroicon-s-play')
                     ->color('success')
-                    ->requiresConfirmation(fn (ExportSchedule $record) => $record->willLogoutUser())
-                    ->modalHeading(fn (ExportSchedule $record) => $record->willLogoutUser()?"Run Export for other user.":false)
-                    ->modalDescription(fn(ExportSchedule $record) =>
-                            $record->willLogoutUser()
-                                    ?new HtmlString("<p style='line-height: 2'>".__('export-scheduler::scheduler.logout_warning')."</p>")
-                                    :false)
-                    ->modalSubmitActionLabel(fn(ExportSchedule $record) => $record->willLogoutUser()?'Run the Export':false)
+                    ->requiresConfirmation(fn(ExportSchedule $record) => $record->willLogoutUser())
+                    ->modalHeading(fn(ExportSchedule $record) => $record->willLogoutUser() ? "Run Export for other user." : false)
+                    ->modalDescription(fn(ExportSchedule $record) => $record->willLogoutUser()
+                        ? new HtmlString("<p style='line-height: 2'>".__('export-scheduler::scheduler.logout_warning')."</p>")
+                        : false)
+                    ->modalSubmitActionLabel(fn(ExportSchedule $record) => $record->willLogoutUser() ? 'Run the Export' : false)
                     ->modalFooterActionsAlignment(Alignment::End)
                     ->action(function ($record) {
                         $exporter = (new ScheduledExporter($record));

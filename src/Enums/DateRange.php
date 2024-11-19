@@ -23,16 +23,16 @@ enum DateRange: string implements HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::TODAY => __('export-scheduler::date_ranges.today'),
-            self::YESTERDAY => __('export-scheduler::date_ranges.yesterday'),
-            self::LAST_7_DAYS => __('export-scheduler::date_ranges.last_7_days'),
-            self::LAST_WEEK => __('export-scheduler::date_ranges.last_week'),
+            self::TODAY        => __('export-scheduler::date_ranges.today'),
+            self::YESTERDAY    => __('export-scheduler::date_ranges.yesterday'),
+            self::LAST_7_DAYS  => __('export-scheduler::date_ranges.last_7_days'),
+            self::LAST_WEEK    => __('export-scheduler::date_ranges.last_week'),
             self::LAST_30_DAYS => __('export-scheduler::date_ranges.last_30_days'),
-            self::LAST_MONTH => __('export-scheduler::date_ranges.last_month'),
-            self::THIS_MONTH => __('export-scheduler::date_ranges.this_month'),
+            self::LAST_MONTH   => __('export-scheduler::date_ranges.last_month'),
+            self::THIS_MONTH   => __('export-scheduler::date_ranges.this_month'),
             self::LAST_QUARTER => __('export-scheduler::date_ranges.last_quarter'),
-            self::THIS_YEAR => __('export-scheduler::date_ranges.this_year'),
-            self::LAST_YEAR => __('export-scheduler::date_ranges.last_year'),
+            self::THIS_YEAR    => __('export-scheduler::date_ranges.this_year'),
+            self::LAST_YEAR    => __('export-scheduler::date_ranges.last_year'),
             // Add more labels as needed
         };
     }
@@ -43,45 +43,45 @@ enum DateRange: string implements HasLabel
         $now = Carbon::now();
 
         return match ($this) {
-            self::TODAY => [
+            self::TODAY        => [
                 'start' => $now->copy()->startOfDay(),
-                'end' => $now->copy()->endOfDay(),
+                'end'   => $now->copy()->endOfDay(),
             ],
-            self::YESTERDAY => [
+            self::YESTERDAY    => [
                 'start' => $now->copy()->subDay()->startOfDay(),
-                'end' => $now->copy()->subDay()->endOfDay(),
+                'end'   => $now->copy()->subDay()->endOfDay(),
             ],
-            self::LAST_7_DAYS => [
+            self::LAST_7_DAYS  => [
                 'start' => $now->copy()->subDays(6)->startOfDay(),
-                'end' => $now->copy()->endOfDay(),
+                'end'   => $now->copy()->endOfDay(),
             ],
-            self::LAST_WEEK => [
+            self::LAST_WEEK    => [
                 'start' => $now->copy()->subWeek()->startOfWeek(),
-                'end' => $now->copy()->subWeek()->endOfWeek(),
+                'end'   => $now->copy()->subWeek()->endOfWeek(),
             ],
             self::LAST_30_DAYS => [
                 'start' => $now->copy()->subDays(29)->startOfDay(),
-                'end' => $now->copy()->endOfDay(),
+                'end'   => $now->copy()->endOfDay(),
             ],
-            self::LAST_MONTH => [
+            self::LAST_MONTH   => [
                 'start' => $now->copy()->subMonth()->startOfMonth(),
-                'end' => $now->copy()->subMonth()->endOfMonth(),
+                'end'   => $now->copy()->subMonth()->endOfMonth(),
             ],
-            self::THIS_MONTH => [
+            self::THIS_MONTH   => [
                 'start' => $now->copy()->startOfMonth(),
-                'end' => $now->copy()->endOfMonth(),
+                'end'   => $now->copy()->endOfMonth(),
             ],
             self::LAST_QUARTER => [
                 'start' => $now->copy()->subQuarter()->firstOfQuarter(),
-                'end' => $now->copy()->subQuarter()->lastOfQuarter(),
+                'end'   => $now->copy()->subQuarter()->lastOfQuarter(),
             ],
-            self::THIS_YEAR => [
+            self::THIS_YEAR    => [
                 'start' => $now->copy()->startOfYear(),
-                'end' => $now->copy()->endOfYear(),
+                'end'   => $now->copy()->endOfYear(),
             ],
-            self::LAST_YEAR => [
+            self::LAST_YEAR    => [
                 'start' => $now->copy()->subYear()->startOfYear(),
-                'end' => $now->copy()->subYear()->endOfYear(),
+                'end'   => $now->copy()->subYear()->endOfYear(),
             ],
 
         };

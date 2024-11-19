@@ -16,6 +16,7 @@ class ExportReady extends Mailable
 
     public $name;
     public $url;
+
     /**
      * Create a new message instance.
      *
@@ -33,9 +34,9 @@ class ExportReady extends Mailable
             ->to($this->exportSchedule->owner->email)
             ->view('export-scheduler::emails.export-ready')
             ->with([
-                'user' => $this->exportSchedule->owner,
-                'url'=> $this->url,
-                'export' => $this->export,
+                'user'           => $this->exportSchedule->owner,
+                'url'            => $this->url,
+                'export'         => $this->export,
                 'exportSchedule' => $this->exportSchedule
             ]);
     }

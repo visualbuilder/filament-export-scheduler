@@ -29,12 +29,12 @@ class ScheduledExporter
     {
     }
 
-    public function getTotalRows():int
+    public function getTotalRows(): int
     {
-        return $this->export?->total_rows??0;
+        return $this->export?->total_rows ?? 0;
     }
 
-    public function run():bool
+    public function run(): bool
     {
         return $this->init() && $this->runExporter();
     }
@@ -42,6 +42,7 @@ class ScheduledExporter
 
     /**
      * Create the export record and get the query results count
+     *
      * @return $this|null
      */
     protected function init()
@@ -103,61 +104,59 @@ class ScheduledExporter
 
     public function runExporter()
     {
-
         try {
+            $formats = $this->exportSchedule->formats;
+            $hasXlsx = in_array(ExportFormat::Xlsx, $formats);
+            $serializedQuery = EloquentSerializeFacade::serialize($this->query);
 
-        $formats = $this->exportSchedule->formats;
-        $hasXlsx = in_array(ExportFormat::Xlsx, $formats);
-        $serializedQuery = EloquentSerializeFacade::serialize($this->query);
+            /**
+             * Enhancement add connection and batchName to ExportSchedule
+             * Maybe not needed as can be set in the Exporter by a dev.
+             * Using queue on the exportSchedule model so we can easily k
+             */
+            $job = PrepareCsvExport::class;
+            $jobQueue = $this->exporterInstance->getJobQueue();
+            $jobConnection = $this->exporterInstance->getJobConnection();
+            $jobBatchName = $this->exporterInstance->getJobBatchName();
 
-        /**
-         * Enhancement add connection and batchName to ExportSchedule
-         * Maybe not needed as can be set in the Exporter by a dev.
-         * Using queue on the exportSchedule model so we can easily k
-         */
-        $job = PrepareCsvExport::class;
-        $jobQueue =  $this->exporterInstance->getJobQueue();
-        $jobConnection = $this->exporterInstance->getJobConnection();
-        $jobBatchName = $this->exporterInstance->getJobBatchName();
-
-        // We do not want to send the loaded user relationship to the queue in job payloads,
-        // in case it contains attributes that are not serializable, such as binary columns.
-        $this->export->unsetRelation('user');
+            // We do not want to send the loaded user relationship to the queue in job payloads,
+            // in case it contains attributes that are not serializable, such as binary columns.
+            $this->export->unsetRelation('user');
 
 
-        $makeCreateXlsxFileJob = fn(): CreateXlsxFile => app(CreateXlsxFile::class, [
-            'export'    => $this->export,
-            'columnMap' => $this->columnMap,
-            'options'   => $this->options,
-        ]);
-
-        Bus::chain([
-            // 1. Batch Job: Processes the export data (CSV).
-            Bus::batch([app($job, [
+            $makeCreateXlsxFileJob = fn(): CreateXlsxFile => app(CreateXlsxFile::class, [
                 'export'    => $this->export,
-                'query'     => $serializedQuery,
                 'columnMap' => $this->columnMap,
                 'options'   => $this->options,
-                'chunkSize' => 100,
-                'records'   => null,
-            ])])
-                ->when(filled($jobQueue), fn(PendingBatch $batch) => $batch->onQueue($jobQueue))
-                ->when(filled($jobConnection), fn(PendingBatch $batch) => $batch->onConnection($jobConnection))
-                ->when(filled($jobBatchName), fn(PendingBatch $batch) => $batch->name($jobBatchName))
-                ->allowFailures(),
+            ]);
 
-            // 2. Conditional Job: CreateXlsxFile if XLSX format is requested.
-            ...($hasXlsx ? [$makeCreateXlsxFileJob()] : []),
+            Bus::chain([
+                // 1. Batch Job: Processes the export data (CSV).
+                Bus::batch([app($job, [
+                    'export'    => $this->export,
+                    'query'     => $serializedQuery,
+                    'columnMap' => $this->columnMap,
+                    'options'   => $this->options,
+                    'chunkSize' => 100,
+                    'records'   => null,
+                ])])
+                    ->when(filled($jobQueue), fn(PendingBatch $batch) => $batch->onQueue($jobQueue))
+                    ->when(filled($jobConnection), fn(PendingBatch $batch) => $batch->onConnection($jobConnection))
+                    ->when(filled($jobBatchName), fn(PendingBatch $batch) => $batch->name($jobBatchName))
+                    ->allowFailures(),
 
-            // 3. ScheduledExportCompletion Job: Marks export as complete after all files are ready.
-            new ScheduledExportCompletion(
-                export: $this->export,
-                exportSchedule: $this->exportSchedule,
-            ),
-        ])
-            ->when(filled($jobQueue), fn(PendingChain $chain) => $chain->onQueue($jobQueue))
-            ->when(filled($jobConnection), fn(PendingChain $chain) => $chain->onConnection($jobConnection))
-            ->dispatch();
+                // 2. Conditional Job: CreateXlsxFile if XLSX format is requested.
+                ...($hasXlsx ? [$makeCreateXlsxFileJob()] : []),
+
+                // 3. ScheduledExportCompletion Job: Marks export as complete after all files are ready.
+                new ScheduledExportCompletion(
+                    export: $this->export,
+                    exportSchedule: $this->exportSchedule,
+                ),
+            ])
+                ->when(filled($jobQueue), fn(PendingChain $chain) => $chain->onQueue($jobQueue))
+                ->when(filled($jobConnection), fn(PendingChain $chain) => $chain->onConnection($jobConnection))
+                ->dispatch();
             return $this;
 
 

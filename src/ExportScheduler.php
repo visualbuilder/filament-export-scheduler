@@ -27,7 +27,7 @@ class ExportScheduler
             // Convert the namespace to a path relative to `app/`
             $path = app_path(str_replace('\\', DIRECTORY_SEPARATOR, Str::after($namespace, 'App\\')));
 
-            if (! is_dir($path)) {
+            if (!is_dir($path)) {
                 continue;
             }
 
@@ -45,13 +45,13 @@ class ExportScheduler
         $exporters = [];
 
         foreach (File::allFiles($directory) as $file) {
-            $className = $namespace . '\\' . Str::replaceLast('.php', '', $file->getRelativePathname());
+            $className = $namespace.'\\'.Str::replaceLast('.php', '', $file->getRelativePathname());
             $className = Str::replace(DIRECTORY_SEPARATOR, '\\', $className);
 
             // Ensure the class exists and is not abstract
-            if (class_exists($className) && ! (new ReflectionClass($className))->isAbstract()) {
+            if (class_exists($className) && !(new ReflectionClass($className))->isAbstract()) {
                 // Remove the base namespace but keep subdirectories in the label
-                $relativePath = Str::after($className, $namespace . '\\');
+                $relativePath = Str::after($className, $namespace.'\\');
                 $exporters[$className] = $relativePath;
             }
         }

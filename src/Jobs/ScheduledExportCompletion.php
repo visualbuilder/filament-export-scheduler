@@ -27,7 +27,8 @@ class ScheduledExportCompletion implements ShouldQueue
     public function __construct(
         protected Export $export,
         protected ExportSchedule $exportSchedule,
-    ) {}
+    ) {
+    }
 
     /**
      * Execute the job.
@@ -51,7 +52,7 @@ class ScheduledExportCompletion implements ShouldQueue
             } else {
                 // Log error if the notification class does not exist
                 Log::error('Notification class does not exist.  Check the config/export-scheduler.php to add a notification class.', [
-                    'class' => $notificationClass,
+                    'class'   => $notificationClass,
                     'user_id' => $this->export->user->id,
                 ]);
             }

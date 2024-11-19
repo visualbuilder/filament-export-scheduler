@@ -23,13 +23,13 @@ class User extends Authenticatable implements FilamentUser
 
     protected $table = 'users';
 
-    public function canAccessPanel(Panel $panel): bool
-    {
-        return true;
-    }
-
     protected static function newFactory(): UserFactory
     {
         return UserFactory::new();
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return true;
     }
 }

@@ -21,29 +21,29 @@ class ExportScheduleSeeder extends Seeder
     public function run()
     {
         ExportSchedule::create([
-            'name' => 'User Export',
-            'exporter' => UserExporter::class,
-            'schedule_frequency' => ScheduleFrequency::MONTHLY,
-            'formats' => [ExportFormat::Csv, ExportFormat::Xlsx],
-            'schedule_time' => '02:00:00',
+            'name'                  => 'User Export',
+            'exporter'              => UserExporter::class,
+            'schedule_frequency'    => ScheduleFrequency::MONTHLY,
+            'formats'               => [ExportFormat::Csv, ExportFormat::Xlsx],
+            'schedule_time'         => '02:00:00',
             'schedule_day_of_month' => 1,
-            'schedule_timezone' => 'Europe/London',
-            'date_range' => null,
-            'owner_id' => 1,
-            'owner_type' => User::class,
-            'columns' => json_encode([
+            'schedule_timezone'     => 'Europe/London',
+            'date_range'            => null,
+            'owner_id'              => 1,
+            'owner_type'            => User::class,
+            'columns'               => json_encode([
                 [
-                    'name' => 'id',
+                    'name'  => 'id',
                     'label' => 'ID',
                 ],
                 [
-                    'name' => 'email',
+                    'name'  => 'email',
                     'label' => 'Email',
                 ],
 
                 [
-                    'name' => 'created_at',
-                    'label' => 'Created At',
+                    'name'      => 'created_at',
+                    'label'     => 'Created At',
                     'formatter' => 'datetime',
                 ],
             ]),

@@ -262,7 +262,7 @@ class ExportScheduleResource extends Resource
                                 ->columns(2)
                                 ->columnSpanFull()
                                 ->schema([
-                                    TextInput::make('name')->required(),
+                                    TextInput::make('name')->required()->disabled(),
                                     TextInput::make('label'),
                                 ])->default(fn(Get $get) => $get('exporter') ? ColumnHelper::getDefaultColumns($get('exporter')) : []),
 

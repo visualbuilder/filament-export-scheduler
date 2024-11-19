@@ -16,7 +16,7 @@ return [
     'cron'                   => 'Custom Cron',
     'date_range'             => 'Date Range',
     'date_range_tooltip'     => 'Leave blank for all records.  Attribute will be created_at unless changed in the Exporter',
-    'date_range_label'       => 'Relative Date Range Query',
+    'date_range_placeholder' => 'Select a relative date range query. Blank for all records',
     'owner'                  => 'Recipient User',
     'custom_cron_expression' => 'Custom Cron Expression',
     'cron_example'           => 'e.g., 0 0 * * * (midnight daily)',

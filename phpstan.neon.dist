@@ -7,5 +7,5 @@ parameters:
     - config
     - database
   ignoreErrors:
-    - "#^Class App\\\\Models\\\\User not found$#"
+    - "#^\[ERROR\] Class App\\Models\\User not found$#"
   tmpDir: build/phpstan

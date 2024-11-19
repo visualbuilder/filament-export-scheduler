@@ -22,7 +22,7 @@ class ExportReady extends Mailable
      *
      * @return void
      */
-    public function __construct($notifiable, public Export $export, public ExportSchedule $exportSchedule)
+    public function __construct(public $notifiable, public Export $export, public ExportSchedule $exportSchedule)
     {
         $hasXlsx = in_array(ExportFormat::Xlsx, $exportSchedule->formats);
         $this->url = route('filament.exports.download', ['export' => $export, 'format' => $hasXlsx ? ExportFormat::Xlsx : ExportFormat::Csv]);
@@ -34,7 +34,7 @@ class ExportReady extends Mailable
             ->to($this->exportSchedule->owner->email)
             ->view('export-scheduler::emails.export-ready')
             ->with([
-                'user'           => $this->exportSchedule->owner,
+                'user'           => $this->notifiable,
                 'url'            => $this->url,
                 'export'         => $this->export,
                 'exportSchedule' => $this->exportSchedule

@@ -77,7 +77,7 @@ class ScheduledExporter
             $export->exporter = $exporter;
             $export->total_rows = $this->query->count();
             $export->file_disk = config('export-scheduler.file_disk');
-            $export->file_name = $this->generateFileName($this->exportSchedule);
+            $export->file_name = $this->generateFileName();
             $export->user()->associate($this->exportSchedule->owner);
             $export->save();
             $this->export = $export;

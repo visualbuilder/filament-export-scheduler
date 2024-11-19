@@ -43,6 +43,7 @@ use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
  * @property-read Carbon|null $next_due_at
  * @property-read Carbon|null $starts_at
  * @property-read string $starts_at_formatted
+ * @property-read Model|null $primaryContact
  * @method static Builder|ExportSchedule newModelQuery()
  * @method static Builder|ExportSchedule newQuery()
  * @method static Builder|ExportSchedule query()
@@ -95,6 +96,7 @@ class ExportSchedule extends Model
         'last_run_at',
         'last_successful_run_at',
         'enabled',
+        'cron'
     ];
 
     /**
@@ -263,11 +265,11 @@ class ExportSchedule extends Model
 
     protected function getNextCronRunAt(): ?Carbon
     {
-        if (!$this->custom_cron_expression) {
+        if (!$this->cron) {
             return null;
         }
 
-        $cron = new CronExpression($this->custom_cron_expression);
+        $cron = new CronExpression($this->cron);
 
         return Carbon::instance($cron->getNextRunDate($this->last_run_at ?? 'now'));
     }

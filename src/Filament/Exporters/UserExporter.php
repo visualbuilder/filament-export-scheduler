@@ -5,7 +5,7 @@ namespace VisualBuilder\ExportScheduler\Filament\Exporters;
 use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Exporter;
 use Filament\Actions\Exports\Models\Export;
-use VisualBuilder\ExportScheduler\Tests\Models\User;
+use App\Models\User;
 
 class UserExporter extends Exporter
 {

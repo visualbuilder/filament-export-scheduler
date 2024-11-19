@@ -43,7 +43,7 @@ use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
  * @property-read Carbon|null $next_due_at
  * @property-read Carbon|null $starts_at
  * @property-read string $starts_at_formatted
- * @property-read Model|null $primaryContact
+ * @property-read Model|null $owner
  * @method static Builder|ExportSchedule newModelQuery()
  * @method static Builder|ExportSchedule newQuery()
  * @method static Builder|ExportSchedule query()

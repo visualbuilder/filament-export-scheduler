@@ -1,10 +1,10 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Resources\ExportScheduleResource\Pages;
+namespace VisualBuilder\ExportScheduler\Filament\Resources\ExportScheduleResource\Pages;
 
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
-use VisualBuilder\ExportScheduler\Resources\ExportScheduleResource;
+use VisualBuilder\ExportScheduler\Filament\Resources\ExportScheduleResource;
 
 class EditExportSchedule extends EditRecord
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Resources;
+namespace VisualBuilder\ExportScheduler\Filament\Resources;
 
 use Closure;
 use Filament\Actions\Exports\Enums\ExportFormat;
@@ -23,8 +23,8 @@ use VisualBuilder\ExportScheduler\Enums\DateRange;
 use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 use VisualBuilder\ExportScheduler\ExportSchedulerPlugin;
 use VisualBuilder\ExportScheduler\Facades\ExportScheduler;
+use VisualBuilder\ExportScheduler\Filament\Resources\ExportScheduleResource\Pages;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
-use VisualBuilder\ExportScheduler\Resources\ExportScheduleResource\Pages;
 use VisualBuilder\ExportScheduler\Support\ColumnHelper;
 use VisualBuilder\ExportScheduler\Support\MorphToSelectHelper;
 

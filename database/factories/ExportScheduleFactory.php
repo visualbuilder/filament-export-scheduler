@@ -6,7 +6,7 @@ use Filament\Actions\Exports\Enums\ExportFormat;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use VisualBuilder\ExportScheduler\Enums\DateRange;
 use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
-use VisualBuilder\ExportScheduler\Exporters\UserExporter;
+use VisualBuilder\ExportScheduler\Filament\Exporters\UserExporter;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 use VisualBuilder\ExportScheduler\Tests\Models\User;
 

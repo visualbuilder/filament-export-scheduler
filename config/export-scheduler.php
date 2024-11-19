@@ -1,9 +1,8 @@
 <?php
 
-// config for VisualBuilder/ExportScheduler
+use VisualBuilder\ExportScheduler\Filament\Resources\ExportScheduleResource;
 use VisualBuilder\ExportScheduler\Mail\ExportReady;
 use VisualBuilder\ExportScheduler\Notifications\ScheduledExportCompleteNotification;
-use VisualBuilder\ExportScheduler\Resources\ExportScheduleResource;
 
 return [
 

@@ -9,9 +9,9 @@ class ExportFormatter
     public static function formatters(): array
     {
         return [
-            'date'          => [self::class, 'formatDate'],
-            'datetime'      => [self::class, 'formatDateTime'],
-            'currency'      => [self::class, 'formatCurrency'],
+            'date' => [self::class, 'formatDate'],
+            'datetime' => [self::class, 'formatDateTime'],
+            'currency' => [self::class, 'formatCurrency'],
             'sessionStatus' => [self::class, 'formatSessionStatus'],
             'invoiceStatus' => [self::class, 'formatInvoiceStatus'],
 
@@ -30,7 +30,7 @@ class ExportFormatter
 
     public static function formatCurrency($state)
     {
-        return '£'.number_format($state, 2);
+        return '£' . number_format($state, 2);
     }
 
     public static function formatSessionStatus($state)

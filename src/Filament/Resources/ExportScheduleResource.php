@@ -292,8 +292,8 @@ class ExportScheduleResource extends Resource
                                         ->color('success')
                                         ->icon('heroicon-o-plus')
                                         ->button()
-                                        ->after(function (ExportSchedule $record, $state, Get $get, Set $set,Component $component) {
-                                            $allColumns = $record->default_columns; // All default columns as a collection
+                                        ->after(function (?ExportSchedule $record, $state, Get $get, Set $set,Component $component) {
+                                            $allColumns = $record->default_columns??[]; // All default columns as a collection
                                             $currentSelectedColumns = $get('columns');
                                             $currentAvailableColumns = $state;
                                             $combinedCurrentColumns = collect($currentSelectedColumns)->merge($currentAvailableColumns)->pluck('name')->all();
@@ -310,7 +310,7 @@ class ExportScheduleResource extends Resource
                                         });
                                 })
                                 ->itemLabel(fn (array $state): ?string => $state['label'] ?? null)
-                                ->maxItems(fn(ExportSchedule $record) => $record->column_count??0)
+                                ->maxItems(fn(?ExportSchedule $record) => $record->column_count??0)
                                 ->addable(false),
 
 
@@ -325,9 +325,9 @@ class ExportScheduleResource extends Resource
                                         ->label('Remove')
                                         ->button(),
                                 )
-                                ->afterStateUpdated(function (ExportSchedule $record, $state, Get $get, Set $set ) {
+                                ->afterStateUpdated(function (?ExportSchedule $record, $state, Get $get, Set $set ) {
 
-                                    $allColumns = $record->default_columns;
+                                    $allColumns = $record->default_columns??[];
 
                                     $currentColumnNames = collect($state)->pluck('name')->all();
                                     $newAvailableColumns = $allColumns->reject(function ($column) use ($currentColumnNames) {
@@ -338,11 +338,11 @@ class ExportScheduleResource extends Resource
                                 })
                                 ->live()
                                 ->itemLabel(fn (array $state): ?string => $state['label'] ?? null)
-                                ->maxItems(fn(ExportSchedule $record) => $record->column_count??0)
+                                ->maxItems(fn(?ExportSchedule $record) => $record->column_count??0)
                                 ->schema([
                                     TextInput::make('name')->disabled(),
                                     TextInput::make('label'),
-                                ])->default(fn(ExportSchedule $record) => $record->default_columns),
+                                ])->default(fn(?ExportSchedule $record) => $record->default_columns),
                         ])->columns(4),
                 ])->persistTab()->persistTabInQueryString()
                     ->columnSpanFull(),

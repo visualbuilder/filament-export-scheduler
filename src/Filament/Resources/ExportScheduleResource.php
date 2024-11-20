@@ -3,8 +3,14 @@
 namespace VisualBuilder\ExportScheduler\Filament\Resources;
 
 use Closure;
+
 use Filament\Actions\Exports\Enums\ExportFormat;
+use Filament\Forms\Components\Actions\Action;
+use Filament\Forms\Components\Builder;
+use Filament\Forms\Components\Component;
 use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -23,6 +29,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Number;
+use Illuminate\Support\Str;
 use VisualBuilder\ExportScheduler\Enums\DateRange;
 use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 use VisualBuilder\ExportScheduler\ExportSchedulerPlugin;
@@ -97,17 +104,26 @@ class ExportScheduleResource extends Resource
                                 ->options(ExportScheduler::listExporters())
                                 ->native(false)
                                 ->reactive()
-                                ->afterStateUpdated(fn(callable $set, $state) => $set('columns', $state ? ColumnHelper::getDefaultColumns($state) : []))
+                                ->afterStateUpdated(function($record, $state,Set $set, $livewire) {
+                                    $record->update([
+                                        'exporter' => $state,
+                                        'columns'=>$record->default_columns,
+                                        'available_columns'=>[]
+                                    ]);
+                                    $set('columns', $record->default_columns->toArray());
+                                    $set('available_columns', []);
+
+                                })
                                 ->required(),
                         ])->columns(1)->columnSpan(1),
                         Grid::make()->schema([
-
                             MorphToSelectHelper::createMorphToSelect(
                                 label: __('export-scheduler::scheduler.owner')
                             ),
                         ])->columns(1)->columnSpan(1),
 
                     ])->columns(2),
+
                     Tabs\Tab::make('Schedule')->schema([
 
                         Section::make('When to Run')
@@ -254,20 +270,82 @@ class ExportScheduleResource extends Resource
                             ]),
 
                     ]),
+
                     Tabs\Tab::make('Columns')
+                        ->extraAttributes(['class'=>'column_picker'])
                         ->schema([
+
+                            Repeater::make('available_columns')
+                                ->schema([
+                                    Hidden::make('name'),
+                                    TextInput::make('label')->label(false)->disabled()->columnSpanFull()
+                                ])
+                                ->label(__('export-scheduler::scheduler.available_columns'))
+                                ->columns(2)
+                                ->columnSpan(1)
+                                ->collapsed()
+                                ->live()
+                                ->reorderable(false)
+                                ->deleteAction(function (Action $action, $get, $set, Component $component) {
+                                    return $action
+                                        ->label('Add')
+                                        ->color('success')
+                                        ->icon('heroicon-o-plus')
+                                        ->button()
+                                        ->after(function (ExportSchedule $record, $state, Get $get, Set $set,Component $component) {
+                                            $allColumns = $record->default_columns; // All default columns as a collection
+                                            $currentSelectedColumns = $get('columns');
+                                            $currentAvailableColumns = $state;
+                                            $combinedCurrentColumns = collect($currentSelectedColumns)->merge($currentAvailableColumns)->pluck('name')->all();
+                                            // Identify the deleted item by comparing with all columns
+                                            $deletedItem = $allColumns->reject(function ($column) use ($combinedCurrentColumns) {
+                                                return in_array($column['name'], $combinedCurrentColumns);
+                                            })->first();
+                                            if ($deletedItem) {
+                                                $deletedItemKey = (string) Str::uuid();
+                                                $newColumns = [$deletedItemKey => $deletedItem];
+                                                $updatedColumns =  $currentSelectedColumns + $newColumns;
+                                                $set('columns', $updatedColumns);
+                                            }
+                                        });
+                                })
+                                ->itemLabel(fn (array $state): ?string => $state['label'] ?? null)
+                                ->maxItems(fn(ExportSchedule $record) => $record->column_count??0)
+                                ->addable(false),
+
+
                             Repeater::make('columns')
                                 ->label(__('export-scheduler::scheduler.columns'))
-                                ->addable(false)
                                 ->columns(2)
-                                ->columnSpanFull()
-                                ->schema([
-                                    TextInput::make('name')->required()->disabled(),
-                                    TextInput::make('label'),
-                                ])->default(fn(Get $get) => $get('exporter') ? ColumnHelper::getDefaultColumns($get('exporter')) : []),
+                                ->columnSpan(3)
+                                ->addable(false)
+                                ->collapsed()
+                                ->deleteAction(
+                                    fn(Action $action) => $action
+                                        ->label('Remove')
+                                        ->button(),
+                                )
+                                ->afterStateUpdated(function (ExportSchedule $record, $state, Get $get, Set $set ) {
 
-                        ]),
-                ])->columnSpanFull(),
+                                    $allColumns = $record->default_columns;
+
+                                    $currentColumnNames = collect($state)->pluck('name')->all();
+                                    $newAvailableColumns = $allColumns->reject(function ($column) use ($currentColumnNames) {
+                                        return in_array($column['name'], $currentColumnNames);
+                                    });
+                                    $set('available_columns', $newAvailableColumns->values()->all());
+
+                                })
+                                ->live()
+                                ->itemLabel(fn (array $state): ?string => $state['label'] ?? null)
+                                ->maxItems(fn(ExportSchedule $record) => $record->column_count??0)
+                                ->schema([
+                                    TextInput::make('name')->disabled(),
+                                    TextInput::make('label'),
+                                ])->default(fn(ExportSchedule $record) => $record->default_columns),
+                        ])->columns(4),
+                ])->persistTab()->persistTabInQueryString()
+                    ->columnSpanFull(),
             ]);
     }
 
@@ -286,32 +364,29 @@ class ExportScheduleResource extends Resource
                 Tables\Columns\ToggleColumn::make('enabled')->label(__('export-scheduler::scheduler.enabled')),
 
             ])
-            ->filters([
-                //
-            ])
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\Action::make('run')
                     ->icon('heroicon-s-play')
                     ->color('success')
                     ->requiresConfirmation(fn(ExportSchedule $record) => $record->willLogoutUser())
-                    ->modalHeading(fn(ExportSchedule $record) => $record->willLogoutUser() ? "Run Export for other user." : false)
+                    ->modalHeading(fn(ExportSchedule $record) => $record->willLogoutUser() ? __("export-scheduler::scheduler.run_modal_heading") : false)
                     ->modalDescription(fn(ExportSchedule $record) => $record->willLogoutUser()
-                        ? new HtmlString("<p style='line-height: 2'>".__('export-scheduler::scheduler.logout_warning')."</p>")
+                        ? new HtmlString("<p style='line-height: 2'>" . __('export-scheduler::scheduler.logout_warning') . "</p>")
                         : false)
-                    ->modalSubmitActionLabel(fn(ExportSchedule $record) => $record->willLogoutUser() ? 'Run the Export' : false)
+                    ->modalSubmitActionLabel(fn(ExportSchedule $record) => $record->willLogoutUser() ? __('export-scheduler::scheduler.run_export') : false)
                     ->modalFooterActionsAlignment(Alignment::End)
                     ->action(function ($record) {
-                        $exporter = (new ScheduledExporter($record));
+                        $exporter = new ScheduledExporter($record);
                         $exporter->run();
                         Notification::make()
-                            ->title($record->name.' started')
+                            ->title(__('export-scheduler::scheduler.notification_title', ['name' => $record->name]))
                             ->body(trans_choice('export-scheduler::scheduler.started.body', $exporter->getTotalRows(), [
                                 'count' => Number::format($exporter->getTotalRows()),
                             ]))
                             ->success()
                             ->send();
-                    })
+                    }),
 
             ])
             ->bulkActions([

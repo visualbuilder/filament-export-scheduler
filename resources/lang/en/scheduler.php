@@ -5,7 +5,8 @@ return [
     'name_placeholder'       => 'eg My Monthly Sales Report',
     'exporter'               => 'Exporter',
     'exporter_hint'          => 'Choose from the defined Exporters',
-    'columns'                => 'Columns',
+    'columns'                => 'Columns to include in report',
+    'available_columns'      => 'Available Columns',
     'schedule_time'          => 'Schedule Time',
     'schedule_time_hint'     => 'How often should it run?',
     'schedule_day_of_week'   => 'Day of the Week',
@@ -26,6 +27,12 @@ return [
     'last_success'           => 'Last Successful Run',
     'next_due'               => 'Next Due',
     'enabled'                => 'Enabled',
+    'Last day of the month'  => 'Last day of the month',
+    'logout_warning'         => 'This export is for someone else and will be emailed to them. You will be logged out  if you run this export. To prevent this message change from the sync queue to database or other.',
+    'run_modal_heading'      => 'Run Export for Other User',
+    'run_export'             => 'Run the Export',
+    'notification_title'     => ':name started',
+
 
     // Additional translations for days of the week
     'Monday'                 => 'Monday',
@@ -50,8 +57,7 @@ return [
     'November'               => 'November',
     'December'               => 'December',
 
-    // Additional translation
-    'Last day of the month'  => 'Last day of the month',
+    //FileTypes
     'CSV'                    => 'CSV',
     'XLSX'                   => 'XLSX',
 
@@ -59,8 +65,6 @@ return [
         'title' => 'Export started',
         'body'  => 'The export has begun and 1 row will be processed in the background. An email notification with the download link will be sent to the owner when it is complete.|The export has begun and :count rows will be processed in the background. The owner will receive a notification with the download link when it is complete.',
     ],
-
-    'logout_warning' => 'This export is for someone else and will be emailed to them. You will be logged out  if you run this export. To prevent this message change from the sync queue to database or other.'
 
 
 ];

@@ -4,11 +4,14 @@ namespace VisualBuilder\ExportScheduler\Models;
 
 use Carbon\Carbon;
 use Cron\CronExpression;
+use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Models\Export;
+use http\Exception\InvalidArgumentException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Collection;
 use VisualBuilder\ExportScheduler\Enums\DateRange;
 use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 
@@ -82,6 +85,7 @@ class ExportSchedule extends Model
     protected $fillable = [
         'name',
         'columns',
+        'available_columns',
         'exporter',
         'date_range',
         'owner_id',
@@ -106,6 +110,7 @@ class ExportSchedule extends Model
      */
     protected $casts = [
         'columns'                => 'array',
+        'available_columns'      => 'array',
         'formats'                => 'array',
         'last_run_at'            => 'datetime',
         'enabled'                => 'boolean',
@@ -154,6 +159,47 @@ class ExportSchedule extends Model
         return $this->date_range->getLabel();
     }
 
+    public function getAvailableColumnsAttribute(): Collection
+    {
+        // Decode if $this->columns is stored as JSON
+        $columns = is_string($this->columns) ? json_decode($this->columns, true) : $this->columns;
+        $selectedNames = array_column($columns, 'name');
+
+        // Assuming $this->default_columns is properly set or calculated elsewhere in your model
+        $allColumns = $this->default_columns;
+
+        $unusedItems = $allColumns->reject(function ($column) use ($selectedNames) {
+            return in_array($column['name'], $selectedNames);
+        });
+
+
+        return $unusedItems;
+    }
+
+    public function getDefaultColumnsAttribute(): Collection
+    {
+        if (!class_exists($this->exporter)) {
+            throw new InvalidArgumentException("Exporter class {$this->importer} does not exist.");
+        }
+
+        if (!method_exists($this->exporter, 'getColumns')) {
+            throw new InvalidArgumentException("Exporter class {$this->importer} does not define a getColumns method.");
+        }
+
+        $columns = $this->exporter::getColumns();
+
+        return collect($columns)
+            ->filter(fn($column) => $column instanceof ExportColumn)// Ensure only ExportColumn instances
+            ->map(fn(ExportColumn $column) => [
+                'name'  => $column->getName(),
+                'label' => $column->getLabel() ?? $column->getName(),
+            ]);
+    }
+
+    public function getColumnCountAttribute(): int
+    {
+        return $this->getDefaultColumnsAttribute()->count();
+    }
     /**
      * Get the next due time for the schedule.
      */
@@ -276,10 +322,10 @@ class ExportSchedule extends Model
 
     public function willLogoutUser(): bool
     {
-        return !$this->isForThisUser() && $this->isSyncQueue();
+        return !$this->isCurrentUserOwner() && $this->isSyncQueue();
     }
 
-    public function isForThisUser(): bool
+    public function isCurrentUserOwner(): bool
     {
         return auth()->user()
             && auth()->id() == $this->owner->id

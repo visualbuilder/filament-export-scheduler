@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('name', 191);
             $table->string('exporter', 191); //The base Filament Exporter Class
             $table->json('columns');  //Allow user to choose which columns will be shown
+            $table->json('available_columns');
             $table->string('schedule_frequency');
             $table->time('schedule_time')->default('00:00:00');
             $table->string('cron', 191)->nullable();

@@ -107,10 +107,10 @@ class ExportScheduleResource extends Resource
                                 ->afterStateUpdated(function($record, $state,Set $set, $livewire) {
                                     $record->update([
                                         'exporter' => $state,
-                                        'columns'=>$record->default_columns,
+                                        'columns'=>$record->default_columns??[],
                                         'available_columns'=>[]
                                     ]);
-                                    $set('columns', $record->default_columns->toArray());
+                                    $set('columns', $record->default_columns->toArray()??[]);
                                     $set('available_columns', []);
 
                                 })
@@ -342,7 +342,7 @@ class ExportScheduleResource extends Resource
                                 ->schema([
                                     TextInput::make('name')->disabled(),
                                     TextInput::make('label'),
-                                ])->default(fn(?ExportSchedule $record) => $record->default_columns),
+                                ])->default(fn(?ExportSchedule $record) => $record->default_columns??[]),
                         ])->columns(4),
                 ])->persistTab()->persistTabInQueryString()
                     ->columnSpanFull(),

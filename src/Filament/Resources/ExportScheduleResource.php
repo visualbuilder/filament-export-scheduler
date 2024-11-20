@@ -104,12 +104,17 @@ class ExportScheduleResource extends Resource
                                 ->options(ExportScheduler::listExporters())
                                 ->native(false)
                                 ->reactive()
-                                ->afterStateUpdated(function($record, $state,Set $set, $livewire) {
-                                    $record->update([
-                                        'exporter' => $state,
-                                        'columns'=>$record->default_columns??[],
-                                        'available_columns'=>[]
-                                    ]);
+                                ->afterStateUpdated(function(?ExportSchedule $record, $state,Set $set, $livewire) {
+                                    if($record){
+                                        /** Update the column definitions when changing exporter
+                                         * But not when creating
+                                         */
+                                        $record->update([
+                                            'exporter' => $state,
+                                            'columns'=>$record->default_columns??[],
+                                            'available_columns'=>[]
+                                        ]);
+                                    }
                                     $set('columns', $record->default_columns->toArray()??[]);
                                     $set('available_columns', []);
 
@@ -286,13 +291,13 @@ class ExportScheduleResource extends Resource
                                 ->collapsed()
                                 ->live()
                                 ->reorderable(false)
-                                ->deleteAction(function (Action $action, $get, $set, Component $component) {
+                                ->deleteAction(function (Action $action) {
                                     return $action
                                         ->label('Add')
                                         ->color('success')
                                         ->icon('heroicon-o-plus')
                                         ->button()
-                                        ->after(function (?ExportSchedule $record, $state, Get $get, Set $set,Component $component) {
+                                        ->after(function (?ExportSchedule $record, $state, Get $get, Set $set) {
                                             $allColumns = $record->default_columns??[]; // All default columns as a collection
                                             $currentSelectedColumns = $get('columns');
                                             $currentAvailableColumns = $state;

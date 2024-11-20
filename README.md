@@ -7,6 +7,9 @@
 
 Email automated exports on a defined schedule - keep the management happy with timely reporting and minimise effort.
 
+![Export Schedules pack shot](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/social-card.jpg)
+
+
 ![List Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/index-page.png)
 
 Any Filament Exporter can be set to run on a schedule. Set in the config where to look for Exporters to populate the list

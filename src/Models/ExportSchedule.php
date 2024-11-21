@@ -165,7 +165,6 @@ class ExportSchedule extends Model
         $columns = is_string($this->columns) ? json_decode($this->columns, true) : $this->columns;
         $selectedNames = array_column($columns, 'name');
 
-        // Assuming $this->default_columns is properly set or calculated elsewhere in your model
         $allColumns = $this->default_columns;
 
         $unusedItems = $allColumns->reject(function ($column) use ($selectedNames) {
@@ -178,22 +177,27 @@ class ExportSchedule extends Model
 
     public function getDefaultColumnsAttribute(): Collection
     {
-        if (!class_exists($this->exporter)) {
-            throw new InvalidArgumentException("Exporter class {$this->importer} does not exist.");
+        return static::getDefaultColumnsForExporter($this->exporter);
+    }
+
+    public static function getDefaultColumnsForExporter(string $exporter): Collection
+    {
+        if (!class_exists($exporter)) {
+            throw new InvalidArgumentException("Exporter class {$exporter} does not exist.");
         }
 
-        if (!method_exists($this->exporter, 'getColumns')) {
-            throw new InvalidArgumentException("Exporter class {$this->importer} does not define a getColumns method.");
+        if (!method_exists($exporter, 'getColumns')) {
+            throw new InvalidArgumentException("Exporter class {$exporter} does not define a getColumns method.");
         }
 
-        $columns = $this->exporter::getColumns();
+        $columns = $exporter::getColumns();
 
         return collect($columns)
-            ->filter(fn($column) => $column instanceof ExportColumn)// Ensure only ExportColumn instances
-            ->map(fn(ExportColumn $column) => [
-                'name'  => $column->getName(),
-                'label' => $column->getLabel() ?? $column->getName(),
-            ]);
+                ->filter(fn($column) => $column instanceof ExportColumn) // Ensure only ExportColumn instances
+                ->map(fn(ExportColumn $column) => [
+                        'name'  => $column->getName(),
+                        'label' => $column->getLabel() ?? $column->getName(),
+                ]);
     }
 
     public function getColumnCountAttribute(): int

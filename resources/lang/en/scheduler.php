@@ -8,7 +8,7 @@ return [
     'columns'                           => 'Columns to include in report',
     'available_columns'                 => 'Available Columns',
     'schedule_time'                     => 'Schedule Time',
-    'schedule_time_hint'                => 'How often should it run?',
+    'schedule_time_hint'                => 'What time should it run?',
     'schedule_day_of_week'              => 'Day of the Week',
     'schedule_day_of_week_placeholder'  => 'On which day should it run?',
     'schedule_day_of_month'             => 'Day of the Month',

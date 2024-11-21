@@ -120,7 +120,6 @@ class ExportSchedule extends Model
         'schedule_day_of_month'  => 'integer',
         'schedule_month'         => Month::class,
         'schedule_start_month'   => Month::class,
-        'schedule_time'          => 'datetime',
         'date_range'             => DateRange::class,
         'schedule_frequency'     => ScheduleFrequency::class,
     ];

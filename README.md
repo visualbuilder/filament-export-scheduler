@@ -7,13 +7,13 @@
 
 Email automated exports on a defined schedule - keep the management happy with timely reporting and minimise effort.
 
-![Export Schedules pack shot](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/social-card.jpg)
+![Export Schedules pack shot](media/social-card.jpg)
 
 
-![List Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/index-page.png)
+![List Schedules](media/index-page.png)
 
 Any Filament Exporter can be set to run on a schedule. Set in the config where to look for Exporters to populate the list
-![Setup Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/edit-schedule-export.png)
+![Setup Schedules](media/edit-schedule-export.png)
 
 pick a frequency or add a custom cron for total flexibility.
 
@@ -25,7 +25,7 @@ pick a frequency or add a custom cron for total flexibility.
 * yearly
 * custom cron
 
-![Setup Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/edit-schedule.png)
+![Setup Schedules](media/edit-schedule.png)
 
 Set a relative date range for the query results:-
 (or leave blank for all rows)
@@ -41,11 +41,11 @@ Set a relative date range for the query results:-
 * this year
 * last year
 
-![Edit Columns](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/edit-columns.png)
+![Edit Columns](media/edit-columns.png)
 
 Hit save and forget it. An HTML email will be sent automatically on the schedule.
 Note that exports are bound to a specific user so there is no point in cc'ing other users, they won't have the right to download it.
-![Email](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/email-default.png)
+![Email](media/vb-email.png)
 
 
 

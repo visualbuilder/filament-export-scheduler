@@ -34,17 +34,31 @@ class ExportScheduler
             $exporters = array_merge($exporters, $this->getExportersFromDirectory($namespace, $path));
         }
 
-        // Format class names with spaces
-        return array_map(fn($class) => $this->formatClassName($class), $exporters);
+        // Format class names with spaces and include subdirectory prefixes
+        return array_map(function ($class) {
+            return $this->formatClassWithPrefix($class);
+        }, $exporters);
     }
 
-    protected function formatClassName(string $className): string
+    protected function formatClassWithPrefix(string $class): string
     {
-        // Extract the class name without the namespace
-        $className = class_basename($className);
+        // Extract the namespace and class name
+        $className = class_basename($class);
+        $namespace = trim(Str::beforeLast($class, '\\'), '\\');
 
-        // Add spaces between words in PascalCase
-        return preg_replace('/(?<!^)([A-Z])/', ' $1', $className);
+        // Convert the class name to a readable format with spaces
+        $formattedClassName = preg_replace('/(?<!^)([A-Z])/', ' $1', $className);
+
+        // Extract the subdirectory prefix from the namespace, relative to `App`
+        $prefix = Str::after($namespace, 'App\\');
+
+        // If there's no prefix (root level), return just the class name
+        if ($prefix === $className || empty($prefix)) {
+            return $formattedClassName;
+        }
+
+        // Otherwise, include the subdirectory prefix
+        return "{$prefix} - {$formattedClassName}";
     }
 
     /**

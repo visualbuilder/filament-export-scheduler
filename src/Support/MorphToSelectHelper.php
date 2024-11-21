@@ -25,6 +25,7 @@ class MorphToSelectHelper
             ->label($label)
             ->types($types)
             ->native($native)
+            ->required()
             ->searchable($searchable);
     }
 }

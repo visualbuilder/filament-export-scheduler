@@ -36,7 +36,6 @@ use VisualBuilder\ExportScheduler\Facades\ExportScheduler;
 use VisualBuilder\ExportScheduler\Filament\Resources\ExportScheduleResource\Pages;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 use VisualBuilder\ExportScheduler\Services\ScheduledExporter;
-use VisualBuilder\ExportScheduler\Support\ColumnHelper;
 use VisualBuilder\ExportScheduler\Support\MorphToSelectHelper;
 
 class ExportScheduleResource extends Resource

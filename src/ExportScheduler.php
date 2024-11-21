@@ -34,7 +34,17 @@ class ExportScheduler
             $exporters = array_merge($exporters, $this->getExportersFromDirectory($namespace, $path));
         }
 
-        return $exporters;
+        // Format class names with spaces
+        return array_map(fn($class) => $this->formatClassName($class), $exporters);
+    }
+
+    protected function formatClassName(string $className): string
+    {
+        // Extract the class name without the namespace
+        $className = class_basename($className);
+
+        // Add spaces between words in PascalCase
+        return preg_replace('/(?<!^)([A-Z])/', ' $1', $className);
     }
 
     /**

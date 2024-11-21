@@ -177,6 +177,21 @@ php artisan make:filament-exporter
 composer test
 ```
 
+To prove the integrity of the system the test suite creates these schedules and simulates running the tasks every day for 4 years to ensure leap years are handled correctly.
+
+| Test Name                       | Schedule Frequency | Cron Expression           | Expected Report Time                                               | Verification Method (Example)                                    |
+| ------------------------------ |--------------------| ------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------- |
+| User Export Daily                | DAILY              | N/A                      | Every day at 3:00 AM                                               | Check for a new file/email at 3:00 AM each simulated day.       |
+| User Export Weekly (Monday)      | WEEKLY             | N/A                      | Every Monday at 4:00 AM                                            | Check for a new file/email at 4:00 AM every Monday.               |
+| User Export Monthly (Day 15)      | MONTHLY            | N/A                      | The 15th day of every month at 5:00 AM                            | Check for a new file/email at 5:00 AM on the 15th of each month. |
+| User Export Monthly (Last Day)  | MONTHLY            | N/A                      | The last day of every month at 6:00 AM                           | Check for a new file/email at 6:00 AM on the last day of each month. |
+| User Export Yearly              | YEARLY             | N/A                      | January 1st of every year at 7:00 AM                           | Check for a new file/email at 7:00 AM on January 1st.         |
+| User Export Leap Year Test      | YEARLY            | N/A                      | February 29th (during leap years) at 10:00 AM       | Check for file/email on Feb 29th in leap years; verify handling in non-leap years. |
+| User Export Quarterly (Jan 10)   | QUARTERLY          | N/A                      | January 10th, April 10th, July 10th, October 10th at 8:00 AM  | Check for a new file/email on these dates at 8:00 AM.     |
+| User Export Half-Yearly (Jul 1) | HALF_YEARLY        | N/A                      | July 1st and January 1st of every year at 9:00 AM                 | Check for a new file/email on these dates at 9:00 AM.            |
+| User Export Weekdays 10:30 AM   | CRON               | `30 10 * * 1-5`          | Every weekday (Monday-Friday) at 10:30 AM                        | Check for a new file/email at 10:30 AM each weekday.           |
+| User Export Quarter Ends 2:00 AM | CRON               | `0 2 1 3,6,9,12 *`      | The 1st day of March, June, September, and December at 2:00 AM    | Check for a new file/email on these dates at 2:00 AM.            |
+
 ## Changelog
 
 Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.

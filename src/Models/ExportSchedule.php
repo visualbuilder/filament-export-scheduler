@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Collection;
 use VisualBuilder\ExportScheduler\Enums\DateRange;
+use VisualBuilder\ExportScheduler\Enums\DayOfWeek;
+use VisualBuilder\ExportScheduler\Enums\Month;
 use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 
 
@@ -27,7 +29,7 @@ use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
  * @property ScheduleFrequency $schedule_frequency
  * @property string $schedule_time
  * @property string|null $cron
- * @property string|null $schedule_day_of_week
+ * @property int|null $schedule_day_of_week
  * @property int|null $schedule_day_of_month
  * @property string|null $schedule_month
  * @property string $schedule_timezone
@@ -85,7 +87,6 @@ class ExportSchedule extends Model
     protected $fillable = [
         'name',
         'columns',
-        'available_columns',
         'exporter',
         'date_range',
         'owner_id',
@@ -112,9 +113,14 @@ class ExportSchedule extends Model
         'columns'                => 'array',
         'available_columns'      => 'array',
         'formats'                => 'array',
-        'last_run_at'            => 'datetime',
         'enabled'                => 'boolean',
+        'last_run_at'            => 'datetime',
         'last_successful_run_at' => 'datetime',
+        'schedule_day_of_week'   => DayOfWeek::class,
+        'schedule_day_of_month'  => 'integer',
+        'schedule_month'         => Month::class,
+        'schedule_start_month'   => Month::class,
+        'schedule_time'          => 'datetime',
         'date_range'             => DateRange::class,
         'schedule_frequency'     => ScheduleFrequency::class,
     ];
@@ -175,6 +181,11 @@ class ExportSchedule extends Model
         return $unusedItems;
     }
 
+    public function getColumnCountAttribute(): int
+    {
+        return $this->getDefaultColumnsAttribute()->count();
+    }
+
     public function getDefaultColumnsAttribute(): Collection
     {
         return static::getDefaultColumnsForExporter($this->exporter);
@@ -182,28 +193,18 @@ class ExportSchedule extends Model
 
     public static function getDefaultColumnsForExporter(string $exporter): Collection
     {
-        if (!class_exists($exporter)) {
-            throw new InvalidArgumentException("Exporter class {$exporter} does not exist.");
+        if (!class_exists($exporter) || !method_exists($exporter, 'getColumns')) {
+           return collect();
         }
 
-        if (!method_exists($exporter, 'getColumns')) {
-            throw new InvalidArgumentException("Exporter class {$exporter} does not define a getColumns method.");
-        }
-
-        $columns = $exporter::getColumns();
-
-        return collect($columns)
-                ->filter(fn($column) => $column instanceof ExportColumn) // Ensure only ExportColumn instances
-                ->map(fn(ExportColumn $column) => [
-                        'name'  => $column->getName(),
-                        'label' => $column->getLabel() ?? $column->getName(),
-                ]);
+        return collect($exporter::getColumns())
+            ->filter(fn($column) => $column instanceof ExportColumn) // Ensure only ExportColumn instances
+            ->map(fn(ExportColumn $column) => [
+                'name'  => $column->getName(),
+                'label' => $column->getLabel() ?? $column->getName(),
+            ]);
     }
 
-    public function getColumnCountAttribute(): int
-    {
-        return $this->getDefaultColumnsAttribute()->count();
-    }
     /**
      * Get the next due time for the schedule.
      */
@@ -267,8 +268,9 @@ class ExportSchedule extends Model
     protected function getNextWeeklyRun(Carbon $nextDue, Carbon $now): Carbon
     {
         return $now->greaterThanOrEqualTo($nextDue)
-            ? $nextDue->addWeek()->next($this->schedule_day_of_week)
-            : $nextDue->next($this->schedule_day_of_week);
+            ? $nextDue->addWeek()->next($this->schedule_day_of_week->value)
+            : $nextDue->next($this->schedule_day_of_week->value);
+
     }
 
     /**
@@ -282,9 +284,16 @@ class ExportSchedule extends Model
             ScheduleFrequency::HALF_YEARLY => 6,
         };
 
-        return $now->greaterThanOrEqualTo($nextDue)
-            ? $nextDue->addMonths($monthsToAdd)->day($this->schedule_day_of_month)
-            : $nextDue->day($this->schedule_day_of_month);
+        $startDay = $this->schedule_day_of_month ?? 1; // Default to 1st
+        $startMonth = $this->schedule_month ?? $this->schedule_start_month ?? 1; // Default to January (1)
+
+        $nextDue = $nextDue->setMonth($startMonth)->setDay($startDay);
+
+        while ($nextDue->lessThanOrEqualTo($now)) {
+            $nextDue->addMonths($monthsToAdd);
+        }
+
+        return $nextDue;
     }
 
     /**
@@ -292,25 +301,21 @@ class ExportSchedule extends Model
      */
     protected function getNextYearlyRun(Carbon $baseTime, Carbon $now): Carbon
     {
-        $month = is_numeric($this->schedule_month)
-            ? (int) $this->schedule_month
-            : Carbon::parse($this->schedule_month)->month;
+        $startMonth = $this->schedule_month ?? $this->schedule_start_month ?? 1; // Default to January
+        $startDay = $this->schedule_day_of_month ?? 1; // Default to 1st
 
         $nextDue = Carbon::create(
-            $now->year,
-            $month,
-            $this->schedule_day_of_month,
-            $baseTime->hour,
-            $baseTime->minute,
-            $baseTime->second,
-            $baseTime->timezone
+                $now->year,
+                $startMonth->value,
+                $startDay,
+                $baseTime->hour,
+                $baseTime->minute,
+                $baseTime->second,
+                $baseTime->timezone,
         );
 
-        if ($now->greaterThanOrEqualTo($nextDue)) {
-            $nextDue->addYear();
-        }
 
-        return $nextDue;
+        return $now->greaterThanOrEqualTo($nextDue) ? $nextDue->addYear() : $nextDue; // Simplified conditional
     }
 
     protected function getNextCronRunAt(): ?Carbon

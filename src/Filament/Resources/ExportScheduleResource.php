@@ -28,6 +28,8 @@ use Illuminate\Support\HtmlString;
 use Illuminate\Support\Number;
 use Illuminate\Support\Str;
 use VisualBuilder\ExportScheduler\Enums\DateRange;
+use VisualBuilder\ExportScheduler\Enums\DayOfWeek;
+use VisualBuilder\ExportScheduler\Enums\Month;
 use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 use VisualBuilder\ExportScheduler\ExportSchedulerPlugin;
 use VisualBuilder\ExportScheduler\Facades\ExportScheduler;
@@ -112,7 +114,6 @@ class ExportScheduleResource extends Resource
                                                                 $record->update([
                                                                         'exporter'          => $state,
                                                                         'columns'           => $defaultColumns ?? [],
-                                                                        'available_columns' => [],
                                                                 ]);
                                                             }
 
@@ -137,7 +138,7 @@ class ExportScheduleResource extends Resource
                                                                         ->placeholder(__('export-scheduler::scheduler.schedule_time_hint'))
                                                                         ->hintIcon('heroicon-m-question-mark-circle', tooltip: __('export-scheduler::scheduler.schedule_time_hint'))
                                                                         ->options(ScheduleFrequency::selectArray())
-                                                                        ->default(ScheduleFrequency::MONTHLY->value)
+
                                                                         ->required()
                                                                         ->native(false)
                                                                         ->reactive()
@@ -195,15 +196,7 @@ class ExportScheduleResource extends Resource
                                                         Select::make('schedule_day_of_week')
                                                                 ->label(__('export-scheduler::scheduler.schedule_day_of_week'))
                                                                 ->placeholder(__('export-scheduler::scheduler.schedule_day_of_week_placeholder'))
-                                                                ->options([
-                                                                        'Monday'    => __('Monday'),
-                                                                        'Tuesday'   => __('Tuesday'),
-                                                                        'Wednesday' => __('Wednesday'),
-                                                                        'Thursday'  => __('Thursday'),
-                                                                        'Friday'    => __('Friday'),
-                                                                        'Saturday'  => __('Saturday'),
-                                                                        'Sunday'    => __('Sunday'),
-                                                                ])
+                                                                ->options(DayOfWeek::class)
                                                                 ->native(false)
                                                                 ->nullable()
                                                                 ->visible(fn(Get $get) => $get('schedule_frequency') === ScheduleFrequency::WEEKLY->value)
@@ -219,39 +212,28 @@ class ExportScheduleResource extends Resource
                                                                 ))
                                                                 ->native(false)
                                                                 ->nullable()
-                                                                ->visible(fn(Get $get) => in_array(
-                                                                        $get('schedule_frequency'),
-                                                                        [ScheduleFrequency::MONTHLY->value, ScheduleFrequency::QUARTERLY->value, ScheduleFrequency::HALF_YEARLY->value,
-                                                                                ScheduleFrequency::YEARLY->value]
-                                                                ))
-                                                                ->required(fn(Get $get) => in_array(
-                                                                        $get('schedule_frequency'),
-                                                                        [ScheduleFrequency::MONTHLY->value, ScheduleFrequency::QUARTERLY->value, ScheduleFrequency::HALF_YEARLY->value,
-                                                                                ScheduleFrequency::YEARLY->value]
-                                                                ))
-                                                                ,
+                                                                ->visible(fn(Get $get) => self::isDayOfMonthFieldRequired($get))
+                                                                ->required(fn(Get $get) => self::isDayOfMonthFieldRequired($get)),
+
 
                                                         Select::make('schedule_month')
                                                                 ->label(__('export-scheduler::scheduler.schedule_month'))
                                                                 ->placeholder(__('export-scheduler::scheduler.schedule_month_placeholder'))
-                                                                ->options([
-                                                                        'January'   => __('January'),
-                                                                        'February'  => __('February'),
-                                                                        'March'     => __('March'),
-                                                                        'April'     => __('April'),
-                                                                        'May'       => __('May'),
-                                                                        'June'      => __('June'),
-                                                                        'July'      => __('July'),
-                                                                        'August'    => __('August'),
-                                                                        'September' => __('September'),
-                                                                        'October'   => __('October'),
-                                                                        'November'  => __('November'),
-                                                                        'December'  => __('December'),
-                                                                ])
+                                                                ->options(Month::class)
                                                                 ->native(false)
                                                                 ->nullable()
                                                                 ->visible(fn(Get $get) => $get('schedule_frequency') === ScheduleFrequency::YEARLY->value)
                                                                 ->required(fn(Get $get) => $get('schedule_frequency') === ScheduleFrequency::YEARLY->value),
+
+
+                                                    Select::make('schedule_start_month')
+                                                        ->label(__('export-scheduler::scheduler.schedule_start_month'))
+                                                        ->placeholder(__('export-scheduler::scheduler.schedule_start_month_placeholder'))
+                                                        ->options(Month::class)
+                                                        ->native(false)
+                                                        ->nullable()
+                                                        ->visible(fn(Get $get) => self::isStartDateRequired($get))
+                                                        ->required(fn(Get $get) => self::isStartDateRequired($get)),
 
                                                         Grid::make()
                                                                 ->schema([
@@ -307,8 +289,8 @@ class ExportScheduleResource extends Resource
                                         ->schema([
                                                 Repeater::make('available_columns')
                                                         ->schema([
-                                                                Hidden::make('name'),
-                                                                TextInput::make('label')->label(false)->disabled()->columnSpanFull()
+                                                                Hidden::make('name')->visible(false),
+                                                                TextInput::make('label')->label(false),
                                                         ])
                                                         ->label(__('export-scheduler::scheduler.available_columns'))
                                                         ->columns(2)
@@ -347,8 +329,15 @@ class ExportScheduleResource extends Resource
                                                         })
                                                         ->itemLabel(fn(array $state): ?string => $state['label'] ?? null)
                                                         ->maxItems(fn(Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->count() : 0)
-                                                        ->addable(false),
-
+                                                        ->addable(false)
+                                                        ->formatStateUsing(function(Get $get) {
+                                                            $allColumns = $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter')) : [];
+                                                            $currentColumnNames = collect($get('columns'))->pluck('name')->all();
+                                                            $availableColumns = $allColumns->reject(function ($column) use ($currentColumnNames) {
+                                                                return in_array($column['name'], $currentColumnNames);
+                                                            });
+                                                            return $availableColumns->toArray();
+                                                        }),
 
                                                 Repeater::make('columns')
                                                         ->label(__('export-scheduler::scheduler.columns'))
@@ -363,7 +352,6 @@ class ExportScheduleResource extends Resource
                                                         )
                                                         ->afterStateUpdated(function (?ExportSchedule $record, $state, Get $get, Set $set) {
                                                             $allColumns = $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter')) : [];
-
                                                             $currentColumnNames = collect($state)->pluck('name')->all();
                                                             $newAvailableColumns = $allColumns->reject(function ($column) use ($currentColumnNames) {
                                                                 return in_array($column['name'], $currentColumnNames);
@@ -375,9 +363,9 @@ class ExportScheduleResource extends Resource
                                                         ->itemLabel(fn(array $state): ?string => $state['label'] ?? null)
                                                         ->maxItems(fn(Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->count() : 0)
                                                         ->schema([
-                                                                TextInput::make('name')->disabled(),
+                                                                TextInput::make('name')->visible(false),
                                                                 TextInput::make('label'),
-                                                        ])->default(fn(Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter')) : []),
+                                                        ])->default(fn(Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->toArray() : []),
                                         ])->columns(4),
                         ])->persistTab()->persistTabInQueryString()
                                 ->columnSpanFull(),
@@ -438,5 +426,30 @@ class ExportScheduleResource extends Resource
                 'create' => Pages\CreateExportSchedule::route('/create'),
                 'edit'   => Pages\EditExportSchedule::route('/{record}/edit'),
         ];
+    }
+
+    public static function isDayOfMonthFieldRequired(Get $get): bool
+    {
+        return in_array(
+            $get('schedule_frequency'),
+            [
+                ScheduleFrequency::MONTHLY->value,
+                ScheduleFrequency::QUARTERLY->value,
+                ScheduleFrequency::HALF_YEARLY->value,
+                ScheduleFrequency::YEARLY->value,
+            ]
+        );
+    }
+
+    public static function isStartDateRequired(Get $get): bool
+    {
+        return in_array(
+                $get('schedule_frequency'),
+                [
+
+                        ScheduleFrequency::QUARTERLY->value,
+                        ScheduleFrequency::HALF_YEARLY->value,
+                ]
+        );
     }
 }

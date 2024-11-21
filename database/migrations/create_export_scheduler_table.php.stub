@@ -21,17 +21,15 @@ return new class extends Migration
             $table->string('schedule_frequency');
             $table->time('schedule_time')->default('00:00:00');
             $table->string('cron', 191)->nullable();
-            $table->string('schedule_day_of_week', 9)->nullable();
+            $table->unsignedTinyInteger('schedule_day_of_week')->nullable();
             $table->tinyInteger('schedule_day_of_month')->nullable(); // -1 for last day
-            $table->string('schedule_month', 9)->nullable();
+            $table->unsignedTinyInteger('schedule_month')->nullable();
             $table->string('schedule_timezone', 50)->default(config('app.timezone'));
-
+            $table->unsignedTinyInteger('schedule_start_month')->nullable(); // 1 for Jan, 12 for Dec
             $table->string('formats')->nullable();
             $table->string('date_range')->nullable(); //Relative date range to use for the query
-
             $table->nullableMorphs('owner');
             $table->boolean('enabled')->default(1);
-
             $table->timestamp('last_run_at')->nullable(); // Last time the export was attempted
             $table->timestamp('last_successful_run_at')->nullable();
             $table->timestamps();

@@ -331,7 +331,7 @@ class ExportScheduleResource extends Resource
                                                         ->maxItems(fn(Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->count() : 0)
                                                         ->addable(false)
                                                         ->formatStateUsing(function(Get $get) {
-                                                            $allColumns = $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter')) : [];
+                                                            $allColumns = ExportSchedule::getDefaultColumnsForExporter($get('exporter')??"");
                                                             $currentColumnNames = collect($get('columns'))->pluck('name')->all();
                                                             $availableColumns = $allColumns->reject(function ($column) use ($currentColumnNames) {
                                                                 return in_array($column['name'], $currentColumnNames);
@@ -351,7 +351,7 @@ class ExportScheduleResource extends Resource
                                                                         ->button(),
                                                         )
                                                         ->afterStateUpdated(function (?ExportSchedule $record, $state, Get $get, Set $set) {
-                                                            $allColumns = $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter')) : [];
+                                                            $allColumns = ExportSchedule::getDefaultColumnsForExporter($get('exporter')??"");
                                                             $currentColumnNames = collect($state)->pluck('name')->all();
                                                             $newAvailableColumns = $allColumns->reject(function ($column) use ($currentColumnNames) {
                                                                 return in_array($column['name'], $currentColumnNames);
@@ -365,7 +365,7 @@ class ExportScheduleResource extends Resource
                                                         ->schema([
                                                                 TextInput::make('name')->visible(false),
                                                                 TextInput::make('label'),
-                                                        ])->default(fn(Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->toArray() : []),
+                                                        ])->default(fn(Get $get) => ExportSchedule::getDefaultColumnsForExporter($get('exporter')??"")->toArray()),
                                         ])->columns(4),
                         ])->persistTab()->persistTabInQueryString()
                                 ->columnSpanFull(),

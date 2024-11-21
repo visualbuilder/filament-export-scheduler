@@ -16,7 +16,7 @@ return new class extends Migration
             $table->increments('id');
             $table->string('name', 191);
             $table->string('exporter', 191); //The base Filament Exporter Class
-            $table->json('columns'); // An array of columns to override the Exporter class columns
+            $table->json('columns')->nullable(); // An array of columns to override the Exporter class columns
             $table->string('schedule_frequency');
             $table->time('schedule_time')->default('00:00:00');
             $table->string('cron', 191)->nullable();

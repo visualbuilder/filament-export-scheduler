@@ -16,17 +16,19 @@ class ExportSchedulerCommand extends Command
 
     public function handle(): int
     {
+
         ExportSchedule::query()->enabled()->each(function (ExportSchedule $exportSchedule) {
+
             // Skip if the export is not due
             if (!$exportSchedule->next_due_at || now()->lessThan($exportSchedule->next_due_at)) {
                 $this->warn($exportSchedule->name.'next due at'.$exportSchedule->next_due_at);
-
                 return;
             }
 
             // Attempt to run the export
             try {
                 $this->info('Running '.$exportSchedule->name);
+
 
                 (new ScheduledExporter($exportSchedule))->run();
 

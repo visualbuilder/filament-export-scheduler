@@ -13,23 +13,18 @@ use Filament\Support\SupportServiceProvider;
 use Filament\Tables\TablesServiceProvider;
 use Filament\Widgets\WidgetsServiceProvider;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Config;
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 use RyanChandler\BladeCaptureDirective\BladeCaptureDirectiveServiceProvider;
 use VisualBuilder\ExportScheduler\ExportSchedulerServiceProvider;
+use VisualBuilder\ExportScheduler\Tests\Models\User;
 
 class TestCase extends Orchestra
 {
-    public function getEnvironmentSetUp($app)
-    {
-        config()->set('database.default', 'testing');
-
-        $migration = include __DIR__.'/../database/migrations/create_filament-export-scheduler_table.php.stub';
-        $migration->up();
-
-
-    }
-
+    use RefreshDatabase;
     protected function setUp(): void
     {
         parent::setUp();
@@ -37,6 +32,45 @@ class TestCase extends Orchestra
         Factory::guessFactoryNamesUsing(
             fn(string $modelName) => 'VisualBuilder\\ExportScheduler\\Database\\Factories\\'.class_basename($modelName).'Factory'
         );
+
+        $this->actingAs(
+            User::create(['email' => 'admin@domain.com', 'name' => 'Admin', 'password' => 'password'])
+        );
+
+    }
+
+    protected function defineDatabaseMigrations(): void
+    {
+        $this->loadLaravelMigrations();
+        $this->loadMigrationsFrom(__DIR__ . '/migrations');
+    }
+
+    public function getEnvironmentSetUp($app)
+    {
+        config()->set('database.default', 'testing');
+
+
+//        $migration = include __DIR__.'/../database/migrations/create_export_scheduler_table.php.stub';
+//        $migration->up();
+
+        // Retrieve the version of Laravel.
+        $laravelVersion = app()->version();
+
+        // Laravel 11 and higher
+        if (version_compare($laravelVersion, '11.0', '>=')) {
+            Artisan::call('make:queue-batches-table');
+            Artisan::call('make:notifications-table');
+        }
+        // Laravel 10
+        else if (version_compare($laravelVersion, '10.0', '>=')) {
+            Artisan::call('queue:batches-table');
+            Artisan::call('notifications:table');
+        }
+
+        Artisan::call('vendor:publish --tag=filament-actions-migrations');
+        Artisan::call('vendor:publish --tag=filament-notifications-migrations');
+
+
     }
 
     protected function getPackageProviders($app)
@@ -54,6 +88,7 @@ class TestCase extends Orchestra
             SupportServiceProvider::class,
             TablesServiceProvider::class,
             WidgetsServiceProvider::class,
+            AdminPanelProvider::class,
             ExportSchedulerServiceProvider::class,
         ];
     }

@@ -44,7 +44,6 @@ class ExportScheduleFactory extends Factory
                 ],
 
             ]),
-            'available_columns'      => json_encode([]),
             'schedule_frequency'     => $this->faker->randomElement(ScheduleFrequency::values()),
             'schedule_timezone'      => $this->faker->timezone,
             'date_range'             => $this->faker->randomElement(DateRange::values()),

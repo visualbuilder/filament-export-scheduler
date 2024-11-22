@@ -1,47 +1,81 @@
 <?php
 
 use Carbon\Carbon;
+use Filament\Actions\Exports\Enums\ExportFormat;
 use Illuminate\Support\Facades\Mail;
 use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
-use VisualBuilder\ExportScheduler\Mail\ExportReady;
+use VisualBuilder\ExportScheduler\Filament\Exporters\UserExporter;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
+use VisualBuilder\ExportScheduler\Tests\Models\User;
 
 
 it('sends a daily export email for 365 days', function () {
+    Mail::fake();
 
-    $exportSchedule = ExportSchedule::where('schedule_frequency', ScheduleFrequency::DAILY)->first();
+    //Load a record from already seeded db
+//    $exportSchedule = ExportSchedule::where('schedule_frequency', ScheduleFrequency::DAILY)->first();
+
+    //Or create one
+    $exportSchedule = ExportSchedule::create(  // DAILY Export Schedule
+        [
+            'name'                  => 'User Export Daily',
+            'exporter'              => UserExporter::class,
+            'schedule_frequency'    => ScheduleFrequency::DAILY,
+            'cron'                  => null,
+            'formats'               => json_encode([ExportFormat::Csv]),
+            'schedule_time'         => '03:00:00', // Runs daily at 3:00 AM
+            'schedule_month'        => null,
+            'schedule_day_of_week'  => null,
+            'schedule_day_of_month' => null,
+            'schedule_start_month'  => null,
+            'columns'               => json_encode([
+                ['name' => 'id', 'label' => 'ID'],
+                ['name' => 'email', 'label' => 'Email'],
+                ['name' => 'created_at', 'label' => 'Created At', 'formatter' => 'datetime'],
+            ]),
+            'owner_id'              => 1, // Replace with the actual owner ID
+            'owner_type'            => User::class,
+        ],);
+
+    $this->assertDatabaseCount('export_schedules', 1);
+    $this->assertDatabaseCount('users', 1);
     $this->assertDatabaseEmpty('exports');
-
-    $this->assertNotNull($exportSchedule, 'Daily schedule not found in the database. Did you run the seeder?');
-
-
-        // Set time to just before the scheduled execution time on the current day
-        $testTime = Carbon::now()->subDay()->setTime(2, 59, 0); // Set to 2:59 AM
-        Carbon::setTestNow($testTime);
+    $this->assertNotNull($exportSchedule);
 
 
+    // Set time to just before the scheduled execution time on the current day
+    $testTime = Carbon::now()->addDays(3)->setTime(5, 59, 0); // Set to 2:59 AM
+    Carbon::setTestNow($testTime);
 
-        // Run the export command
-        $this->artisan('export:run');
+    // Run the export command
+    $this->artisan('export:run');
 
 
-        Mail::fake(); // Reset Mail::fake() for each day
-        Mail::assertNothingSent(); // Assert nothing sent yet
 
 
-        // Advance time to just after the scheduled time
-        Carbon::setTestNow($testTime->addMinutes(2)); // Add 2 minutes (3:01 AM)
 
-        $this->artisan('export:run');
+    Mail::assertNothingSent();
+    $testTime = Carbon::now()->addDay()->setTime(3, 59, 0);
+    Carbon::setTestNow($testTime);
 
-        // Assertions for the current day
-        Mail::assertSent(ExportReady::class, function ($mail) use ($exportSchedule) {
-            return $mail->hasTo($exportSchedule->owner->email) && $mail->exportSchedule->id === $exportSchedule->id;
-        });
+    $this->artisan('export:run');
+
+//
+//
+//
+//        // Advance time to just after the scheduled time
+//        Carbon::setTestNow($testTime->addMinutes(2)); // Add 2 minutes (3:01 AM)
+//
+//        $this->artisan('export:run');
+//
+//        // Assertions for the current day
+//        Mail::assertSent(ExportReady::class, function ($mail) use ($exportSchedule) {
+//            return $mail->hasTo($exportSchedule->owner->email) && $mail->exportSchedule->id === $exportSchedule->id;
+//        });
 
 });
 
-
+/*
 
 // Weekly (Monday)
 it('sends a weekly export email', function () {

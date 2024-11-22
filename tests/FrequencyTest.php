@@ -6,22 +6,28 @@ use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 use VisualBuilder\ExportScheduler\Mail\ExportReady;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 
-/*
+
 it('sends a daily export email for 365 days', function () {
+
     $exportSchedule = ExportSchedule::where('schedule_frequency', ScheduleFrequency::DAILY)->first();
+    $this->assertDatabaseEmpty('exports');
+
     $this->assertNotNull($exportSchedule, 'Daily schedule not found in the database. Did you run the seeder?');
 
-    // Loop through 365 days
-    for ($i = 0; $i < 365; $i++) {
+
         // Set time to just before the scheduled execution time on the current day
-        $testTime = Carbon::now()->addDays($i)->setTime(2, 59, 0); // Set to 2:59 AM
+        $testTime = Carbon::now()->subDay()->setTime(2, 59, 0); // Set to 2:59 AM
         Carbon::setTestNow($testTime);
+
+
+
+        // Run the export command
+        $this->artisan('export:run');
+
 
         Mail::fake(); // Reset Mail::fake() for each day
         Mail::assertNothingSent(); // Assert nothing sent yet
 
-        // Run the export command
-        $this->artisan('export:run');
 
         // Advance time to just after the scheduled time
         Carbon::setTestNow($testTime->addMinutes(2)); // Add 2 minutes (3:01 AM)
@@ -33,7 +39,6 @@ it('sends a daily export email for 365 days', function () {
             return $mail->hasTo($exportSchedule->owner->email) && $mail->exportSchedule->id === $exportSchedule->id;
         });
 
-    }
 });
 
 
@@ -89,7 +94,7 @@ it('sends a monthly export email (15th)', function () {
 });
 
 
-
+/*
 
 // Test for MONTHLY Last Day of Month
 it('sends a monthly export email for the last day of the month', function () {

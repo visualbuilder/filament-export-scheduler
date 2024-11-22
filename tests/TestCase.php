@@ -42,7 +42,7 @@ class TestCase extends Orchestra
     protected function defineDatabaseMigrations(): void
     {
         $this->loadLaravelMigrations();
-        $this->loadMigrationsFrom(__DIR__ . '/migrations');
+//        $this->loadMigrationsFrom(__DIR__ . '/migrations');
     }
 
     public function getEnvironmentSetUp($app)
@@ -50,8 +50,8 @@ class TestCase extends Orchestra
         config()->set('database.default', 'testing');
 
 
-//        $migration = include __DIR__.'/../database/migrations/create_export_scheduler_table.php.stub';
-//        $migration->up();
+        $migration = include __DIR__.'/../database/migrations/create_export_scheduler_table.php.stub';
+        $migration->up();
 
         // Retrieve the version of Laravel.
         $laravelVersion = app()->version();

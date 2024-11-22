@@ -28,6 +28,7 @@ it('sends a daily export email for 365 days', function () {
             'schedule_day_of_week'  => null,
             'schedule_day_of_month' => null,
             'schedule_start_month'  => null,
+            'last_run_at'           => now()->subDay(),
             'columns'               => json_encode([
                 ['name' => 'id', 'label' => 'ID'],
                 ['name' => 'email', 'label' => 'Email'],
@@ -42,24 +43,20 @@ it('sends a daily export email for 365 days', function () {
     $this->assertDatabaseEmpty('exports');
     $this->assertNotNull($exportSchedule);
 
-
     // Set time to just before the scheduled execution time on the current day
-    $testTime = Carbon::now()->addDays(3)->setTime(5, 59, 0); // Set to 2:59 AM
+    $testTime = Carbon::now()->subDay()->setTime(2, 59, 0); // Set to 2:59 AM
     Carbon::setTestNow($testTime);
-
     // Run the export command
     $this->artisan('export:run');
-
-
-
-
-
+    $this->assertDatabaseEmpty('exports');
     Mail::assertNothingSent();
-    $testTime = Carbon::now()->addDay()->setTime(3, 59, 0);
-    Carbon::setTestNow($testTime);
 
+
+    $testTime = Carbon::now()->addDays(10)->setTime(3, 59, 0);
+    Carbon::setTestNow($testTime);
     $this->artisan('export:run');
 
+    $this->assertDatabaseCount('exports',1);
 //
 //
 //

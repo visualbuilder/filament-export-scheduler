@@ -26,6 +26,7 @@ class ScheduledExportCompletion implements ShouldQueue
     ) {
     }
 
+
     /**
      * Execute the job.
      */
@@ -43,6 +44,20 @@ class ScheduledExportCompletion implements ShouldQueue
             if (class_exists($notificationClass)) {
                 // The user can be notified
                 $this->export->user->notify(new $notificationClass($this->export, $this->exportSchedule));
+
+                // Clone the Export for each copied user
+                if($this->exportSchedule->cc && is_array($this->exportSchedule->cc)){
+                    foreach ($this->exportSchedule->cc as $userId){
+                        $copiedExport  = $this->export->replicate(['user_id']);
+                        $copiedExport->user_id = $userId;
+                        $copiedExport->save();
+                        $copiedExport->load('user');
+                        if($copiedExport->user){
+                            $copiedExport->user->notify(new $notificationClass($copiedExport, $this->exportSchedule));
+                        }
+
+                    }
+                }
 
             } else {
                 // Log error if the notification class does not exist

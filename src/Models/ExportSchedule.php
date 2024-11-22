@@ -101,7 +101,8 @@ class ExportSchedule extends Model
         'last_run_at',
         'last_successful_run_at',
         'enabled',
-        'cron'
+        'cron',
+        'cc'
     ];
 
     /**
@@ -113,6 +114,7 @@ class ExportSchedule extends Model
         'columns'                => 'array',
         'available_columns'      => 'array',
         'formats'                => 'array',
+        'cc'                     => 'array',
         'enabled'                => 'boolean',
         'last_run_at'            => 'datetime',
         'last_successful_run_at' => 'datetime',
@@ -120,6 +122,7 @@ class ExportSchedule extends Model
         'schedule_day_of_month'  => 'integer',
         'schedule_month'         => Month::class,
         'schedule_start_month'   => Month::class,
+
         'date_range'             => DateRange::class,
         'schedule_frequency'     => ScheduleFrequency::class,
     ];
@@ -166,18 +169,13 @@ class ExportSchedule extends Model
 
     public function getAvailableColumnsAttribute(): Collection
     {
-        // Decode if $this->columns is stored as JSON
         $columns = is_string($this->columns) ? json_decode($this->columns, true) : $this->columns;
         $selectedNames = array_column($columns, 'name');
 
-        $allColumns = $this->default_columns;
-
-        $unusedItems = $allColumns->reject(function ($column) use ($selectedNames) {
+        return $this->default_columns->reject(function ($column) use ($selectedNames) {
             return in_array($column['name'], $selectedNames);
         });
 
-
-        return $unusedItems;
     }
 
     public function getColumnCountAttribute(): int

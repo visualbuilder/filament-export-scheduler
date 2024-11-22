@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'name'                              => 'Schedule Name',
+    'name'                              => 'Report Name',
     'name_placeholder'                  => 'eg My Monthly Sales Report',
     'exporter'                          => 'Exporter',
     'exporter_hint'                     => 'Choose from the defined Exporters',
@@ -26,7 +26,11 @@ return [
     'date_range'             => 'Date Range',
     'date_range_tooltip'     => 'Leave blank for all records.  Attribute will be created_at unless changed in the Exporter',
     'date_range_placeholder' => 'Select a relative date range query. Blank for all records',
-    'owner'                  => 'Recipient User',
+    'owner'                  => 'Report Owner',
+    'cc'                     => 'Copy To Users',
+    'cc_add_label'           => 'Add Recipient',
+    'cc_placeholder'         => 'Search for an email address',
+    'cc_warning'             => 'To ensure data security reports are not sent as attachments.<br>All recipients must login to download the report.<br>The export will be run with permissions of the owner set above. <br><br>To prevent accidental breaches, you can only send to another :owner_type user.',
     'custom_cron_expression' => 'Custom Cron Expression',
     'cron_example'           => 'e.g., 0 0 * * * (midnight daily)',
     'schedule_frequency'     => 'Frequency',

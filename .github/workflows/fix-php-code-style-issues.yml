@@ -1,4 +1,4 @@
-name: "Fix PHP Code Styling"
+#name: "Fix PHP Code Styling"
 # Not sure I'm a fan of this auto committing and fucking up the styling. Just annoying.
 # TODO Research configurable options for pint
 

@@ -75,7 +75,7 @@ return [
 
     'started' => [
         'title' => 'Export started',
-        'body'  => 'The export has begun and 1 row will be processed in the background. An email notification with the download link will be sent to the owner when it is complete.|The export has begun and :count rows will be processed in the background. The owner will receive a notification with the download link when it is complete.',
+        'body'  => 'The export has begun processing :count rows in the background. An email notification with the download link will be sent to the owner when it is complete.|The export has begun processing :count rows in the background. An email notification with the download link will be sent to the owner and :cc_count others will receive a notification with the download link when it is complete.',
     ],
 
 

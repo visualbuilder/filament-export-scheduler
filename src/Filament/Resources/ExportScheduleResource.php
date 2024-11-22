@@ -2,32 +2,21 @@
 
 namespace VisualBuilder\ExportScheduler\Filament\Resources;
 
-use App\Models\EndUser;
-use Filament\Forms\Components\Fieldset;
+
 use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Placeholder;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Tabs;
-use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
-use Filament\Notifications\Notification;
 use Filament\Pages\SubNavigationPosition;
 use Filament\Resources\Resource;
-use Filament\Support\Enums\Alignment;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Support\HtmlString;
-use Illuminate\Support\Number;
-use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 use VisualBuilder\ExportScheduler\ExportSchedulerPlugin;
+use VisualBuilder\ExportScheduler\Filament\Actions\Tables\RunExport;
 use VisualBuilder\ExportScheduler\Filament\Forms\Fields;
 use VisualBuilder\ExportScheduler\Filament\Resources\ExportScheduleResource\Pages;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
-use VisualBuilder\ExportScheduler\Services\ScheduledExporter;
-use VisualBuilder\ExportScheduler\Support\MorphToSelectHelper;
 
 class ExportScheduleResource extends Resource
 {
@@ -79,57 +68,27 @@ class ExportScheduleResource extends Resource
             ->schema([
                 Tabs::make('tabs')->tabs([
                     Tabs\Tab::make('Exporter')->schema([
+
                         Grid::make()->schema([
                             Fields::name(),
                             Fields::exporter(),
                         ])->columns(1)->columnSpan(1),
+
                         Grid::make()->schema([
-                            MorphToSelectHelper::createMorphToSelect(
-                                label: __('export-scheduler::scheduler.owner')
-                            ),
+                            Fields::ownerMorphSelect(),
                         ])->columns(1)->columnSpan(1),
 
-                        Fieldset::make(__('export-scheduler::scheduler.cc'))
-                            ->schema([
-                                Placeholder::make('Data Security Warning')
-                                    ->content(fn(Get $get) =>new HtmlString( __('export-scheduler::scheduler.cc_warning',['owner_type'=>class_basename($get('owner_type'))]))),
-
-                                Repeater::make('cc')
-                                    ->label('')
-                                    ->addActionLabel(__('export-scheduler::scheduler.cc_add_label'))
-                                    ->simple(
-                                        Select::make('id')
-                                            ->label('User')
-                                            ->options(function ($get) {
-                                                $type = $get('../../owner_type');
-                                                $ownerId = $get('../../owner_id');
-                                                $ccItems = $get('../../cc');
-                                                $ccIds = [];
-                                                if (is_array($ccItems)) {
-                                                    $ccIds = collect($ccItems)->pluck('id')->toArray();
-                                                }
-                                                $excludeIds = array_filter(array_merge($ccIds, [$ownerId]));
-                                                return $type ? $type::query()->whereNotIn('id',$excludeIds)->pluck('email', 'id') : [];
-                                            }) ->getOptionLabelUsing(function($value, Get $get){
-                                                $type = $get('../../owner_type');
-                                                return $type ? $type::query()->find($value)?->email:"";
-                                            })
-                                            ->placeholder(__('export-scheduler::scheduler.cc_placeholder'))
-                                            ->searchable(),
-                                    )
-
-                            ])->visible(fn(Get $get) => $get('owner_id'))
+                        Fields::copyToUser()
 
                     ])->columns(2),
 
                     Tabs\Tab::make('Schedule')->schema([
                         Section::make('When to Run')
                             ->schema([
+
                                 Grid::make()->schema([
                                     Fields::scheduleFrequency(),
-                                    Toggle::make('enabled')
-                                        ->inline(false)
-                                        ->label(__('export-scheduler::scheduler.enabled')),
+                                    Fields::enableToggle()
                                 ])->columns(2),
 
                                 Grid::make()->schema([
@@ -168,22 +127,13 @@ class ExportScheduleResource extends Resource
                         ->columns(4)
                         ->visible(fn(Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->count() : false)
                         ->extraAttributes(['class' => 'column_picker'])
-                ])->persistTab()->persistTabInQueryString()
+
+                ])->persistTab()
+                    ->persistTabInQueryString()
                     ->columnSpanFull(),
             ]);
     }
 
-    public static function isStartDateRequired(Get $get): bool
-    {
-        return in_array(
-            $get('schedule_frequency'),
-            [
-
-                ScheduleFrequency::QUARTERLY->value,
-                ScheduleFrequency::HALF_YEARLY->value,
-            ]
-        );
-    }
 
     public static function table(Table $table): Table
     {
@@ -202,27 +152,7 @@ class ExportScheduleResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('run')
-                    ->icon('heroicon-s-play')
-                    ->color('success')
-                    ->requiresConfirmation(fn(ExportSchedule $record) => $record->willLogoutUser())
-                    ->modalHeading(fn(ExportSchedule $record) => $record->willLogoutUser() ? __("export-scheduler::scheduler.run_modal_heading") : false)
-                    ->modalDescription(fn(ExportSchedule $record) => $record->willLogoutUser()
-                        ? new HtmlString("<p style='line-height: 2'>".__('export-scheduler::scheduler.logout_warning')."</p>")
-                        : false)
-                    ->modalSubmitActionLabel(fn(ExportSchedule $record) => $record->willLogoutUser() ? __('export-scheduler::scheduler.run_export') : false)
-                    ->modalFooterActionsAlignment(Alignment::End)
-                    ->action(function ($record) {
-                        $exporter = new ScheduledExporter($record);
-                        $exporter->run();
-                        Notification::make()
-                            ->title(__('export-scheduler::scheduler.notification_title', ['name' => $record->name]))
-                            ->body(trans_choice('export-scheduler::scheduler.started.body', $exporter->getTotalRows(), [
-                                'count' => Number::format($exporter->getTotalRows()),
-                            ]))
-                            ->success()
-                            ->send();
-                    }),
+                RunExport::make('run'),
 
             ])
             ->bulkActions([
@@ -240,7 +170,6 @@ class ExportScheduleResource extends Resource
             'edit'   => Pages\EditExportSchedule::route('/{record}/edit'),
         ];
     }
-
 
 
 }

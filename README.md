@@ -13,7 +13,7 @@ Email automated exports on a defined schedule - keep the management happy with t
 ![List Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/index-page.png)
 
 Any Filament Exporter can be set to run on a schedule. Set in the config where to look for Exporters to populate the list
-![Setup Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/edit-schedule-export.png)
+![Setup Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/edit-export.png)
 
 pick a frequency or add a custom cron for total flexibility.
 
@@ -45,9 +45,7 @@ Set a relative date range for the query results:-
 
 Hit save and forget it. An HTML email will be sent automatically on the schedule.
 Note that exports are bound to a specific user so there is no point in cc'ing other users, they won't have the right to download it.
-![Email](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/email-default.png)
-
-
+![Email](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/vb-email.png)
 
 
 ## Installation
@@ -58,7 +56,7 @@ You can install the package via composer:
 composer require visualbuilder/filament-export-scheduler
 ```
 
-Quick install views and migrations
+Copy views and migrations, run the migration
 
 ```bash
 php artisan export-scheduler:install

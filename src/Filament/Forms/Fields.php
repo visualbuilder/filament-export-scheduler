@@ -1,15 +1,18 @@
 <?php
 
 namespace VisualBuilder\ExportScheduler\Filament\Forms;
-
+use Closure;
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Forms\Components\Actions\Action;
+use Filament\Forms\Components\Fieldset;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\MorphToSelect;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Illuminate\Support\HtmlString;
@@ -112,7 +115,7 @@ class Fields
             ->hintColor('info')
             ->placeholder("eg 0 0 * * 0 ")
             ->rules([
-                fn(): Closure => function (string $attribute, $value, \Closure $fail) {
+                fn(): Closure => function (string $attribute, $value, Closure $fail) {
                     if (!ExportScheduler::isValidCronExpression($value)) {
                         $fail(__('Invalid cron expression'));
                     }
@@ -343,6 +346,85 @@ class Fields
                 });
                 return $availableColumns->toArray();
             });
+    }
+
+
+    /**
+     * @return Toggle|string|null
+     */
+    public static function enableToggle(): Toggle
+    {
+        return Toggle::make('enabled')
+            ->inline(false)
+            ->label(__('export-scheduler::scheduler.enabled'));
+    }
+
+    public static function copyToUser(): Fieldset
+    {
+        return Fieldset::make(__('export-scheduler::scheduler.cc'))
+            ->schema(
+                self::copyToUserFields()
+            )
+            ->visible(fn(Get $get) => $get('owner_id'));
+    }
+
+
+    public static function copyToUserFields():array
+    {
+        return [
+
+            Placeholder::make('Data Security Warning')
+            ->content(fn(Get $get) => new HtmlString(__('export-scheduler::scheduler.cc_warning', ['owner_type' => class_basename($get('owner_type'))]))),
+
+            Repeater::make('cc')
+                ->label('')
+                ->addActionLabel(__('export-scheduler::scheduler.cc_add_label'))
+                ->simple(
+                    self::selectCopyToUser()
+                )];
+    }
+
+    public static function selectCopyToUser(): Select
+    {
+        return Select::make('id')
+            ->label('User')
+            ->options(function ($get) {
+                $type = $get('../../owner_type');
+                $ownerId = $get('../../owner_id');
+                $ccItems = $get('../../cc');
+                $ccIds = [];
+                if (is_array($ccItems)) {
+                    $ccIds = collect($ccItems)->pluck('id')->toArray();
+                }
+                $excludeIds = array_filter(array_merge($ccIds, [$ownerId]));
+                return $type ? $type::query()->whereNotIn('id', $excludeIds)->pluck('email', 'id') : [];
+            })->getOptionLabelUsing(function ($value, Get $get) {
+                $type = $get('../../owner_type');
+                return $type ? $type::query()->find($value)?->email : "";
+            })
+            ->placeholder(__('export-scheduler::scheduler.cc_placeholder'))
+            ->searchable();
+    }
+
+    public static function ownerMorphSelect( string $fieldName = 'owner', bool $native = false, bool $searchable = true): MorphToSelect
+    {
+        $userModels = config('export-scheduler.user_models', []);
+
+        $types = [];
+        foreach ($userModels as $userModel) {
+            if (is_array($userModel) && isset($userModel['model'], $userModel['title_attribute'])) {
+                $types[] = MorphToSelect\Type::make($userModel['model'])
+                    ->titleAttribute($userModel['title_attribute']);
+            }
+        }
+
+        return MorphToSelect::make($fieldName)
+            ->label( __('export-scheduler::scheduler.owner'))
+            ->types($types)
+            ->native($native)
+            ->required()
+            ->live()
+            ->searchable($searchable);
     }
 
 

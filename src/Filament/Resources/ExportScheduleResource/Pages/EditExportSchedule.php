@@ -4,6 +4,7 @@ namespace VisualBuilder\ExportScheduler\Filament\Resources\ExportScheduleResourc
 
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
+use VisualBuilder\ExportScheduler\Filament\Actions\RunExport;
 use VisualBuilder\ExportScheduler\Filament\Resources\ExportScheduleResource;
 
 class EditExportSchedule extends EditRecord
@@ -14,6 +15,8 @@ class EditExportSchedule extends EditRecord
     {
         return [
             Actions\DeleteAction::make(),
+            RunExport::make('run export'),
+
         ];
     }
 

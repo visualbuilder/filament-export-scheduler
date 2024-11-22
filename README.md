@@ -15,7 +15,7 @@ Email automated exports on a defined schedule - keep the management happy with t
 
 ## Any Filament Exporter can be used as the starting point
 
-- Exporters will be discovered in App\Filament\Exporters or add more locations in the config
+- Exporters will be discovered in ```App\Filament\Exporters``` or add more locations in the config
 - Send Exports to other users
 - To ensure data security only system users can receive reports
 
@@ -51,13 +51,19 @@ Email automated exports on a defined schedule - keep the management happy with t
   - last year
 - Custom date field if not created_at can be set in the Exporter
 
+## Users can choose which columns to include
+
+- Currently all columns must be defined in the exporter
+- Maybe will add ability to add user definable columns
+- All Column Formatting options set in the exporter
+
 ![Edit Columns](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/edit-columns.png)
 
 ## Attractive HTML Email templates
 
  - Default HTML email template included
  - Or works well with [Visual Builder Email Templates](https://github.com/visualbuilder/email-templates "Other Free Package")  - if you want user editable emails
- - Custom Report Builder and Templates coming soon
+ - Custom Report Builder and Templates coming soon 
 
 ![Email](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/vb-email.png)
 
@@ -106,7 +112,14 @@ Ensure your server is set up to run Laravel's scheduler by adding this cron entr
 * * * * * cd /path-to-your-project && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-## Review the config file
+### 3. Review the config file
+
+Here you can 
+- override the resource page
+- customise the navigation menu
+- set the disk to be used
+- customise which notification and email template is used
+- set which user classes can receive reports 
 
 ```php
 return [

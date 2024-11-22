@@ -9,14 +9,20 @@ Email automated exports on a defined schedule - keep the management happy with t
 
 ![Export Schedules pack shot](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/social-card.jpg)
 
-Empower users to create their own reports
+## Empower users to create their own reports
 
 ![List Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/reports-index.png)
 
-Any Filament Exporter can be set to run on a schedule. Set in the config where to look for Exporters to populate the list
+## Any Filament Exporter to run on a schedule. 
+
+- Exporters will be discovered in App\Filament\Exporters
+- Copy Reports to other users
+- To ensure data security only system users can receive reports
+
 ![Setup Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/edit-export.png)
 
-pick a frequency or add a custom cron for total flexibility.
+
+- Prefined Schedule Frequencies
 
 * daily
 * weekly
@@ -24,28 +30,36 @@ pick a frequency or add a custom cron for total flexibility.
 * quarterly
 * half yearly
 * yearly
-* custom cron
 
-![Setup Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/edit-schedule.png)
+- Custom Cron for non standard schedules
 
-Set a relative date range for the query results:-
-(or leave blank for all rows)
+![Setup Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/cron.png)
 
-* today
-* yesterday
-* last 7 days
-* last week
-* last 30 days
-* last month
-* this month
-* last quarter
-* this year
-* last year
+
+## Customise query date range
+
+- Choose from preset query ranges
+  - today
+  - yesterday
+  - last 7 days
+  - last week
+  - last 30 days
+  - last month
+  - this month
+  - last quarter
+  - this year
+  - last year
+
+Custom date field if not created_at can be set in the Exporter
 
 ![Edit Columns](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/edit-columns.png)
 
-Hit save and forget it. An HTML email will be sent automatically on the schedule.
-Note that exports are bound to a specific user so there is no point in cc'ing other users, they won't have the right to download it.
+## Attractive HTML Email templates
+
+ - Default HTML email template included
+ - Or works well with [Visual Builder Email Templates](https://github.com/visualbuilder/email-templates "Other Free Package")  - if you want user editable emails
+ - Custom Report Builder and Templates coming soon
+
 ![Email](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/vb-email.png)
 
 

@@ -35,8 +35,9 @@ trait RunExportTrait
         $exporter->run();
         Notification::make()
             ->title(__('export-scheduler::scheduler.notification_title', ['name' => $record->name]))
-            ->body(trans_choice('export-scheduler::scheduler.started.body', $exporter->getTotalRows(), [
+            ->body(trans_choice('export-scheduler::scheduler.started.body',  is_array($record->cc_count) ? count($record->cc_count) : 0, [
                 'count' => Number::format($exporter->getTotalRows()),
+                'cc_count' => is_array($record->cc_count) ? count($record->cc_count) : 0,
             ]))
             ->success()
             ->send();

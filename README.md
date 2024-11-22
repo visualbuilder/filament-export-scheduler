@@ -13,30 +13,30 @@ Email automated exports on a defined schedule - keep the management happy with t
 
 ![List Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/reports-index.png)
 
-## Any Filament Exporter to run on a schedule. 
+## Any Filament Exporter can be used as the starting point
 
-- Exporters will be discovered in App\Filament\Exporters
-- Copy Reports to other users
+- Exporters will be discovered in App\Filament\Exporters or add more locations in the config
+- Send Exports to other users
 - To ensure data security only system users can receive reports
 
 ![Setup Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/edit-export.png)
 
 
-- Prefined Schedule Frequencies
+## Easy Frequency Selection
 
-* daily
-* weekly
-* monthly
-* quarterly
-* half yearly
-* yearly
-
-- Custom Cron for non standard schedules
+- Choose from preset frequencies
+  - daily
+  - weekly
+  - monthly
+  - quarterly
+  - half yearly
+  - yearly
+- Or use a custom Cron for non standard schedules
 
 ![Setup Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/cron.png)
 
 
-## Customise query date range
+## Customise query data range
 
 - Choose from preset query ranges
   - today
@@ -49,8 +49,7 @@ Email automated exports on a defined schedule - keep the management happy with t
   - last quarter
   - this year
   - last year
-
-Custom date field if not created_at can be set in the Exporter
+- Custom date field if not created_at can be set in the Exporter
 
 ![Edit Columns](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/edit-columns.png)
 

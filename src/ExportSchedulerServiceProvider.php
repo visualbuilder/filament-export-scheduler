@@ -117,6 +117,10 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
             ], 'filament-export-scheduler-seeds');
         }
 
+        if(app()->environment('testing')) {
+            $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');
+        }
+
     }
 
     protected function getAssetPackageName(): ?string

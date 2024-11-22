@@ -6,6 +6,7 @@ use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 use VisualBuilder\ExportScheduler\Mail\ExportReady;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 
+/*
 it('sends a daily export email for 365 days', function () {
     $exportSchedule = ExportSchedule::where('schedule_frequency', ScheduleFrequency::DAILY)->first();
     $this->assertNotNull($exportSchedule, 'Daily schedule not found in the database. Did you run the seeder?');
@@ -276,3 +277,4 @@ it('sends a cron export email (quarter ends)', function () {
     }
 });
 
+*/

@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use VisualBuilder\ExportScheduler\Jobs\ScheduledExportCompletion;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
+use VisualBuilder\ExportScheduler\Tests\Models\User;
 
 class ScheduledExporter
 {
@@ -71,7 +72,6 @@ class ScheduledExporter
 
             // Prepare options if needed
             $this->options = [];
-
             // Create Export instance
             $export = new Export;
             $export->exporter = $exporter;

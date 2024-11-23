@@ -47,6 +47,7 @@ CREATE TABLE `exports` (
   `total_rows` int unsigned NOT NULL,
   `successful_rows` int unsigned NOT NULL DEFAULT '0',
   `user_id` bigint unsigned NOT NULL,
+  `user_type` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),

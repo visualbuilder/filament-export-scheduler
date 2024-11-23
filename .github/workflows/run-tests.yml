@@ -38,7 +38,6 @@ jobs:
             sudo /etc/init.d/mysql start
             mysql -e "CREATE DATABASE IF NOT EXISTS $DB_DATABASE;" -u$DB_USER -p$DB_PASSWORD
 
-
       -   name: Setup PHP
           uses: shivammathur/setup-php@v2
           with:
@@ -50,6 +49,7 @@ jobs:
           run: |
             composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" "filament/filament:${{ matrix.filament }}" --no-interaction --no-update
             composer update --${{ matrix.stability }} --prefer-dist --no-interaction
+            artisan migrate:fresh --seed
 
       -   name: Setup Problem Matches
           run: |
@@ -57,4 +57,4 @@ jobs:
             echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
 
       -   name: Execute tests
-          run: vendor/bin/pest
+          run:  composer test

@@ -20,11 +20,14 @@ class ExportScheduleSeeder extends Seeder
      */
     public function run()
     {
+
+
         DB::table('export_schedules')->insert($this->getData());
     }
 
     public function getData()
     {
+        $user = User::create(['email' => 'user@domain.com', 'name' => 'Admin', 'password' => 'password']);
         return [
             // DAILY Export Schedule
             [
@@ -45,7 +48,7 @@ class ExportScheduleSeeder extends Seeder
                     ['name' => 'email', 'label' => 'Email'],
                     ['name' => 'created_at', 'label' => 'Created At', 'formatter' => 'datetime'],
                 ]),
-                'owner_id'              => 1, // Replace with the actual owner ID
+                'owner_id'              => $user->id,
                 'owner_type'            => User::class,
             ],
 

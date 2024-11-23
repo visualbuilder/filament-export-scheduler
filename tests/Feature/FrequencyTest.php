@@ -2,6 +2,7 @@
 
 use Carbon\Carbon;
 use Filament\Actions\Exports\Enums\ExportFormat;
+use Filament\Actions\Exports\Models\Export;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
@@ -12,38 +13,42 @@ use VisualBuilder\ExportScheduler\Notifications\ScheduledExportCompleteNotificat
 use VisualBuilder\ExportScheduler\Tests\Models\User;
 
 
-
-
-
-it('sends a daily export email for 365 days', function () {
+beforeEach(function () {
     Notification::fake();
     Mail::fake();
+});
 
-    $exportSchedule = ExportSchedule::where('schedule_frequency', ScheduleFrequency::DAILY)->first();
 
+it('Does not send a daily export email before 3pm for 365 days', function () {
     // Set time to just before the scheduled execution time on the current day
     $testTime = Carbon::now()->setTime(2, 59, 0); // Set to 2:59 AM
     Carbon::setTestNow($testTime);
     // Run the export command
     $this->artisan('export:run');
     $this->assertDatabaseEmpty('exports');
+});
 
+it('Sends a daily export email after 3pm every day for 365 days', function () {
 
-    $testTime = Carbon::now()->addDay(1)->setTime(3, 59, 0);
+    $exportSchedule = ExportSchedule::where('schedule_frequency', ScheduleFrequency::DAILY)->first();
+    $testTime = Carbon::now()->addDay()->setTime(15, 5, 0);
     Carbon::setTestNow($testTime);
     $this->artisan('export:run');
     $this->assertDatabaseCount('exports',1);
-
-
-
-
-    //Notification::assertSentTo($exportSchedule->owner, ScheduledExportCompleteNotification::class);
-//    Mail::assertSent(ExportReady::class, function ($mail) use ($exportSchedule) {
-//        return $mail->hasTo($exportSchedule->owner->email) && $mail->exportSchedule->id === $exportSchedule->id;
-//    });
-
+    Notification::assertSentTo($exportSchedule->owner, ScheduledExportCompleteNotification::class);
 });
 
+/**
+ *
+ * $notifiable = $exportSchedule->owner;
+ * $export = Export::first();
+ * Mail::assertSent(ExportReady::class, function ($mail) use ($notifiable, $export, $exportSchedule) {
+ * return $mail->hasTo($notifiable->email) &&
+ * $mail->export === $export &&
+ * $mail->exportSchedule->id === $exportSchedule->id;
+ * });
+ *
+ */
 
 /*
 

@@ -19,6 +19,8 @@ class ExportSchedulerCommand extends Command
 
         ExportSchedule::query()->enabled()->each(function (ExportSchedule $exportSchedule) {
 
+            $nextDue = $exportSchedule->next_due_at->toDateTimeString();
+            $now= now()->toDateTimeString();
             // Skip if the export is not due
             if (!$exportSchedule->next_due_at || now()->lessThan($exportSchedule->next_due_at)) {
                 $this->warn($exportSchedule->name.' next due at '.$exportSchedule->next_due_at);

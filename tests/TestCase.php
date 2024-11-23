@@ -16,6 +16,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\Concerns\InteractsWithPest;
 use Orchestra\Testbench\TestCase as Orchestra;

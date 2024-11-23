@@ -48,7 +48,7 @@ class ScheduledExporter
     {
         try {
             $exporter = $this->exportSchedule->exporter;
-
+            $this->exportSchedule->loadMissing('owner');
             // Get the query from the exporter class
             $this->query = $exporter::getModel()::query();
             $this->query = $exporter::modifyQuery($this->query);

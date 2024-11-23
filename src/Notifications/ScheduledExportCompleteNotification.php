@@ -5,6 +5,7 @@ namespace VisualBuilder\ExportScheduler\Notifications;
 use Filament\Actions\Exports\Models\Export;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Mail\Mailable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Queue\SerializesModels;
@@ -14,7 +15,7 @@ use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 
 // implements ShouldQueue
 
-class ScheduledExportCompleteNotification extends Notification implements ShouldQueue
+class ScheduledExportCompleteNotification extends Notification
 {
     use Queueable;
     use SerializesModels;
@@ -24,6 +25,7 @@ class ScheduledExportCompleteNotification extends Notification implements Should
      */
     public function __construct(public Export $export, public ExportSchedule $exportSchedule)
     {
+
     }
 
     /**

@@ -175,6 +175,35 @@ return [
     ],
 ];
 ```
+### 4. Ensure you have added the filament Export migrations
+If you don't have an exports table you can add it with:-
+```php
+# Laravel 11 and higher
+php artisan make:queue-batches-table
+php artisan make:notifications-table
+ 
+# Laravel 10
+php artisan queue:batches-table
+php artisan notifications:table
+
+# All apps
+php artisan vendor:publish --tag=filament-actions-migrations
+```
+
+Check the docs at: https://filamentphp.com/docs/3.x/actions/prebuilt-actions/export
+
+#### Polymorphism - Using different user classes
+This package uses this by default, please ensure your exports migration has this line:-
+```php
+ $table->morphs('user');
+```
+This will create the columns user_type and user_id to allow any user type to be associated with an export.
+
+Note: This code has already been included in the package service provider so you don't need to include it.
+```php
+Export::polymorphicUserRelationship();
+```
+
 
 
 Add the plugin to your filament panel provider

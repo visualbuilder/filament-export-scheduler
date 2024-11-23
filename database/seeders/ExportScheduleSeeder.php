@@ -33,12 +33,13 @@ class ExportScheduleSeeder extends Seeder
                 'schedule_frequency'    => ScheduleFrequency::DAILY,
                 'cron'                  => null,
                 'formats'               => json_encode([ExportFormat::Csv]),
-                'schedule_time'         => '03:00:00', // Runs daily at 3:00 AM
+                'schedule_time'         => '15:00:00', // Runs daily at 3:00 pm
                 'schedule_month'        => null,
                 'schedule_day_of_week'  => null,
                 'schedule_day_of_month' => null,
                 'schedule_start_month'  => null,
                 'last_run_at'           => now(),
+                'last_successful_run_at'=> now(),
                 'columns'               => json_encode([
                     ['name' => 'id', 'label' => 'ID'],
                     ['name' => 'email', 'label' => 'Email'],

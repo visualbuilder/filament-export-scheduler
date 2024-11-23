@@ -19,8 +19,6 @@ class ExportSchedulerCommand extends Command
 
         ExportSchedule::query()->enabled()->each(function (ExportSchedule $exportSchedule) {
 
-            $nextDue = $exportSchedule->next_due_at->toDateTimeString();
-            $now= now()->toDateTimeString();
             // Skip if the export is not due
             if (!$exportSchedule->next_due_at || now()->lessThan($exportSchedule->next_due_at)) {
                 $this->warn($exportSchedule->name.' next due at '.$exportSchedule->next_due_at);
@@ -29,17 +27,14 @@ class ExportSchedulerCommand extends Command
 
             // Attempt to run the export
             try {
-                $this->info('Running '.$exportSchedule->name);
 
-                Log::info('Running '.$exportSchedule->name);
                 (new ScheduledExporter($exportSchedule))->run();
 
                 $exportSchedule->update([
                     'last_run_at'            => now(),
                     'last_successful_run_at' => now(),
                 ]);
-                Log::info('Finished '.$exportSchedule->name);
-                $this->alert('Finished '.$exportSchedule->name);
+
             } catch (Exception $e) {
                 $exportSchedule->update([
                     'last_run_at' => now(),

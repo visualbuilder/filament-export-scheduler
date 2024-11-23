@@ -15,27 +15,30 @@ use VisualBuilder\ExportScheduler\Tests\Models\User;
 
 beforeEach(function () {
     Notification::fake();
-    Mail::fake();
+
 });
 
 
 it('Does not send a daily export email before 3pm for 365 days', function () {
     // Set time to just before the scheduled execution time on the current day
-    $testTime = Carbon::now()->setTime(2, 59, 0); // Set to 2:59 AM
+    $testTime = Carbon::now()->setTime(14, 50, 0); // Set to 2:59 AM
     Carbon::setTestNow($testTime);
-    // Run the export command
+
     $this->artisan('export:run');
     $this->assertDatabaseEmpty('exports');
+    Carbon::setTestNow();
 });
 
 it('Sends a daily export email after 3pm every day for 365 days', function () {
 
-    $exportSchedule = ExportSchedule::where('schedule_frequency', ScheduleFrequency::DAILY)->first();
     $testTime = Carbon::now()->addDay()->setTime(15, 5, 0);
     Carbon::setTestNow($testTime);
     $this->artisan('export:run');
     $this->assertDatabaseCount('exports',1);
+
+    $exportSchedule = ExportSchedule::where('schedule_frequency', ScheduleFrequency::DAILY)->first();
     Notification::assertSentTo($exportSchedule->owner, ScheduledExportCompleteNotification::class);
+    Carbon::setTestNow();
 });
 
 /**

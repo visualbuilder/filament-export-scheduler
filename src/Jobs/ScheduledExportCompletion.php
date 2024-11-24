@@ -46,9 +46,12 @@ class ScheduledExportCompletion implements ShouldQueue
                 $this->export->user->notify(new $notificationClass($this->export, $this->exportSchedule));
 
                 // Clone the Export for each copied user
-                if($this->exportSchedule->cc && is_array($this->exportSchedule->cc)){
+                if($this->exportSchedule->cc && is_array($this->exportSchedule->cc) && count($this->exportSchedule->cc)){
                     foreach ($this->exportSchedule->cc as $userId){
-                        $copiedExport  = $this->export->replicate(['user_id']);
+                        if(!is_numeric($userId)){
+                            continue;
+                        }
+                        $copiedExport  = $this->export->replicate(['user_id','url']);
                         $copiedExport->user_id = $userId;
                         $copiedExport->save();
                         $copiedExport->load('user');

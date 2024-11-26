@@ -26,6 +26,7 @@ CREATE TABLE `export_schedules` (
   `owner_id` bigint unsigned DEFAULT NULL,
   `cc` json DEFAULT NULL,
   `enabled` tinyint(1) NOT NULL DEFAULT '1',
+  `next_run_at` timestamp NULL DEFAULT NULL,
   `last_run_at` timestamp NULL DEFAULT NULL,
   `last_successful_run_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,

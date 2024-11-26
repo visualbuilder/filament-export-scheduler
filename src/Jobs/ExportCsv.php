@@ -3,36 +3,18 @@
 namespace VisualBuilder\ExportScheduler\Jobs;
 
 use AnourValar\EloquentSerialize\Facades\EloquentSerializeFacade;
-use Carbon\CarbonInterface;
-use Exception;
-use Filament\Actions\Exports\Exporter;
-use Filament\Actions\Exports\Models\Export;
-use Illuminate\Bus\Batchable;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Filesystem\Filesystem;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use League\Csv\Writer;
 use SplTempFileObject;
 use Throwable;
 use  Filament\Actions\Exports\Jobs\ExportCsv as BaseExportCsv;
+
 class ExportCsv extends BaseExportCsv
 {
     public function handle(): void
     {
-
-        /** @var Authenticatable $user */
-        $user = $this->export->owner;
-
-        auth()->setUser($user);
-
-
-        $exceptions = [];
+        auth()->setUser($this->export->user);
 
         $processedRows = 0;
         $successfulRows = 0;
@@ -50,7 +32,6 @@ class ExportCsv extends BaseExportCsv
         foreach ($query->find($this->records) as $record) {
             try {
                 $csv->insertOne(($this->exporter)($record));
-
                 $successfulRows++;
             } catch (Throwable $exception) {
                 $exceptions[$exception::class] = $exception;
@@ -83,7 +64,6 @@ class ExportCsv extends BaseExportCsv
                 'successful_rows' => DB::raw('total_rows'),
             ]);
 
-        $this->handleExceptions($exceptions);
+        $this->handleExceptions($exceptions ?? []);
     }
-
 }

@@ -31,6 +31,7 @@ return new class extends Migration
                 $table->nullableMorphs('owner');
                 $table->json('cc')->nullable();
                 $table->boolean('enabled')->default(1);
+                $table->timestamp('next_run_at')->nullable(); // Next time the export will be run
                 $table->timestamp('last_run_at')->nullable(); // Last time the export was attempted
                 $table->timestamp('last_successful_run_at')->nullable();
                 $table->timestamps();

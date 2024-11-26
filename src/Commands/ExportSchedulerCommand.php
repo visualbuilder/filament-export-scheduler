@@ -16,38 +16,31 @@ class ExportSchedulerCommand extends Command
 
     public function handle(): int
     {
+        ExportSchedule::query()
+            ->enabled()
+            ->nextRunDue()
+            ->each(function (ExportSchedule $exportSchedule) {
+                // Attempt to run the export
+                try {
+                    (new ScheduledExporter($exportSchedule))->run();
+                    $nextRunAt = $exportSchedule->calculateNextRun();
+                    $exportSchedule->update([
+                        'next_run_at' => $nextRunAt,
+                        'last_run_at' => now(),
+                        'last_successful_run_at' => now(),
+                    ]);
+                } catch (Exception $e) {
+                    $exportSchedule->update([
+                        'last_run_at' => now(),
+                    ]);
 
-        ExportSchedule::query()->enabled()->each(function (ExportSchedule $exportSchedule) {
-
-            // Skip if the export is not due
-            if (!$exportSchedule->next_due_at || now()->lessThan($exportSchedule->next_due_at)) {
-                $this->warn($exportSchedule->name.' next due at '.$exportSchedule->next_due_at);
-                return;
-            }
-
-            // Attempt to run the export
-            try {
-
-                (new ScheduledExporter($exportSchedule))->run();
-
-                $exportSchedule->update([
-                    'last_run_at'            => now(),
-                    'last_successful_run_at' => now(),
-                ]);
-
-            } catch (Exception $e) {
-                $exportSchedule->update([
-                    'last_run_at' => now(),
-                ]);
-
-                Log::error('Export failed', [
-                    'schedule_id' => $exportSchedule->id,
-                    'error'       => $e->getMessage(),
-                ]);
-            }
-        });
+                    Log::error('Export failed', [
+                        'schedule_id' => $exportSchedule->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            });
 
         return self::SUCCESS;
-
     }
 }

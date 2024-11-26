@@ -2,6 +2,7 @@
 
 namespace VisualBuilder\ExportScheduler;
 
+use Filament\Actions\Exports\Models\Export;
 use Filament\Support\Assets\Asset;
 use Illuminate\Filesystem\Filesystem;
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
@@ -52,6 +53,9 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
         if (file_exists($package->basePath('/../resources/views'))) {
             $package->hasViews(static::$viewNamespace);
         }
+
+        //Add Polymorphic relationship to Export
+        Export::polymorphicUserRelationship();
     }
 
     /**
@@ -90,20 +94,6 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
     {
         parent::packageBooted();
 
-        //        // Asset Registration
-        //        FilamentAsset::register(
-        //            $this->getAssets(),
-        //            $this->getAssetPackageName()
-        //        );
-
-        //        FilamentAsset::registerScriptData(
-        //            $this->getScriptData(),
-        //            $this->getAssetPackageName()
-        //        );
-
-        // Icon Registration
-        //        FilamentIcon::register($this->getIcons());
-
         // Handle Stubs
         if (app()->runningInConsole()) {
             foreach (app(Filesystem::class)->files(__DIR__.'/../stubs/') as $file) {
@@ -117,6 +107,10 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
             ], 'filament-export-scheduler-seeds');
         }
 
+        if(app()->environment('testing')) {
+            $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');
+        }
+
     }
 
     protected function getAssetPackageName(): ?string
@@ -124,17 +118,6 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
         return 'visualbuilder/filament-export-scheduler';
     }
 
-    /**
-     * @return array<Asset>
-     */
-    protected function getAssets(): array
-    {
-        return [
-            // AlpineComponent::make('filament-export-scheduler', __DIR__ . '/../resources/dist/components/filament-export-scheduler.js'),
-            //            Css::make('filament-export-scheduler-styles', __DIR__ . '/../resources/dist/filament-export-scheduler.css'),
-            //            Js::make('filament-export-scheduler-scripts', __DIR__ . '/../resources/dist/filament-export-scheduler.js'),
-        ];
-    }
 
     /**
      * @return array<string>

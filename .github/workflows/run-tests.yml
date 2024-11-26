@@ -5,6 +5,11 @@ on: [push, pull_request]
 jobs:
   tests:
     runs-on: ${{ matrix.os }}
+    env:
+      DB_DATABASE: testing
+      DB_USER: root
+      DB_PASSWORD: root
+
     strategy:
       fail-fast: false
       matrix:
@@ -28,10 +33,10 @@ jobs:
       -   name: Checkout code
           uses: actions/checkout@v4
 
-      -   name: Install SQLite 3
+      -   name: Start MySQL
           run: |
-            sudo apt-get update
-            sudo apt-get install sqlite3
+            sudo /etc/init.d/mysql start
+            mysql -e "CREATE DATABASE IF NOT EXISTS $DB_DATABASE;" -u$DB_USER -p$DB_PASSWORD
 
       -   name: Setup PHP
           uses: shivammathur/setup-php@v2
@@ -44,6 +49,7 @@ jobs:
           run: |
             composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" "filament/filament:${{ matrix.filament }}" --no-interaction --no-update
             composer update --${{ matrix.stability }} --prefer-dist --no-interaction
+            php artisan migrate:fresh --seed
 
       -   name: Setup Problem Matches
           run: |
@@ -51,4 +57,4 @@ jobs:
             echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
 
       -   name: Execute tests
-          run: vendor/bin/pest
+          run:  composer test

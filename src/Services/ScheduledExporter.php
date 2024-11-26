@@ -6,7 +6,6 @@ use AnourValar\EloquentSerialize\Facades\EloquentSerializeFacade;
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Actions\Exports\Exporter;
 use Filament\Actions\Exports\Jobs\CreateXlsxFile;
-use Filament\Actions\Exports\Jobs\PrepareCsvExport;
 use Filament\Actions\Exports\Models\Export;
 use Illuminate\Bus\PendingBatch;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,6 +13,7 @@ use Illuminate\Foundation\Bus\PendingChain;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use VisualBuilder\ExportScheduler\Jobs\PrepareCsvExport;
 use VisualBuilder\ExportScheduler\Jobs\ScheduledExportCompletion;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 
@@ -48,7 +48,7 @@ class ScheduledExporter
     {
         try {
             $exporter = $this->exportSchedule->exporter;
-
+            $this->exportSchedule->loadMissing('owner');
             // Get the query from the exporter class
             $this->query = $exporter::getModel()::query();
             $this->query = $exporter::modifyQuery($this->query);
@@ -71,7 +71,6 @@ class ScheduledExporter
 
             // Prepare options if needed
             $this->options = [];
-
             // Create Export instance
             $export = new Export;
             $export->exporter = $exporter;

@@ -2,125 +2,56 @@
 
 use Carbon\Carbon;
 use Filament\Actions\Exports\Enums\ExportFormat;
+use Filament\Actions\Exports\Models\Export;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 use VisualBuilder\ExportScheduler\Filament\Exporters\UserExporter;
+use VisualBuilder\ExportScheduler\Mail\ExportReady;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
+use VisualBuilder\ExportScheduler\Notifications\ScheduledExportCompleteNotification;
 use VisualBuilder\ExportScheduler\Tests\Models\User;
-use Illuminate\Support\Facades\Queue;
 
-it('sends a daily export email on the first day when schedule is before now', function () {
-    Queue::fake();
 
-    $time = Carbon::createFromTime(3);  // 3:00 AM
-    $past = $time->copy()->subMinute(); // 2:59 AM
-    $later = $time->copy()->addMinute(); // 3:01 AM
+beforeEach(function () {
+    Notification::fake();
 
-    // dd(sprintf("%s\n%s\n%s", $time->toTimeString(), $past->toTimeString(), $later->toTimeString()));
-
-    $exportSchedule = ExportSchedule::create([
-        'name' => 'User Export Daily',
-        'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::DAILY,
-        'cron' => null,
-        'formats' => [ExportFormat::Csv],
-        'schedule_time' => $time->toTimeString(),
-        'schedule_month' => null,
-        'schedule_day_of_week' => null,
-        'schedule_day_of_month' => null,
-        'schedule_start_month' => null,
-        'last_run_at' => $time->copy()->subDay()->toDateTimeString(),    // 24 hours before for DAILY exports
-        'columns' => [
-            ['name' => 'id', 'label' => 'ID'],
-            ['name' => 'email', 'label' => 'Email'],
-            ['name' => 'created_at', 'label' => 'Created At', 'formatter' => 'datetime'],
-        ],
-        'owner_id' => auth()->id(),
-        'owner_type' => User::class,
-    ]);
-
-    $this->assertDatabaseCount('export_schedules', 1);
-    $this->assertDatabaseCount('users', 1);
-    $this->assertDatabaseEmpty('exports');
-    $this->assertNotNull($exportSchedule);
-
-    // Set time to just before the scheduled execution time on the current day
-    Carbon::setTestNow($past);
-
-    // Run the export command
-    $this->artisan('export:run');
-    Queue::assertNothingPushed();
-    $this->assertDatabaseEmpty('exports');
-
-    // Set time to just after the scheduled execution time on the current day
-    Carbon::setTestNow($later);
-
-    // Run the export command
-    $this->artisan('export:run');
-    Queue::assertCount(1);
-    $this->assertDatabaseCount('exports', 1);
 });
 
 
-//it('sends a daily export email for 365 days', function () {
-//    Queue::fake();
-//
-//    //Load a record from already seeded db
-////    $exportSchedule = ExportSchedule::where('schedule_frequency', ScheduleFrequency::DAILY)->first();
-//
-//    //Or create one
-//    $exportSchedule = ExportSchedule::create(  // DAILY Export Schedule
-//        [
-//            'name' => 'User Export Daily',
-//            'exporter' => UserExporter::class,
-//            'schedule_frequency' => ScheduleFrequency::DAILY,
-//            'cron' => null,
-//            'formats' => [ExportFormat::Csv],
-//            'schedule_time' => '03:00:00', // Runs daily at 3:00 AM
-//            'schedule_month' => null,
-//            'schedule_day_of_week' => null,
-//            'schedule_day_of_month' => null,
-//            'schedule_start_month' => null,
-//            'last_run_at' => now()->subDay(),
-//            'columns' => [
-//                ['name' => 'id', 'label' => 'ID'],
-//                ['name' => 'email', 'label' => 'Email'],
-//                ['name' => 'created_at', 'label' => 'Created At', 'formatter' => 'datetime'],
-//            ],
-//            'owner_id' => 1, // Replace with the actual owner ID
-//            'owner_type' => User::class,
-//        ],);
-//
-//    $this->assertDatabaseCount('export_schedules', 1);
-//    $this->assertDatabaseCount('users', 1);
-//    $this->assertDatabaseEmpty('exports');
-//    $this->assertNotNull($exportSchedule);
-//
-//    // Set time to just before the scheduled execution time on the current day
-//    $testTime = Carbon::now()->subDay()->setTime(2, 59, 0); // Set to 2:59 AM
-//    Carbon::setTestNow($testTime);
-//
-//    // Run the export command
-//    $this->artisan('export:run');
-//    $this->assertDatabaseEmpty('exports');
-//    Queue::assertNothingPushed();
-//
-//    // Advance time to just after the scheduled time
-//
-//    $testTime = Carbon::now()->addDays(2);
-//    Carbon::setTestNow($testTime);
-//
-//    $this->artisan('export:run');
-//    $this->assertDatabaseCount('exports', 1);
-//    Queue::assertCount(1);
-//
-//    dump(ExportSchedule::all());
-//
-////        // Assertions for the current day
-////        Mail::assertSent(ExportReady::class, function ($mail) use ($exportSchedule) {
-////            return $mail->hasTo($exportSchedule->owner->email) && $mail->exportSchedule->id === $exportSchedule->id;
-////        });
-//
-//});
+it('Does not send a daily export email before 3pm for 365 days', function () {
+    // Set time to just before the scheduled execution time on the current day
+    $testTime = Carbon::now()->setTime(14, 50, 0); // Set to 2:59 AM
+    Carbon::setTestNow($testTime);
+
+    $this->artisan('export:run');
+    $this->assertDatabaseEmpty('exports');
+    Carbon::setTestNow();
+});
+
+it('Sends a daily export email after 3pm every day for 365 days', function () {
+
+    $testTime = Carbon::now()->addDay()->setTime(15, 5, 0);
+    Carbon::setTestNow($testTime);
+    $this->artisan('export:run');
+    $this->assertDatabaseCount('exports',1);
+
+    $exportSchedule = ExportSchedule::where('schedule_frequency', ScheduleFrequency::DAILY)->first();
+    Notification::assertSentTo($exportSchedule->owner, ScheduledExportCompleteNotification::class);
+    Carbon::setTestNow();
+});
+
+/**
+ *
+ * $notifiable = $exportSchedule->owner;
+ * $export = Export::first();
+ * Mail::assertSent(ExportReady::class, function ($mail) use ($notifiable, $export, $exportSchedule) {
+ * return $mail->hasTo($notifiable->email) &&
+ * $mail->export === $export &&
+ * $mail->exportSchedule->id === $exportSchedule->id;
+ * });
+ *
+ */
 
 /*
 

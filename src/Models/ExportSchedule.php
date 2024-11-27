@@ -213,9 +213,9 @@ class ExportSchedule extends Model
             ScheduleFrequency::DAILY => $this->getNextDailyRun(),
             ScheduleFrequency::WEEKLY => $this->getNextWeeklyRun(),
             ScheduleFrequency::MONTHLY => $this->getNextMonthlyRun(),
-//            ScheduleFrequency::QUARTERLY => $this->getNextYearlyRun(4),
-//            ScheduleFrequency::HALF_YEARLY => $this->getNextYearlyRun(2),
-//            ScheduleFrequency::YEARLY => $this->getNextYearlyRun(),
+            ScheduleFrequency::QUARTERLY => $this->getNextYearlyRun(4),
+            ScheduleFrequency::HALF_YEARLY => $this->getNextYearlyRun(2),
+            ScheduleFrequency::YEARLY => $this->getNextYearlyRun(),
 //            ScheduleFrequency::CRON => $this->getNextCronRun()
         };
     }
@@ -240,14 +240,20 @@ class ExportSchedule extends Model
 
     protected function getNextMonthlyRun(): Carbon
     {
-        $nextRunAt = $this->next_run_at ?? Carbon::parse($this->schedule_time)->dayOfMonth($this->schedule_day_of_month);
+        $nextRunAt = $this->next_run_at ?? Carbon::parse($this->schedule_time)->setDay($this->schedule_day_of_month);
         if ($nextRunAt->lessThanOrEqualTo(now())) {
             $nextMonth = $nextRunAt->copy()->addMonthNoOverflow();
+            $lastDayOfTheMonth = $nextMonth->copy()->endOfMonth()->day;
 
-            // if day is 29, 30, 31 and next month doesn't have date
-            if ($nextMonth->copy()->endOfMonth()->day < $this->schedule_day_of_month) {
+            if ($this->schedule_day_of_month < 0) {
+                // -1 => last day of the month
+                $nextRunAt = $nextMonth->copy()->endOfMonth()->setTime($nextMonth->hour, $nextMonth->minute, $nextMonth->second);
+            } else if ($lastDayOfTheMonth < $this->schedule_day_of_month) {
+                // if the day is 29, 30 or 31 & isn't
+                // a valid date for that month, set
+                // it to the last day of that month
                 $nextRunAt = $nextMonth;
-            } else if ($nextMonth->copy()->endOfMonth()->day >= $this->schedule_day_of_month) {
+            } else if ($lastDayOfTheMonth >= $this->schedule_day_of_month) {
                 $nextRunAt = $nextMonth->setDay($this->schedule_day_of_month);
             } else {
                 $nextRunAt->addMonth();
@@ -257,50 +263,28 @@ class ExportSchedule extends Model
         return $nextRunAt;
     }
 
-    /**
-     * Get the next yearly, half-yearly  or quarterly run time.
-     */
-//    protected function getNextMonthlyOrPeriodicRun(Carbon $nextDue, Carbon $now): Carbon
-//    {
-//        $monthsToAdd = match ($this->schedule_frequency) {
-//            ScheduleFrequency::MONTHLY => 1,
-//            ScheduleFrequency::QUARTERLY => 3,
-//            ScheduleFrequency::HALF_YEARLY => 6,
-//        };
-//
-//        $startDay = $this->schedule_day_of_month ?? 1; // Default to 1st
-//        $startMonth = $this->schedule_month ?? $this->schedule_start_month ?? 1; // Default to January (1)
-//
-//        $nextDue = $nextDue->setMonth($startMonth)->setDay($startDay);
-//
-//        while ($nextDue->lessThanOrEqualTo($now)) {
-//            $nextDue->addMonths($monthsToAdd);
-//        }
-//
-//        return $nextDue;
-//    }
+    protected function getNextYearlyRun(int $numOfTimesInAYear = 1): Carbon
+    {
+        $numOfMonthsInAYear = 12 / $numOfTimesInAYear;
+        $nextRunAt = $this->next_run_at ?? Carbon::parse($this->schedule_time)->setMonth($this->schedule_month)->setDay($this->schedule_day_of_month);
 
-    /**
-     * Get the next yearly run time.
-     */
-//    protected function getNextYearlyRun(Carbon $baseTime, Carbon $now): Carbon
-//    {
-//        $startMonth = $this->schedule_month ?? $this->schedule_start_month ?? 1; // Default to January
-//        $startDay = $this->schedule_day_of_month ?? 1; // Default to 1st
-//
-//        $nextDue = Carbon::create(
-//            $now->year,
-//            $startMonth->value,
-//            $startDay,
-//            $baseTime->hour,
-//            $baseTime->minute,
-//            $baseTime->second,
-//            $baseTime->timezone,
-//        );
-//
-//
-//        return $now->greaterThanOrEqualTo($nextDue) ? $nextDue->addYear() : $nextDue; // Simplified conditional
-//    }
+        if ($nextRunAt->lessThanOrEqualTo(now())) {
+            $next = $nextRunAt->copy()->addMonthsNoOverflow($numOfMonthsInAYear);
+            $lastDayOfTheMonth = $next->copy()->endOfMonth()->day;
+
+            if ($lastDayOfTheMonth < $this->schedule_day_of_month) {
+                $nextRunAt = $next;
+            } else if ($lastDayOfTheMonth >= $this->schedule_day_of_month) {
+                // if the day is 29, 30 or 31 & isn't
+                // a valid date for that month, set
+                // it to the last day of that month
+                $nextRunAt = $next->setDay($this->schedule_day_of_month);
+            } else {
+                $nextRunAt->addMonths($numOfMonthsInAYear);
+            }
+        }
+        return $nextRunAt;
+    }
 
     protected function getNextCronRunAt(): ?Carbon
     {

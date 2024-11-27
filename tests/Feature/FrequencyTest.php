@@ -1,9 +1,11 @@
 <?php
 
 use Carbon\Carbon;
+use Carbon\Month as CarbonMonth;
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Illuminate\Support\Facades\Notification;
 use VisualBuilder\ExportScheduler\Enums\DayOfWeek;
+use VisualBuilder\ExportScheduler\Enums\Month;
 use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 use VisualBuilder\ExportScheduler\Filament\Exporters\UserExporter;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
@@ -83,7 +85,7 @@ it('sends a weekly export email every week (Wednesday) for 3 weeks', function ()
     Notification::assertSentTo($weeklySchedule->owner, ScheduledExportCompleteNotification::class);
 });
 
-it('sends a monthly export email every month (15th) for a year', function () {
+it('sends a monthly export email every month (15th)', function () {
     $firstDayOfTheYear = now()->firstOfYear();
     $dayOfTheMonth = 15;
     $numOfDays = $firstDayOfTheYear->diffInDays($firstDayOfTheYear->copy()->endOfYear());
@@ -117,7 +119,41 @@ it('sends a monthly export email every month (15th) for a year', function () {
     Notification::assertSentTo($monthlySchedule->owner, ScheduledExportCompleteNotification::class);
 });
 
-it('sends a monthly export email every month (29th) for a year in a non-leap year', function () {
+it('sends a monthly export email every last day of the month', function () {
+    $firstDayOfTheYear = Carbon::createFromDate(2024)->firstOfYear();
+    $dayOfTheMonth = -1;    // last day of the month - 28, 29, 30, 31
+    $numOfDays = $firstDayOfTheYear->diffInDays($firstDayOfTheYear->copy()->endOfYear());
+
+    $monthlySchedule = ExportSchedule::create([
+        'name' => 'User Export Monthly (-1)',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::MONTHLY,
+        'formats' => [ExportFormat::Csv],
+        'schedule_time' => $firstDayOfTheYear->toTimeString(),
+        'schedule_day_of_month' => $dayOfTheMonth,
+        'next_run_at' => $firstDayOfTheYear->copy()->endOfMonth()->setTime(0, 0),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+            ['name' => 'created_at', 'label' => 'Created At', 'formatter' => 'datetime'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+    ]);
+    $this->assertDatabaseCount('export_schedules', 1);
+    $this->assertDatabaseHas($monthlySchedule, ['schedule_frequency' => ScheduleFrequency::MONTHLY]);
+
+    $testTime = $firstDayOfTheYear;
+    for ($i = 0; $i < $numOfDays; $i++) {   // run every once every day for a year
+        Carbon::setTestNow($testTime);
+        $this->artisan('export:run');
+        $testTime->addDay();
+    }
+    Notification::assertCount(12);
+    Notification::assertSentTo($monthlySchedule->owner, ScheduledExportCompleteNotification::class);
+});
+
+it('sends a monthly export email every month (29th; 28th for non-leap year)', function () {
     $nonLeapYear = Carbon::createFromDate(2023)->firstOfYear();
     $dayOfTheMonth = 29;
     $numOfDays = $nonLeapYear->diffInDays($nonLeapYear->copy()->endOfYear());
@@ -151,7 +187,7 @@ it('sends a monthly export email every month (29th) for a year in a non-leap yea
     Notification::assertSentTo($monthlySchedule->owner, ScheduledExportCompleteNotification::class);
 });
 
-it('sends a monthly export email every month (30th) for a year in a non-leap year', function () {
+it('sends a monthly export email every month (30th; 28th/29th for February)', function () {
     $nonLeapYear = Carbon::createFromDate(2023)->firstOfYear();
     $dayOfTheMonth = 30;
     $numOfDays = $nonLeapYear->diffInDays($nonLeapYear->copy()->endOfYear());
@@ -185,7 +221,7 @@ it('sends a monthly export email every month (30th) for a year in a non-leap yea
     Notification::assertSentTo($monthlySchedule->owner, ScheduledExportCompleteNotification::class);
 });
 
-it('sends a monthly export email every month (31st) for a year in a non-leap year', function () {
+it('sends a monthly export email every month (31st; 28th/29th/30th for others)', function () {
     $nonLeapYear = Carbon::createFromDate(2023)->firstOfYear();
     $dayOfTheMonth = 31;
     $numOfDays = $nonLeapYear->diffInDays($nonLeapYear->copy()->endOfYear());
@@ -219,166 +255,222 @@ it('sends a monthly export email every month (31st) for a year in a non-leap yea
     Notification::assertSentTo($monthlySchedule->owner, ScheduledExportCompleteNotification::class);
 });
 
-// Test for MONTHLY Last Day of Month
-//it('sends a monthly export email for the last day of the month', function () {
-//    $exportSchedule = ExportSchedule::where('schedule_frequency', ScheduleFrequency::MONTHLY)->where('schedule_day_of_month', -1)->first();
-//    $this->assertNotNull($exportSchedule);
-//
-//    // Test for 12 months
-//    for ($i = 0; $i < 12; $i++) {
-//        // Using ->endOfMonth() to get the last day dynamically
-//        $testTime = Carbon::now()->addMonths($i)->endOfMonth()->setTime(5, 59, 0); //5.59 last day
-//        Carbon::setTestNow($testTime);
-//        Mail::fake();
-//        $this->artisan('export:run');
-//
-//        Carbon::setTestNow($testTime->addMinutes(2)); //6.01 last day
-//        $this->artisan('export:run');
-//
-//        Mail::assertSent(ExportReady::class, function ($mail) use ($exportSchedule) {
-//            return $mail->hasTo($exportSchedule->owner->email) && $mail->exportSchedule->id === $exportSchedule->id;
-//        });
-//    }
-//});
-//
-//
-//
-// Yearly
-//it('sends a yearly export email', function () {
-//    $exportSchedule = ExportSchedule::where('schedule_frequency', ScheduleFrequency::YEARLY)->first();
-//    $this->assertNotNull($exportSchedule);
-//
-//    $testTime = Carbon::now()->setTime(6, 59, 0); //6:59 AM on Jan 1st
-//    Carbon::setTestNow($testTime);
-//
-//    Mail::fake();
-//    $this->artisan('export:run');
-//
-//    Carbon::setTestNow($testTime->addMinutes(2)); //7.01 AM on Jan 1st
-//    $this->artisan('export:run');
-//
-//    Mail::assertSent(ExportReady::class, function ($mail) use ($exportSchedule) {
-//        return $mail->hasTo($exportSchedule->owner->email) && $mail->exportSchedule->id === $exportSchedule->id;
-//    });
-//
-//});
-//
-//
-//
-// Leap Year
-//it('sends a yearly export email (leap year)', function () {
-//    $exportSchedule = ExportSchedule::where('schedule_frequency', ScheduleFrequency::YEARLY)
-//        ->where('schedule_month', 2) // February
-//        ->where('schedule_day_of_month', 29) // 29th (leap day)
-//        ->first();
-//    $this->assertNotNull($exportSchedule);
-//
-//    // Set to a leap year (e.g., 2024)
-//    $testTime = Carbon::create(2024)->setTime(9, 59, 0);  // Set time to just before execution
-//
-//    Carbon::setTestNow($testTime);
-//    Mail::fake();
-//    $this->artisan('export:run');
-//
-//    Carbon::setTestNow($testTime->addMinutes(2));
-//
-//    $this->artisan('export:run');
-//
-//    Mail::assertSent(ExportReady::class, function ($mail) use ($exportSchedule) {
-//        return $mail->hasTo($exportSchedule->owner->email) && $mail->exportSchedule->id === $exportSchedule->id;
-//    });
-//
-//    // Test non-leap year behavior (e.g., 2023) —  adjust assertion as needed
-//    $testTime = Carbon::create(2023)->setTime(9, 59, 0); // Set to a non-leap year
-//    Carbon::setTestNow($testTime);
-//    Mail::fake(); // Reset fake mail
-//    $this->artisan('export:run');
-//    Carbon::setTestNow($testTime->addMinutes(2));
-//    $this->artisan('export:run');
-//    Mail::assertNothingSent();  // or assert different behavior depending on your logic for non-leap years
-//});
-//
-//
-//
-//
-// Quarterly (Jan 10)
-//it('sends a quarterly export email', function () {
-//    $exportSchedule = ExportSchedule::where('schedule_frequency', ScheduleFrequency::QUARTERLY)->first();
-//    $this->assertNotNull($exportSchedule);
-//
-//    $startMonth = $exportSchedule->schedule_start_month; // Get the starting month from the schedule
-//    $startDay = $exportSchedule->schedule_day_of_month;
-//
-//    for ($i = 0; $i < 4; $i++) { // Loop through four quarters
-//        $testTime = Carbon::create(2024, $startMonth, $startDay, 7, 59, 0)->addQuarters($i); // 7:59 AM on start day/month + quarters
-//        Carbon::setTestNow($testTime);
-//
-//        Mail::fake();
-//        $this->artisan('export:run');
-//
-//        Carbon::setTestNow($testTime->addMinutes(2)); // 8:01 AM
-//        $this->artisan('export:run');
-//
-//        Mail::assertSent(ExportReady::class, function ($mail) use ($exportSchedule) {
-//            return $mail->hasTo($exportSchedule->owner->email) && $mail->exportSchedule->id === $exportSchedule->id;
-//        });
-//
-//    }
-//});
-//
-//
-//
-//
-//
-//// Half-Yearly (July 1)
-//it('sends a half-yearly export email', function () {
-//    $exportSchedule = ExportSchedule::where('schedule_frequency', ScheduleFrequency::HALF_YEARLY)->first();
-//    $this->assertNotNull($exportSchedule);
-//
-//    $startMonth = $exportSchedule->schedule_start_month; // Get the starting month from the schedule
-//    $startDay = $exportSchedule->schedule_day_of_month;
-//    for ($i = 0; $i < 2; $i++) { // Test for two half-year periods
-//
-//        $testTime = Carbon::create(2024, $startMonth, $startDay, 8, 59, 0)->addMonths($i * 6);  // 8.59 on start day/month + half years
-//        Carbon::setTestNow($testTime);
-//
-//        Mail::fake();
-//        $this->artisan('export:run');
-//
-//        Carbon::setTestNow($testTime->addMinutes(2));// 9.01 on start day/month + half years
-//        $this->artisan('export:run');
-//
-//        Mail::assertSent(ExportReady::class, function ($mail) use ($exportSchedule) {
-//            return $mail->hasTo($exportSchedule->owner->email) && $mail->exportSchedule->id === $exportSchedule->id;
-//        });
-//
-//    }
-//});
-//
-//
-//
-//// Cron (Weekdays 10:30 AM)
-//it('sends a cron export email (weekdays)', function () {
-//    $exportSchedule = ExportSchedule::where('schedule_frequency', ScheduleFrequency::CRON)
-//        ->where('cron', '30 10 * * 1-5')
-//        ->first();
-//
-//    $this->assertNotNull($exportSchedule);
-//
-//    $testDate = Carbon::create(2024, 1, 7, 10, 29, 0); // a Sunday
-//    Carbon::setTestNow($testDate);
-//    Mail::fake();
-//
-//    $this->artisan('export:run');
-//    Carbon::setTestNow($testDate->addMinute());  //10.30 am on monday
-//    $this->artisan('export:run');
-//
-//    Mail::assertSent(ExportReady::class, function ($mail) use ($exportSchedule) {
-//        return $mail->hasTo($exportSchedule->owner->email) && $mail->exportSchedule->id === $exportSchedule->id;
-//    });
-//});
-//
-//
+it('sends a yearly export email (June 15th)', function () {
+    $nonLeapYear = now()->firstOfYear();
+    $dayOfTheMonth = 15;
+    $month = Month::JUNE->value;
+    $numOfYears = 12;
+
+    $yearlySchedule = ExportSchedule::create([
+        'name' => 'User Export Yearly (June 15th)',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::YEARLY,
+        'formats' => [ExportFormat::Csv],
+        'schedule_time' => $nonLeapYear->toTimeString(),
+        'schedule_month' => $month,
+        'schedule_day_of_month' => $dayOfTheMonth,
+        'next_run_at' => $nonLeapYear->copy()->setMonth($month)->setDay($dayOfTheMonth),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+            ['name' => 'created_at', 'label' => 'Created At', 'formatter' => 'datetime'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+    ]);
+    $this->assertDatabaseCount('export_schedules', 1);
+    $this->assertDatabaseHas($yearlySchedule, ['schedule_frequency' => ScheduleFrequency::YEARLY]);
+
+    $testTime = $nonLeapYear;
+    for ($i = 0; $i < $numOfYears * 3; $i++) {   // run every 4 months every year for 12 years
+        Carbon::setTestNow($testTime);
+        $this->artisan('export:run');
+        $testTime->addMonths(4);
+    }
+    Notification::assertCount($numOfYears);
+    Notification::assertSentTo($yearlySchedule->owner, ScheduledExportCompleteNotification::class);
+});
+
+it('sends a yearly export email (February 29th; 28th for non-leap year)', function () {
+    $nonLeapYear = Carbon::createFromDate(2024)->firstOfYear();
+    $dayOfTheMonth = 29;
+    $month = Month::FEBRUARY->value;
+    $numOfYears = 12;
+
+    $yearlySchedule = ExportSchedule::create([
+        'name' => 'User Export Yearly (June 15th)',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::YEARLY,
+        'formats' => [ExportFormat::Csv],
+        'schedule_time' => $nonLeapYear->toTimeString(),
+        'schedule_month' => $month,
+        'schedule_day_of_month' => $dayOfTheMonth,
+        'next_run_at' => $nonLeapYear->copy()->setMonth($month)->setDay($dayOfTheMonth),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+            ['name' => 'created_at', 'label' => 'Created At', 'formatter' => 'datetime'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+    ]);
+    $this->assertDatabaseCount('export_schedules', 1);
+    $this->assertDatabaseHas($yearlySchedule, ['schedule_frequency' => ScheduleFrequency::YEARLY]);
+
+    $testTime = $nonLeapYear;
+    for ($i = 0; $i < $numOfYears * 3; $i++) {   // run every 4 months every year for 12 years
+        Carbon::setTestNow($testTime);
+        $this->artisan('export:run');
+        $testTime->addMonths(4);
+    }
+    Notification::assertCount($numOfYears);
+    Notification::assertSentTo($yearlySchedule->owner, ScheduledExportCompleteNotification::class);
+});
+
+it('sends a quarterly export email (starts on January 15th)', function () {
+    $nonLeapYear = now()->firstOfYear();
+    $dayOfTheMonth = 15;
+    $startMonth = Month::JANUARY->value;
+    $numOfYears = 10;
+
+    $yearlySchedule = ExportSchedule::create([
+        'name' => 'User Export Quarterly (January 15th)',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::QUARTERLY,
+        'formats' => [ExportFormat::Csv],
+        'schedule_time' => $nonLeapYear->toTimeString(),
+        'schedule_month' => $startMonth,
+        'schedule_day_of_month' => $dayOfTheMonth,
+        'next_run_at' => $nonLeapYear->copy()->setMonth($startMonth)->setDay($dayOfTheMonth),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+            ['name' => 'created_at', 'label' => 'Created At', 'formatter' => 'datetime'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+    ]);
+    $this->assertDatabaseCount('export_schedules', 1);
+    $this->assertDatabaseHas($yearlySchedule, ['schedule_frequency' => ScheduleFrequency::QUARTERLY]);
+
+    $testTime = $nonLeapYear;
+    for ($i = 0; $i < $numOfYears * 12; $i++) {   // run every month every year for 10 years
+        Carbon::setTestNow($testTime);
+        $this->artisan('export:run');
+        $testTime->addMonth();
+    }
+    Notification::assertCount($numOfYears * 4);
+    Notification::assertSentTo($yearlySchedule->owner, ScheduledExportCompleteNotification::class);
+});
+
+it('sends a quarterly export email (starts on November 29th; February 28th for non-leap year)', function () {
+    $nonLeapMonth = Carbon::createFromDate(2023)->setMonth(CarbonMonth::November)->firstOfMonth();
+    $dayOfTheMonth = 29;
+    $startMonth = Month::NOVEMBER->value;
+    $numOfYears = 10;
+
+    $yearlySchedule = ExportSchedule::create([
+        'name' => 'User Export Quarterly (November 29th)',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::QUARTERLY,
+        'formats' => [ExportFormat::Csv],
+        'schedule_time' => $nonLeapMonth->toTimeString(),
+        'schedule_month' => $startMonth,
+        'schedule_day_of_month' => $dayOfTheMonth,
+        'next_run_at' => $nonLeapMonth->copy()->setMonth($startMonth)->setDay($dayOfTheMonth),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+            ['name' => 'created_at', 'label' => 'Created At', 'formatter' => 'datetime'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+    ]);
+    $this->assertDatabaseCount('export_schedules', 1);
+    $this->assertDatabaseHas($yearlySchedule, ['schedule_frequency' => ScheduleFrequency::QUARTERLY]);
+
+    $testTime = $nonLeapMonth;
+    for ($i = 0; $i < $numOfYears * 12; $i++) {   // run every month every year for 10 years
+        Carbon::setTestNow($testTime);
+        $this->artisan('export:run');
+        $testTime->addMonth();
+    }
+    Notification::assertCount($numOfYears * 4);
+    Notification::assertSentTo($yearlySchedule->owner, ScheduledExportCompleteNotification::class);
+});
+
+it('sends a half-yearly export email (starts on January 15th)', function () {
+    $nonLeapYear = now()->firstOfYear();
+    $dayOfTheMonth = 15;
+    $startMonth = Month::JANUARY->value;
+    $numOfYears = 10;
+
+    $yearlySchedule = ExportSchedule::create([
+        'name' => 'User Export Half-Yearly (January 15th)',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::HALF_YEARLY,
+        'formats' => [ExportFormat::Csv],
+        'schedule_time' => $nonLeapYear->toTimeString(),
+        'schedule_month' => $startMonth,
+        'schedule_day_of_month' => $dayOfTheMonth,
+        'next_run_at' => $nonLeapYear->copy()->setMonth($startMonth)->setDay($dayOfTheMonth),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+            ['name' => 'created_at', 'label' => 'Created At', 'formatter' => 'datetime'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+    ]);
+    $this->assertDatabaseCount('export_schedules', 1);
+    $this->assertDatabaseHas($yearlySchedule, ['schedule_frequency' => ScheduleFrequency::HALF_YEARLY]);
+
+    $testTime = $nonLeapYear;
+    for ($i = 0; $i < $numOfYears * 12; $i++) {   // run every month every year for 10 years
+        Carbon::setTestNow($testTime);
+        $this->artisan('export:run');
+        $testTime->addMonth();
+    }
+    Notification::assertCount($numOfYears * 2);
+    Notification::assertSentTo($yearlySchedule->owner, ScheduledExportCompleteNotification::class);
+});
+
+it('sends a half-yearly export email (starts on August 29th; February 28th for non-leap year)', function () {
+    $nonLeapMonth = Carbon::createFromDate(2023)->setMonth(CarbonMonth::August)->firstOfMonth();
+    $dayOfTheMonth = 29;
+    $startMonth = Month::AUGUST->value;
+    $numOfYears = 10;
+
+    $yearlySchedule = ExportSchedule::create([
+        'name' => 'User Export Half-Yearly (November 29th)',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::HALF_YEARLY,
+        'formats' => [ExportFormat::Csv],
+        'schedule_time' => $nonLeapMonth->toTimeString(),
+        'schedule_month' => $startMonth,
+        'schedule_day_of_month' => $dayOfTheMonth,
+        'next_run_at' => $nonLeapMonth->copy()->setMonth($startMonth)->setDay($dayOfTheMonth),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+            ['name' => 'created_at', 'label' => 'Created At', 'formatter' => 'datetime'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+    ]);
+    $this->assertDatabaseCount('export_schedules', 1);
+    $this->assertDatabaseHas($yearlySchedule, ['schedule_frequency' => ScheduleFrequency::HALF_YEARLY]);
+
+    $testTime = $nonLeapMonth;
+    for ($i = 0; $i < $numOfYears * 12; $i++) {   // run every month every year for 10 years
+        Carbon::setTestNow($testTime);
+        $this->artisan('export:run');
+        $testTime->addMonth();
+    }
+    Notification::assertCount($numOfYears * 2);
+    Notification::assertSentTo($yearlySchedule->owner, ScheduledExportCompleteNotification::class);
+});
+
 //it('sends a cron export email (quarter ends)', function () {
 //    $exportSchedule = ExportSchedule::where('schedule_frequency', ScheduleFrequency::CRON)
 //        ->where('cron', '0 2 1 3,6,9,12 *')

@@ -17,9 +17,12 @@ use Orchestra\Testbench\TestCase as Orchestra;
 use RyanChandler\BladeCaptureDirective\BladeCaptureDirectiveServiceProvider;
 use VisualBuilder\ExportScheduler\ExportSchedulerServiceProvider;
 use VisualBuilder\ExportScheduler\Tests\Models\User;
+use VisualBuilder\ExportScheduler\Tests\Traits\CustomRefreshDatabase;
 
 class TestCase extends Orchestra
 {
+    use CustomRefreshDatabase;
+
     protected function setUp(): void
     {
         parent::setUp();

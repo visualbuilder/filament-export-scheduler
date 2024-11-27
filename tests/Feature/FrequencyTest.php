@@ -10,9 +10,6 @@ use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 use VisualBuilder\ExportScheduler\Filament\Exporters\UserExporter;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 use VisualBuilder\ExportScheduler\Notifications\ScheduledExportCompleteNotification;
-use VisualBuilder\ExportScheduler\Tests\Traits\CustomRefreshDatabase;
-
-uses(CustomRefreshDatabase::class);
 
 beforeEach(function () {
     Notification::fake();

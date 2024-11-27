@@ -1,0 +1,60 @@
+name: run-tests
+
+on: [push, pull_request]
+
+jobs:
+  tests:
+    runs-on: ${{ matrix.os }}
+    env:
+      DB_DATABASE: testing
+      DB_USER: root
+      DB_PASSWORD: root
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        php: [8.2,8.3]
+        laravel: [10.*,11.*]
+        stability: [ prefer-stable ]
+        filament: [3.*]
+        dependency-version: [ prefer-stable]
+        include:
+          -   laravel: 10.*
+              testbench: 8.*
+              filament: 3.*
+          -   laravel: 11.*
+              testbench: 9.*
+              filament: 3.*
+
+    name: P${{ matrix.php }} - L${{ matrix.laravel }} - - ${{ matrix.stability }}  - ${{ matrix.dependency-version }}
+
+    steps:
+      -   name: Checkout code
+          uses: actions/checkout@v4
+
+      -   name: Start MySQL
+          run: |
+            sudo /etc/init.d/mysql start
+            mysql -e "CREATE DATABASE IF NOT EXISTS $DB_DATABASE;" -u$DB_USER -p$DB_PASSWORD
+
+      -   name: Setup PHP
+          uses: shivammathur/setup-php@v2
+          with:
+            php-version: ${{ matrix.php }}
+            extensions: curl, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, iconv
+            coverage: none
+
+      -   name: Install dependencies
+          run: |
+            composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" "filament/filament:${{ matrix.filament }}" --no-interaction --no-update
+            composer update --${{ matrix.stability }} --prefer-dist --no-interaction
+            php artisan migrate:fresh --seed
+
+      -   name: Setup Problem Matches
+          run: |
+            echo "::add-matcher::${{ runner.tool_cache }}/php.json"
+            echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
+
+      -   name: Execute tests
+          run:  composer test

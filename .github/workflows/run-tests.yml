@@ -49,6 +49,7 @@ jobs:
           run: |
             composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" "filament/filament:${{ matrix.filament }}" --no-interaction --no-update
             composer update --${{ matrix.stability }} --prefer-dist --no-interaction
+            php artisan migrate:fresh --seed
 
       -   name: Setup Problem Matches
           run: |

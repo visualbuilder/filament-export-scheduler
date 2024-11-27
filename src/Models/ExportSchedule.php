@@ -216,7 +216,7 @@ class ExportSchedule extends Model
             ScheduleFrequency::QUARTERLY => $this->getNextYearlyRun(4),
             ScheduleFrequency::HALF_YEARLY => $this->getNextYearlyRun(2),
             ScheduleFrequency::YEARLY => $this->getNextYearlyRun(),
-//            ScheduleFrequency::CRON => $this->getNextCronRun()
+            ScheduleFrequency::CRON => $this->getNextCronRun()
         };
     }
 
@@ -286,15 +286,9 @@ class ExportSchedule extends Model
         return $nextRunAt;
     }
 
-    protected function getNextCronRunAt(): ?Carbon
+    protected function getNextCronRun(): Carbon
     {
-        if (!$this->cron) {
-            return null;
-        }
-
-        $cron = new CronExpression($this->cron);
-
-        return Carbon::instance($cron->getNextRunDate($this->last_run_at ?? 'now'));
+        return Carbon::instance((new CronExpression($this->cron))->getNextRunDate($this->next_run_at ?? 'now'));
     }
 
     public function willLogoutUser(): bool

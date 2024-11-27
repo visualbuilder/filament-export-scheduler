@@ -471,28 +471,70 @@ it('sends a half-yearly export email (starts on August 29th; February 28th for n
     Notification::assertSentTo($yearlySchedule->owner, ScheduledExportCompleteNotification::class);
 });
 
-//it('sends a cron export email (quarter ends)', function () {
-//    $exportSchedule = ExportSchedule::where('schedule_frequency', ScheduleFrequency::CRON)
-//        ->where('cron', '0 2 1 3,6,9,12 *')
-//        ->first();
-//
-//    $this->assertNotNull($exportSchedule);
-//
-//    $targetMonths = [3, 6, 9, 12]; // March, June, September, December
-//
-//    foreach ($targetMonths as $month) {
-//        $testTime = Carbon::create(2024, $month, 1, 1, 59, 0); // 1:59 AM on the 1st of the target month
-//        Carbon::setTestNow($testTime);
-//
-//        Mail::fake();
-//        $this->artisan('export:run');
-//
-//        Carbon::setTestNow($testTime->addMinutes(2));  //2.01 am on the 1st of target month
-//
-//        $this->artisan('export:run');
-//
-//        Mail::assertSent(ExportReady::class, function ($mail) use ($exportSchedule) {
-//            return $mail->hasTo($exportSchedule->owner->email) && $mail->exportSchedule->id === $exportSchedule->id;
-//        });
-//    }
-//});
+it('sends a cron export email (quarterly at 2:00 am)', function () {
+    $numOfYears = 10;
+
+    $cronSchedule = ExportSchedule::create([
+        'name' => 'User Export Cron (Quarterly at 2:00 am)',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::CRON,
+        'formats' => [ExportFormat::Csv],
+        'next_run_at' => now()->setMonth(CarbonMonth::March)->setTime(2, 0),
+        // at 2:00 am on the 1st of March, June, September, Dec
+        'cron' => '0 2 1 3,6,9,12 *',
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+            ['name' => 'created_at', 'label' => 'Created At', 'formatter' => 'datetime'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+    ]);
+    $this->assertDatabaseCount('export_schedules', 1);
+    $this->assertDatabaseHas($cronSchedule, ['schedule_frequency' => ScheduleFrequency::CRON]);
+
+    $testTime = now()->firstOfYear()->setDay(2);
+    for ($i = 0; $i < $numOfYears * 12; $i++) {   // run on the second day of every month for 10 years
+        Carbon::setTestNow($testTime);
+        $this->artisan('export:run');
+        $testTime->addMonth();
+    }
+    Notification::assertCount($numOfYears * 4);
+    Notification::assertSentTo($cronSchedule->owner, ScheduledExportCompleteNotification::class);
+});
+
+it('sends a cron export email (every weekday at 10:30 am)', function () {
+    $firstDayOfTheYear = now()->firstOfYear();
+    $firstWeekDayOfTheYear = $firstDayOfTheYear->isWeekend() ? $firstDayOfTheYear->nextWeekday() : $firstDayOfTheYear;
+    $lastDayOfTheYear = now()->lastOfYear();
+    $lastWeekDayOfTheYear = $lastDayOfTheYear->isWeekend() ? $lastDayOfTheYear->previousWeekday() : $lastDayOfTheYear;
+    $numOfWeekDays = $firstWeekDayOfTheYear->diffInWeekdays($lastWeekDayOfTheYear);
+
+    $cronSchedule = ExportSchedule::create([
+        'name' => 'User Export Cron (Every weekday at 10:30 am)',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::CRON,
+        'formats' => [ExportFormat::Csv],
+        'next_run_at' => $firstWeekDayOfTheYear->copy()->setTime(10, 30),
+        // every week from Monday to Friday at 10:30am
+        'cron' => '30 10 * * 1-5',
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+            ['name' => 'created_at', 'label' => 'Created At', 'formatter' => 'datetime'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+    ]);
+    $this->assertDatabaseCount('export_schedules', 1);
+    $this->assertDatabaseHas($cronSchedule, ['schedule_frequency' => ScheduleFrequency::CRON]);
+
+    $testTime = $firstWeekDayOfTheYear;
+    for ($i = 0; $i < $numOfWeekDays; $i++) {   // run on the second day of every month for 10 years
+        Carbon::setTestNow($testTime);
+        $this->artisan('export:run');
+        $testTime->addWeekday();
+    }
+    Notification::assertCount($numOfWeekDays - 1);
+    Notification::assertSentTo($cronSchedule->owner, ScheduledExportCompleteNotification::class);
+});

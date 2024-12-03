@@ -224,13 +224,13 @@ it('sends a monthly export email on the last day of every month (31st; 28th/29th
     $numOfDays = $nonLeapYear->diffInDays($nonLeapYear->copy()->endOfYear());
 
     $monthlySchedule = ExportSchedule::create([
-        'name' => 'User Export Monthly (15th)',
+        'name' => 'User export Last Day the month',
         'exporter' => UserExporter::class,
         'schedule_frequency' => ScheduleFrequency::MONTHLY,
         'formats' => [ExportFormat::Csv],
         'schedule_time' => $nonLeapYear->toTimeString(),
         'schedule_day_of_month' => $dayOfTheMonth,
-        'next_run_at' => $nonLeapYear->copy()->setDay($dayOfTheMonth),
+        'next_run_at' => $nonLeapYear->copy()->lastOfMonth(),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],

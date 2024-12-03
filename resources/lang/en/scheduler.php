@@ -37,7 +37,7 @@ return [
     'recipient'              => 'Recipient',
     'last_run'               => 'Last Run',
     'last_success'           => 'Last Successful Run',
-    'next_due'               => 'Next Due',
+    'next_run_at'            => 'Next Run',
     'enabled'                => 'Enabled',
     'Last day of the month'  => 'Last day of the month',
     'logout_warning'         => 'This export is for someone else and will be emailed to them. You will be logged out  if you run this export. To prevent this message change from the sync queue to database or other.',

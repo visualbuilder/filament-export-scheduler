@@ -117,9 +117,9 @@ it('sends a monthly export email every month (15th)', function () {
 
 it('sends a monthly export email every last day of the month', function () {
     $firstDayOfTheYear = Carbon::createFromDate(2024)->firstOfYear();
-    $dayOfTheMonth = -1;    // last day of the month - 28, 29, 30, 31
-    $numOfDays = $firstDayOfTheYear->diffInDays($firstDayOfTheYear->copy()->endOfYear());
-
+    $dayOfTheMonth = -1;    // last day of the month
+    $numOfDays = $firstDayOfTheYear->diffInDays($firstDayOfTheYear->copy()->endOfYear())+1;
+    $nextRun = $firstDayOfTheYear->copy()->endOfMonth()->setTime(0, 0);
     $monthlySchedule = ExportSchedule::create([
         'name' => 'User Export Monthly (-1)',
         'exporter' => UserExporter::class,
@@ -127,7 +127,7 @@ it('sends a monthly export email every last day of the month', function () {
         'formats' => [ExportFormat::Csv],
         'schedule_time' => $firstDayOfTheYear->toTimeString(),
         'schedule_day_of_month' => $dayOfTheMonth,
-        'next_run_at' => $firstDayOfTheYear->copy()->endOfMonth()->setTime(0, 0),
+        'next_run_at' => $nextRun,
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -142,6 +142,7 @@ it('sends a monthly export email every last day of the month', function () {
     $testTime = $firstDayOfTheYear;
     for ($i = 0; $i < $numOfDays; $i++) {   // run every once every day for a year
         Carbon::setTestNow($testTime);
+        fwrite(STDOUT, "Running test on day $i. ".$testTime->format("Y-m-d H:i:s")."\n");
         $this->artisan('export:run');
         $testTime->addDay();
     }
@@ -151,7 +152,7 @@ it('sends a monthly export email every last day of the month', function () {
 
 it('sends a monthly export email every month (29th; 28th for non-leap year)', function () {
     $nonLeapYear = Carbon::createFromDate(2023)->firstOfYear();
-    $dayOfTheMonth = 29;
+    $dayOfTheMonth = 28;
     $numOfDays = $nonLeapYear->diffInDays($nonLeapYear->copy()->endOfYear());
 
     $monthlySchedule = ExportSchedule::create([

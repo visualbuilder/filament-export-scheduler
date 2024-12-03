@@ -49,7 +49,7 @@ it('sends a daily export email every day for 3 days', function () {
 });
 
 it('sends a weekly export email every week (Wednesday) for 3 weeks', function () {
-    $wednesday = now()->weekday(\Carbon\WeekDay::Wednesday);
+    $wednesday = now()->weekday(Carbon::WEDNESDAY);
     Carbon::setTestNow($wednesday);
 
     $weeklySchedule = ExportSchedule::create([
@@ -217,9 +217,9 @@ it('sends a monthly export email every month (30th; 28th/29th for February)', fu
     Notification::assertSentTo($monthlySchedule->owner, ScheduledExportCompleteNotification::class);
 });
 
-it('sends a monthly export email every month (31st; 28th/29th/30th for others)', function () {
+it('sends a monthly export email on the last day of every month (31st; 28th/29th/30th for others)', function () {
     $nonLeapYear = Carbon::createFromDate(2023)->firstOfYear();
-    $dayOfTheMonth = 31;
+    $dayOfTheMonth = -1;
     $numOfDays = $nonLeapYear->diffInDays($nonLeapYear->copy()->endOfYear());
 
     $monthlySchedule = ExportSchedule::create([

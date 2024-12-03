@@ -51,7 +51,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          run: php -r "file_exists('.env') || copy('.env.github', '.env');"
+          php -r "file_exists('.env') || copy('.env.github', '.env');"
           composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" "filament/filament:${{ matrix.filament }}" --no-interaction --no-update
           composer update --${{ matrix.stability }} --prefer-dist --no-interaction
           php artisan key:generate

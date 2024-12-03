@@ -35,7 +35,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Start MySQL Database
+      - name: Start MySQL Database - installed already
         run: sudo systemctl start mysql.service
 
       - name: Setup MySQL Database
@@ -54,9 +54,16 @@ jobs:
           php -r "file_exists('.env') || copy('.env.github', '.env');"
           composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" "filament/filament:${{ matrix.filament }}" --no-interaction --no-update
           composer update --${{ matrix.stability }} --prefer-dist --no-interaction
-          php artisan key:generate
-          chmod -R 777 storage bootstrap/cache
-          php artisan migrate --seed
+
+      - name: Set permissions
+        run: |
+          chmod -R 777 vendor/orchestra/testbench-core/laravel/storage
+          chmod -R 777 vendor/orchestra/testbench-core/laravel/bootstrap/cache
+
+      - name: Run migrations
+        run: |
+          vendor/bin/testbench key:generate
+          vendor/bin/testbench migrate --seed
 
       - name: Setup Problem Matches
         run: |
@@ -64,11 +71,4 @@ jobs:
           echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
 
       - name: Execute tests
-        env:
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_CONNECTION: mysql
-          DB_DATABASE: ${{env.DB_DATABASE}}
-          DB_USERNAME: ${{env.DB_USER}}
-          DB_PASSWORD: ${{env.DB_PASSWORD}}
         run: composer test tests

@@ -63,7 +63,7 @@ jobs:
       - name: Run migrations
         run: |
           vendor/bin/testbench key:generate
-          vendor/bin/testbench migrate --seed
+          vendor/bin/testbench migrate
 
       - name: Setup Problem Matches
         run: |

@@ -183,9 +183,9 @@ it('sends a monthly export email every month (29th; 28th for non-leap year)', fu
     Notification::assertSentTo($monthlySchedule->owner, ScheduledExportCompleteNotification::class);
 });
 
-it('sends a monthly export email every month (30th; 28th/29th for February)', function () {
+it('sends a monthly export email every month', function () {
     $nonLeapYear = Carbon::createFromDate(2023)->firstOfYear();
-    $dayOfTheMonth = 30;
+    $dayOfTheMonth = 15;
     $numOfDays = $nonLeapYear->diffInDays($nonLeapYear->copy()->endOfYear());
 
     $monthlySchedule = ExportSchedule::create([

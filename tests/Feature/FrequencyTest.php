@@ -1,7 +1,6 @@
 <?php
 
 use Carbon\Carbon;
-use Carbon\Month as CarbonMonth;
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Illuminate\Support\Facades\Notification;
 use VisualBuilder\ExportScheduler\Enums\DayOfWeek;
@@ -361,7 +360,7 @@ it('sends a quarterly export email (starts on January 15th)', function () {
 });
 
 it('sends a quarterly export email (starts on November 29th; February 28th for non-leap year)', function () {
-    $nonLeapMonth = Carbon::createFromDate(2023)->setMonth(CarbonMonth::November)->firstOfMonth();
+    $nonLeapMonth = Carbon::createFromDate(2023)->setMonth(11)->firstOfMonth();
     $dayOfTheMonth = 29;
     $startMonth = Month::NOVEMBER->value;
     $numOfYears = 10;
@@ -433,7 +432,7 @@ it('sends a half-yearly export email (starts on January 15th)', function () {
 });
 
 it('sends a half-yearly export email (starts on August 29th; February 28th for non-leap year)', function () {
-    $nonLeapMonth = Carbon::createFromDate(2023)->setMonth(CarbonMonth::August)->firstOfMonth();
+    $nonLeapMonth = Carbon::createFromDate(2023)->setMonth(8)->firstOfMonth();
     $dayOfTheMonth = 29;
     $startMonth = Month::AUGUST->value;
     $numOfYears = 10;
@@ -476,7 +475,7 @@ it('sends a cron export email (quarterly at 2:00 am)', function () {
         'exporter' => UserExporter::class,
         'schedule_frequency' => ScheduleFrequency::CRON,
         'formats' => [ExportFormat::Csv],
-        'next_run_at' => now()->setMonth(CarbonMonth::March)->setTime(2, 0),
+        'next_run_at' => now()->setMonth(3)->setTime(2, 0),
         // at 2:00 am on the 1st of March, June, September, Dec
         'cron' => '0 2 1 3,6,9,12 *',
         'columns' => [

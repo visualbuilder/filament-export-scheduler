@@ -12,25 +12,8 @@ jobs:
   tests:
     runs-on: ${{ matrix.os }}
 
-    services:
-      mysql:
-        image: mysql:latest
-        env:
-          MYSQL_ALLOW_EMPTY_PASSWORD: false
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: $DB_DATABASE
-          MYSQL_USER: $DB_USER
-          MYSQL_PASSWORD: $DB_PASSWORD
-        ports:
-          - 3306/tcp
-        options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: [ ubuntu-latest ]
         php: [ 8.2,8.3 ]
@@ -65,8 +48,12 @@ jobs:
 
       - name: Install dependencies
         run: |
+          run: php -r "file_exists('.env') || copy('.env.github', '.env');"
           composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" "filament/filament:${{ matrix.filament }}" --no-interaction --no-update
           composer update --${{ matrix.stability }} --prefer-dist --no-interaction
+          php artisan key:generate
+          chmod -R 777 storage bootstrap/cache
+          php artisan migrate --seed
 
       - name: Setup Problem Matches
         run: |

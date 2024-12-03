@@ -118,7 +118,7 @@ it('sends a monthly export email every month (15th)', function () {
 it('sends a monthly export email every last day of the month', function () {
     $firstDayOfTheYear = Carbon::createFromDate(2024)->firstOfYear();
     $dayOfTheMonth = -1;    // last day of the month
-    $numOfDays = $firstDayOfTheYear->diffInDays($firstDayOfTheYear->copy()->endOfYear())+1;
+    $numOfDays = $firstDayOfTheYear->diffInDays($firstDayOfTheYear->copy()->endOfYear());
     $nextRun = $firstDayOfTheYear->copy()->endOfMonth()->setTime(0, 0);
     $monthlySchedule = ExportSchedule::create([
         'name' => 'User Export Monthly (-1)',

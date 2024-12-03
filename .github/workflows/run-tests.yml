@@ -35,7 +35,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Start MySQL Database - installed already
+      - name: Start MySQL Database
         run: sudo systemctl start mysql.service
 
       - name: Setup MySQL Database

@@ -23,8 +23,7 @@ class ExportSchedulerCommand extends Command
                 // Attempt to run the export
                 try {
                     (new ScheduledExporter($exportSchedule))->run();
-
-                    fwrite(STDOUT, "Run Success, next due: ".$exportSchedule->calculateNextRun());
+                    fwrite(STDOUT, "{$exportSchedule->name} success, next due: ".$exportSchedule->calculateNextRun()."\n");
                     $exportSchedule->update([
                         'next_run_at' => $exportSchedule->calculateNextRun(),
                         'last_run_at' => now(),

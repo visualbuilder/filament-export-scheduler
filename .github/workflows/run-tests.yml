@@ -35,6 +35,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Start MySQL Database
+        run: sudo systemctl start mysql.service
+
       - name: Setup MySQL Database
         run: mysql -h 127.0.0.1 -u $DB_USER -p$DB_PASSWORD -e "CREATE DATABASE IF NOT EXISTS $DB_DATABASE;"
 

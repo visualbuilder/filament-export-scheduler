@@ -1,20 +1,24 @@
 <?php
 
 namespace VisualBuilder\ExportScheduler\Filament\Forms;
+
 use Closure;
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\Fieldset;
+use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\MorphToSelect;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use VisualBuilder\ExportScheduler\Enums\DateRange;
@@ -23,6 +27,7 @@ use VisualBuilder\ExportScheduler\Enums\Month;
 use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
 use VisualBuilder\ExportScheduler\Facades\ExportScheduler;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
+use VisualBuilder\ExportScheduler\Traits\InteractsWithExportSchedulerFilter;
 
 class Fields
 {
@@ -41,11 +46,112 @@ class Fields
     /**
      * @return Select
      */
+    public static function filterReportSection(): Section
+    {
+        return Section::make('Filter By Associated Records (optional)')
+            ->columns()
+            ->live()
+            ->visible(fn(Get $get) => $get('exporter'))
+            ->schema([
+                Section::make('Choose the Associated Record Type')
+                    ->columnSpan(1)
+                    ->schema([
+                        Select::make('selected_relations')
+                            ->hiddenLabel()
+                            ->multiple()
+                            ->live()
+                            ->options(function (Get $get) {
+                                $exporter = $get('exporter');
+                                if ($exporter) {
+                                    $exporterModel = (new \ReflectionClass($exporter))->getStaticPropertyValue('model');
+                                    $belongsToRelations = collect((new \ReflectionClass($exporterModel))->getMethods(\ReflectionMethod::IS_PUBLIC))
+                                        ->filter(function (\ReflectionMethod $method) use ($exporterModel) {
+                                            // check if it is a BelongsTo
+                                            if ($method->getReturnType()?->getName() !== BelongsTo::class) {
+                                                return false;
+                                            }
+
+                                            // check if it can be used in a filter
+                                            $relationship = $method->getName();
+                                            $relationshipInstance = (new $exporterModel)->$relationship();
+                                            $relatedModelClass = get_class($relationshipInstance->getRelated());
+
+                                            return in_array(InteractsWithExportSchedulerFilter::class, (new \ReflectionClass($relatedModelClass))->getTraitNames());
+                                        })
+                                        ->mapWithKeys(function (\ReflectionMethod $method) {
+                                            $relationship = $method->getName();
+
+                                            return [$relationship => ucwords(preg_replace('/(?<!^)([A-Z])/', ' $1', $method->getName()))];
+
+                                        });
+                                    return $belongsToRelations->toArray();
+                                }
+                            })
+                    ]),
+                Section::make('Select Records for Each Associated Type')
+                    ->columnSpan(1)
+                    ->key('relationRecordsKey')
+            ])
+            ->afterStateUpdated(function ($component, Get $get, Set $set) {
+                $selectedRelations = $get('selected_relations' ?? []);
+                $relationRecordsSection = $component->getContainer()->getComponent('relationRecordsKey');
+
+                // remove fields/relations that are no longer selected
+                $relatedRecordsFields = array_filter($relationRecordsSection->getChildComponents(), fn($field) => in_array($field->getName(), $selectedRelations));
+
+                // get the names of the updated fields
+                $relatedRecordsFieldsKeys = array_map(fn($child) => $child->getName(), $relatedRecordsFields);
+
+                // get the newly added relations
+                foreach ($selectedRelations as $relation) {
+                    if (!in_array($relation, $relatedRecordsFieldsKeys)) {
+                        $exporter = $get('exporter');
+                        $exporterModel = (new \ReflectionClass($exporter))->getStaticPropertyValue('model');
+
+                        $relationshipInstance = (new $exporterModel)->$relation();
+                        $relatedModelClass = get_class($relationshipInstance->getRelated());
+
+                        $data = $component->getContainer()->getLivewire()->data;
+                        if (!array_key_exists('filters', $data)) {
+                            $data['filters'] = [];
+                        }
+
+                        if (!array_key_exists($relation, $data['filters'])) {
+                            $data['filters'][$relation] = null;
+                        }
+
+                        $component->getContainer()->getLivewire()->data = $data;
+
+//                        dump($relatedModelClass::latest()->get());
+
+                        $relatedRecordsFields[] = Select::make('filters.' . $relation)
+                            ->searchable()
+//                            ->options(fn() => $relatedModelClass::latest()
+//                                ->limit(50)
+//                                ->pluck('name', 'id'))
+                            ->getSearchResultsUsing(function (string $search) use ($relatedModelClass) {
+                                $results = $relatedModelClass::where('name', 'like', "%{$search}%")
+                                    ->limit(50)
+                                    ->pluck('name', 'id');
+                                return $results;
+                            })
+                            ->getOptionLabelUsing(fn ($value) => $relatedModelClass::find($value)?->name)
+                        ;
+                    }
+                }
+
+                $relationRecordsSection->schema($relatedRecordsFields);
+            });
+    }
+
+    /**
+     * @return Select
+     */
     public static function exporter(): Select
     {
         return Select::make('exporter')
             ->label(__('export-scheduler::scheduler.exporter'))
-            ->hintColor('info')->hintIcon('heroicon-m-question-mark-circle', tooltip: __('export-scheduler::scheduler.exporter_hint'))
+            ->hintIcon('heroicon-m-question-mark-circle', tooltip: __('export-scheduler::scheduler.exporter_hint'))
             ->hintColor('info')
             ->options(ExportScheduler::listExporters())
             ->native(false)
@@ -61,7 +167,7 @@ class Fields
                 if ($record) {
                     $record->update([
                         'exporter' => $state,
-                        'columns'  => $defaultColumns ?? [],
+                        'columns' => $defaultColumns ?? [],
                     ]);
                 }
 
@@ -128,7 +234,7 @@ class Fields
         return Placeholder::make('cron_hint')
             ->visible(fn(Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))
             ->label(__('Cron Tips'))
-            ->content(new HtmlString("<div style='line-height: 1.7'><p>".__('export-scheduler::scheduler.cron_expression_hint')."</p></div>"));
+            ->content(new HtmlString("<div style='line-height: 1.7'><p>" . __('export-scheduler::scheduler.cron_expression_hint') . "</p></div>"));
     }
 
     /**
@@ -245,7 +351,7 @@ class Fields
         return Select::make('formats')
             ->label(__('export-scheduler::scheduler.formats'))
             ->options([
-                'csv'  => __('CSV'),
+                'csv' => __('CSV'),
                 'xlsx' => __('XLSX'),
             ])
             ->default([ExportFormat::Xlsx])
@@ -328,7 +434,7 @@ class Fields
                         })->first();
 
                         if ($deletedItem) {
-                            $deletedItemKey = (string) Str::uuid(); // Generate a unique key
+                            $deletedItemKey = (string)Str::uuid(); // Generate a unique key
                             $newColumns = [$deletedItemKey => $deletedItem];
                             $updatedColumns = $currentSelectedColumns + $newColumns;
                             $set('columns', $updatedColumns); // Update the columns
@@ -369,12 +475,12 @@ class Fields
     }
 
 
-    public static function copyToUserFields():array
+    public static function copyToUserFields(): array
     {
         return [
 
             Placeholder::make('Data Security Warning')
-            ->content(fn(Get $get) => new HtmlString(__('export-scheduler::scheduler.cc_warning', ['owner_type' => class_basename($get('owner_type'))]))),
+                ->content(fn(Get $get) => new HtmlString(__('export-scheduler::scheduler.cc_warning', ['owner_type' => class_basename($get('owner_type'))]))),
 
             Repeater::make('cc')
                 ->label('')
@@ -406,7 +512,7 @@ class Fields
             ->searchable();
     }
 
-    public static function ownerMorphSelect( string $fieldName = 'owner', bool $native = false, bool $searchable = true): MorphToSelect
+    public static function ownerMorphSelect(string $fieldName = 'owner', bool $native = false, bool $searchable = true): MorphToSelect
     {
         $userModels = config('export-scheduler.user_models', []);
 
@@ -419,7 +525,7 @@ class Fields
         }
 
         return MorphToSelect::make($fieldName)
-            ->label( __('export-scheduler::scheduler.owner'))
+            ->label(__('export-scheduler::scheduler.owner'))
             ->types($types)
             ->native($native)
             ->required()

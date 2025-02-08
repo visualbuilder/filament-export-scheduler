@@ -1,31 +1,14 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler;
+namespace VisualBuilder\ExportScheduler\Traits;
 
-trait InteractsWithExportScheduleFilter
+trait InteractsWithExportSchedulerFilter
 {
-    protected string $filterOptionId;
-
-    protected string $filterOptionLabel = 'name';
-
-    public function setFilterOptionId(string $key = 'id'): void
-    {
-        $this->filterOptionId = $key;
-    }
-
-    public function setFilterOptionLabel(string $label = 'name'): void
-    {
-        $this->filterOptionLabel = $label;
-    }
-
-    public function getFilterId(): string
-    {
-        return $this->id;
-    }
+    protected $filterOptionLabel = 'name';
 
     public function getFilterLabel(): string
     {
-        return $this->label;
+        return $this->filterOptionLabel;
     }
 
 

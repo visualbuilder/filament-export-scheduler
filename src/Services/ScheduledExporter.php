@@ -24,6 +24,7 @@ class ScheduledExporter
     protected ?Builder $query = null;
     protected array $columnMap = [];
     protected array $options = [];
+    protected array $relations = [];
 
     public function __construct(public ExportSchedule $exportSchedule)
     {

@@ -67,20 +67,30 @@ class ExportScheduleResource extends Resource
         return $form
             ->schema([
                 Tabs::make('tabs')->tabs([
-                    Tabs\Tab::make('Exporter')->schema([
+                    Tabs\Tab::make('Exporter')
+                        ->schema([
+                            Section::make()
+                                ->schema([
+                                    Grid::make()
+                                        ->schema([
+                                            Fields::name(),
+                                            Fields::exporter(),
+                                        ])
+                                        ->columns(1)
+                                        ->columnSpan(1),
 
-                        Grid::make()->schema([
-                            Fields::name(),
-                            Fields::exporter(),
-                        ])->columns(1)->columnSpan(1),
+                                    Grid::make()
+                                        ->schema([
+                                            Fields::ownerMorphSelect(),
+                                        ])
+                                        ->columns(1)
+                                        ->columnSpan(1),
 
-                        Grid::make()->schema([
-                            Fields::ownerMorphSelect(),
-                        ])->columns(1)->columnSpan(1),
+                                    Fields::copyToUser(),
+                                ])->columns(),
 
-                        Fields::copyToUser()
-
-                    ])->columns(2),
+                            Fields::filterReportSection()
+                        ]),
 
                     Tabs\Tab::make('Schedule')->schema([
                         Section::make('When to Run')
@@ -128,7 +138,9 @@ class ExportScheduleResource extends Resource
                         ->visible(fn(Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->count() : false)
                         ->extraAttributes(['class' => 'column_picker'])
 
-                ])->persistTab()
+                ])
+                    ->contained(false)
+                    ->persistTab()
                     ->persistTabInQueryString()
                     ->columnSpanFull(),
             ]);
@@ -165,9 +177,9 @@ class ExportScheduleResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListExportSchedules::route('/'),
+            'index' => Pages\ListExportSchedules::route('/'),
             'create' => Pages\CreateExportSchedule::route('/create'),
-            'edit'   => Pages\EditExportSchedule::route('/{record}/edit'),
+            'edit' => Pages\EditExportSchedule::route('/{record}/edit'),
         ];
     }
 

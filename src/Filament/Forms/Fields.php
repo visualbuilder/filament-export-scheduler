@@ -54,21 +54,25 @@ class Fields
         $relationshipInstance = (new $exporterModel)->$relation();
         // Determine the related model's class.
         $relatedModelClass = get_class($relationshipInstance->getRelated());
+        // Get the filter label for the related model's class;
+        $filterLabel = (new $relatedModelClass())->getFilterLabel();
 
         return Select::make("filters.$relation")
-            ->label(ucfirst($relation))
+            ->label(ucwords(preg_replace('/(?<!^)([A-Z])/', ' $1', $relation)))
             ->live()
             ->preload()
             ->multiple()
             ->searchable()
-            ->getSearchResultsUsing(function (string $search) use ($relatedModelClass) {
-                return $relatedModelClass::where('name', 'like', "%{$search}%")
+            ->getSearchResultsUsing(function (string $search) use ($filterLabel, $relatedModelClass): array {
+                return $relatedModelClass::where($filterLabel, 'like', "%{$search}%")
                     ->limit(50)
-                    ->pluck('name', 'id')
+                    ->pluck($filterLabel, 'id')
                     ->toArray();
             })
-            ->getOptionLabelUsing(function ($value) use ($relatedModelClass) {
-                return optional($relatedModelClass::find($value))->name;
+            ->getOptionLabelsUsing(function (array $values) use ($filterLabel, $relatedModelClass): array {
+                return $relatedModelClass::whereIn('id', $values)
+                    ->pluck($filterLabel, 'id')
+                    ->toArray();
             });
     }
 
@@ -121,24 +125,50 @@ class Fields
                                     });
 
                                 return $belongsToRelations->toArray();
+                            })
+                            ->afterStateUpdated(function ($livewire, $state) {
+                                // Remove field data from livewire if not selected
+                                if (array_key_exists('filters', $livewire->data)) {
+                                    $livewire->data['filters'] = array_filter(
+                                        $livewire->data['filters'],
+                                        fn($filter) => in_array($filter, $state),
+                                        ARRAY_FILTER_USE_KEY,
+                                    );
+                                }
                             }),
                     ]),
 
                 // Section that dynamically creates a Select field for each chosen relation.
                 Section::make('Select Records for Each Associated Type')
                     ->columnSpan(1)
+                    ->visible(fn (Get $get) => $get('selected_relations'))
                     ->live()
-                    ->schema(function (callable $get) {
+                    ->schema(function (Get $get, $livewire) {
                         $exporter = $get('exporter');
-                        if (! $exporter) {
+                        if (!$exporter) {
                             return [];
                         }
                         $selectedRelations = $get('selected_relations') ?? [];
 
                         // Use the helper method to build each Select field.
-                        return collect($selectedRelations)
+                        $selectFields = collect($selectedRelations)
                             ->map(fn($relation) => self::buildRelationSelectField($relation, $exporter))
                             ->toArray();
+
+                        // Add field data to the livewire
+                        $livewireData = $livewire->data;
+                        if (!array_key_exists('filters', $livewireData)) {
+                            $livewireData['filters'] = [];
+                        }
+                        foreach($selectFields as $field) {
+                            $fieldName = str_replace('filters.', '', $field->getName());
+                            if (!array_key_exists($fieldName, $livewireData['filters'])) {
+                                $livewireData['filters'][$fieldName] = null;
+                            }
+                        }
+                        $livewire->data = $livewireData;
+
+                        return $selectFields;
                     })
                 // Assigning a key is not necessary here anymore since the schema is entirely dynamic.
                 // ->key('relationRecordsKey')

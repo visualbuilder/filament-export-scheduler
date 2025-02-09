@@ -11,7 +11,6 @@ trait InteractsWithExportSchedulerFilter
         return $this->filterOptionLabel;
     }
 
-
     /*
      * Exclude relations that should
      * not be added to the filter

@@ -44,8 +44,34 @@ class Fields
     }
 
     /**
-     * @return Select
+     * Helper method that builds a dynamic Select field for a given relation.
      */
+    protected static function buildRelationSelectField(string $relation, $exporter): Select
+    {
+        // Get the exporter model via reflection.
+        $exporterModel = (new \ReflectionClass($exporter))->getStaticPropertyValue('model');
+        // Instantiate and get the relationship instance.
+        $relationshipInstance = (new $exporterModel)->$relation();
+        // Determine the related model's class.
+        $relatedModelClass = get_class($relationshipInstance->getRelated());
+
+        return Select::make("filters.$relation")
+            ->label(ucfirst($relation))
+            ->live()
+            ->preload()
+            ->multiple()
+            ->searchable()
+            ->getSearchResultsUsing(function (string $search) use ($relatedModelClass) {
+                return $relatedModelClass::where('name', 'like', "%{$search}%")
+                    ->limit(50)
+                    ->pluck('name', 'id')
+                    ->toArray();
+            })
+            ->getOptionLabelUsing(function ($value) use ($relatedModelClass) {
+                return optional($relatedModelClass::find($value))->name;
+            });
+    }
+
     public static function filterReportSection(): Section
     {
         return Section::make('Filter By Associated Records (optional)')
@@ -53,6 +79,7 @@ class Fields
             ->live()
             ->visible(fn(Get $get) => $get('exporter'))
             ->schema([
+                // Section for choosing which relation types to filter by.
                 Section::make('Choose the Associated Record Type')
                     ->columnSpan(1)
                     ->schema([
@@ -62,86 +89,60 @@ class Fields
                             ->live()
                             ->options(function (Get $get) {
                                 $exporter = $get('exporter');
-                                if ($exporter) {
-                                    $exporterModel = (new \ReflectionClass($exporter))->getStaticPropertyValue('model');
-                                    $belongsToRelations = collect((new \ReflectionClass($exporterModel))->getMethods(\ReflectionMethod::IS_PUBLIC))
-                                        ->filter(function (\ReflectionMethod $method) use ($exporterModel) {
-                                            // check if it is a BelongsTo
-                                            if ($method->getReturnType()?->getName() !== BelongsTo::class) {
-                                                return false;
-                                            }
-
-                                            // check if it can be used in a filter
-                                            $relationship = $method->getName();
-                                            $relationshipInstance = (new $exporterModel)->$relationship();
-                                            $relatedModelClass = get_class($relationshipInstance->getRelated());
-
-                                            return in_array(InteractsWithExportSchedulerFilter::class, (new \ReflectionClass($relatedModelClass))->getTraitNames());
-                                        })
-                                        ->mapWithKeys(function (\ReflectionMethod $method) {
-                                            $relationship = $method->getName();
-
-                                            return [$relationship => ucwords(preg_replace('/(?<!^)([A-Z])/', ' $1', $method->getName()))];
-
-                                        });
-                                    return $belongsToRelations->toArray();
+                                if (! $exporter) {
+                                    return [];
                                 }
-                            })
+
+                                $exporterModel = (new \ReflectionClass($exporter))->getStaticPropertyValue('model');
+
+                                // Filter methods on the exporter model to only include BelongsTo relationships
+                                // whose related model uses the filter trait.
+                                $belongsToRelations = collect((new \ReflectionClass($exporterModel))->getMethods(\ReflectionMethod::IS_PUBLIC))
+                                    ->filter(function (\ReflectionMethod $method) use ($exporterModel) {
+                                        if ($method->getReturnType()?->getName() !== BelongsTo::class) {
+                                            return false;
+                                        }
+
+                                        $relationship = $method->getName();
+                                        $relationshipInstance = (new $exporterModel)->$relationship();
+                                        $relatedModelClass = get_class($relationshipInstance->getRelated());
+
+                                        return in_array(
+                                            InteractsWithExportSchedulerFilter::class,
+                                            (new \ReflectionClass($relatedModelClass))->getTraitNames()
+                                        );
+                                    })
+                                    ->mapWithKeys(function (\ReflectionMethod $method) {
+                                        $relationship = $method->getName();
+                                        // Convert camelCase to spaced words.
+                                        return [
+                                            $relationship => ucwords(preg_replace('/(?<!^)([A-Z])/', ' $1', $relationship))
+                                        ];
+                                    });
+
+                                return $belongsToRelations->toArray();
+                            }),
                     ]),
+
+                // Section that dynamically creates a Select field for each chosen relation.
                 Section::make('Select Records for Each Associated Type')
                     ->columnSpan(1)
-                    ->key('relationRecordsKey')
-            ])
-            ->afterStateUpdated(function ($component, Get $get, Set $set) {
-                $selectedRelations = $get('selected_relations' ?? []);
-                $relationRecordsSection = $component->getContainer()->getComponent('relationRecordsKey');
-
-                // remove fields/relations that are no longer selected
-                $relatedRecordsFields = array_filter($relationRecordsSection->getChildComponents(), fn($field) => in_array($field->getName(), $selectedRelations));
-
-                // get the names of the updated fields
-                $relatedRecordsFieldsKeys = array_map(fn($child) => $child->getName(), $relatedRecordsFields);
-
-                // get the newly added relations
-                foreach ($selectedRelations as $relation) {
-                    if (!in_array($relation, $relatedRecordsFieldsKeys)) {
+                    ->live()
+                    ->schema(function (callable $get) {
                         $exporter = $get('exporter');
-                        $exporterModel = (new \ReflectionClass($exporter))->getStaticPropertyValue('model');
-
-                        $relationshipInstance = (new $exporterModel)->$relation();
-                        $relatedModelClass = get_class($relationshipInstance->getRelated());
-
-                        $data = $component->getContainer()->getLivewire()->data;
-                        if (!array_key_exists('filters', $data)) {
-                            $data['filters'] = [];
+                        if (! $exporter) {
+                            return [];
                         }
+                        $selectedRelations = $get('selected_relations') ?? [];
 
-                        if (!array_key_exists($relation, $data['filters'])) {
-                            $data['filters'][$relation] = null;
-                        }
-
-                        $component->getContainer()->getLivewire()->data = $data;
-
-//                        dump($relatedModelClass::latest()->get());
-
-                        $relatedRecordsFields[] = Select::make('filters.' . $relation)
-                            ->searchable()
-//                            ->options(fn() => $relatedModelClass::latest()
-//                                ->limit(50)
-//                                ->pluck('name', 'id'))
-                            ->getSearchResultsUsing(function (string $search) use ($relatedModelClass) {
-                                $results = $relatedModelClass::where('name', 'like', "%{$search}%")
-                                    ->limit(50)
-                                    ->pluck('name', 'id');
-                                return $results;
-                            })
-                            ->getOptionLabelUsing(fn ($value) => $relatedModelClass::find($value)?->name)
-                        ;
-                    }
-                }
-
-                $relationRecordsSection->schema($relatedRecordsFields);
-            });
+                        // Use the helper method to build each Select field.
+                        return collect($selectedRelations)
+                            ->map(fn($relation) => self::buildRelationSelectField($relation, $exporter))
+                            ->toArray();
+                    })
+                // Assigning a key is not necessary here anymore since the schema is entirely dynamic.
+                // ->key('relationRecordsKey')
+            ]);
     }
 
     /**

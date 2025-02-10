@@ -21,6 +21,12 @@ Email automated exports on a defined schedule - keep the management happy with t
 
 ![Setup Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/edit-export.png)
 
+## Filter By Available Relationships
+<!-- show description image here -->
+- BelongsTo relations (with 'InteractsWithExportScheduler' trait set on the relation class) are automatically discovered.
+- Exclude relations with the 'excludeFilterableRelations' method available in the 'InteractsWithExportScheduler' trait.
+<!-- add media here -->
+
 
 ## Easy Frequency Selection
 

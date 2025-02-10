@@ -101,10 +101,13 @@ class Fields
                                 $exporterModel = (new \ReflectionClass($exporter))->getStaticPropertyValue('model');
 
                                 // Filter methods on the exporter model to only include BelongsTo relationships
-                                // whose related model uses the filter trait.
+                                // that don't require any arguments and whose related model uses filter trait
                                 $belongsToRelations = collect((new \ReflectionClass($exporterModel))->getMethods(\ReflectionMethod::IS_PUBLIC))
                                     ->filter(function (\ReflectionMethod $method) use ($exporterModel) {
-                                        if ($method->getReturnType()?->getName() !== BelongsTo::class) {
+                                        if (
+                                            $method->getReturnType()?->getName() !== BelongsTo::class
+                                            || $method->getNumberOfParameters() > 1
+                                        ) {
                                             return false;
                                         }
 
@@ -190,8 +193,14 @@ class Fields
             ->reactive()
             ->required()
             ->afterStateUpdated(function (?ExportSchedule $record, $state, Set $set, $livewire) {
+                /** Clear any existing selected_relations & filter data */
+                if (array_key_exists('filters', $livewire->data)) {
+                    $livewire->data['filters'] = [];
+                    $set('selected_relations', null);
+                }
+
                 /** Update the column definitions when changing exporter */
-                $defaultColumns = ExportSchedule::getDefaultColumnsForExporter($state);
+                $defaultColumns = ExportSchedule::getDefaultColumnsForExporter($state ?? '');
 
                 $set('columns', $defaultColumns->toArray() ?? []);
                 $set('available_columns', []);

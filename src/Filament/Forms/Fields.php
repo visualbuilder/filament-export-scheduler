@@ -91,34 +91,43 @@ class Fields
                             ->hiddenLabel()
                             ->multiple()
                             ->live()
-                            ->formatStateUsing(fn (?ExportSchedule $record) => array_keys($record?->filters ?? []))
+                            ->formatStateUsing(fn(?ExportSchedule $record) => array_keys($record?->filters ?? []))
                             ->options(function (Get $get) {
                                 $exporter = $get('exporter');
                                 if (!$exporter) {
                                     return [];
                                 }
 
-                                $exporterModel = (new \ReflectionClass($exporter))->getStaticPropertyValue('model');
+                                $exporterReflection = new \ReflectionClass($exporter);
+                                $exporterModel = $exporterReflection->getStaticPropertyValue('model');
 
-                                // Filter methods on the exporter model to only include BelongsTo relationships
-                                // that don't require any arguments and whose related model uses filter trait
+                                // Filter methods on the exporter model to only include relationships that
+                                // - is an instance of a BelongsTo relation
+                                // - doesn't require any arguments
+                                // - implements the 'InteractsWithExportSchedulerFilter' trait
+                                // - is not specifically excluded from the exporter
                                 $belongsToRelations = collect((new \ReflectionClass($exporterModel))->getMethods(\ReflectionMethod::IS_PUBLIC))
-                                    ->filter(function (\ReflectionMethod $method) use ($exporterModel) {
-                                        if (
-                                            $method->getReturnType()?->getName() !== BelongsTo::class
-                                            || $method->getNumberOfParameters() > 1
-                                        ) {
+                                    ->filter(function (\ReflectionMethod $method) use ($exporter, $exporterModel, $exporterReflection) {
+                                        $methodReturnType = $method->getReturnType()?->getName();
+                                        $methodParamsCount = $method->getNumberOfParameters();
+
+                                        if ($methodReturnType !== BelongsTo::class || $methodParamsCount > 1) {
                                             return false;
                                         }
 
                                         $relationship = $method->getName();
+                                        $exporterTraits = $exporterReflection->getTraitNames();
+
+                                        if (in_array(InteractsWithExportSchedulerFilter::class, $exporterTraits)
+                                            && in_array($relationship, $exporter::excludeFilterableRelations())) {
+                                            return false;
+                                        }
+
                                         $relationshipInstance = (new $exporterModel)->$relationship();
                                         $relatedModelClass = get_class($relationshipInstance->getRelated());
+                                        $relatedModelTraits = (new \ReflectionClass($relatedModelClass))->getTraitNames();
 
-                                        return in_array(
-                                            InteractsWithExportSchedulerFilter::class,
-                                            (new \ReflectionClass($relatedModelClass))->getTraitNames()
-                                        );
+                                        return in_array(InteractsWithExportSchedulerFilter::class, $relatedModelTraits);
                                     })
                                     ->mapWithKeys(function (\ReflectionMethod $method) {
                                         $relationship = $method->getName();

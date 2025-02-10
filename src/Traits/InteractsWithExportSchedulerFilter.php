@@ -16,7 +16,7 @@ trait InteractsWithExportSchedulerFilter
      * not be added to the filter
      * @return <array>Illuminate\Database\Eloquent\Relations\Relations
      */
-    public function excludeFilterableRelations(): array
+    public static function excludeFilterableRelations(): array
     {
         return [];
     }

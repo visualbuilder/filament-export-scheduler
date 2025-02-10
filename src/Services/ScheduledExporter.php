@@ -64,6 +64,11 @@ class ScheduledExporter
                 $this->query->whereBetween($dateColumn, [$startDate, $endDate]);
             }
 
+            // Apply custom relation filter if available
+            foreach ($this->exportSchedule->filters as $relation => $selectedRelations) {
+                $this->query->whereHas($relation, fn ($query) => $query->whereIn('id', $selectedRelations));
+            }
+
             // Prepare column mappings
             $this->columnMap = [];
             foreach ($this->exportSchedule->columns as $column) {

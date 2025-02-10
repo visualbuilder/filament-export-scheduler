@@ -100,7 +100,8 @@ class ExportSchedule extends Model
         'last_successful_run_at',
         'enabled',
         'cron',
-        'cc'
+        'cc',
+        'filters'
     ];
 
     /**
@@ -123,6 +124,7 @@ class ExportSchedule extends Model
         'schedule_start_month' => Month::class,
         'date_range' => DateRange::class,
         'schedule_frequency' => ScheduleFrequency::class,
+        'filters' => 'array',
     ];
 
     public function owner(): MorphTo

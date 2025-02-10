@@ -91,9 +91,10 @@ class Fields
                             ->hiddenLabel()
                             ->multiple()
                             ->live()
+                            ->formatStateUsing(fn (?ExportSchedule $record) => array_keys($record?->filters ?? []))
                             ->options(function (Get $get) {
                                 $exporter = $get('exporter');
-                                if (! $exporter) {
+                                if (!$exporter) {
                                     return [];
                                 }
 
@@ -141,7 +142,7 @@ class Fields
                 // Section that dynamically creates a Select field for each chosen relation.
                 Section::make('Select Records for Each Associated Type')
                     ->columnSpan(1)
-                    ->visible(fn (Get $get) => $get('selected_relations'))
+                    ->visible(fn(Get $get) => $get('selected_relations'))
                     ->live()
                     ->schema(function (Get $get, $livewire) {
                         $exporter = $get('exporter');
@@ -160,7 +161,7 @@ class Fields
                         if (!array_key_exists('filters', $livewireData)) {
                             $livewireData['filters'] = [];
                         }
-                        foreach($selectFields as $field) {
+                        foreach ($selectFields as $field) {
                             $fieldName = str_replace('filters.', '', $field->getName());
                             if (!array_key_exists($fieldName, $livewireData['filters'])) {
                                 $livewireData['filters'][$fieldName] = null;

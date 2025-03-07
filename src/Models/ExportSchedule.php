@@ -47,6 +47,7 @@ use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
  * @property-read Carbon|null $starts_at
  * @property-read string $starts_at_formatted
  * @property-read Model|null $owner
+ *
  * @method static Builder|ExportSchedule newModelQuery()
  * @method static Builder|ExportSchedule newQuery()
  * @method static Builder|ExportSchedule query()
@@ -101,7 +102,7 @@ class ExportSchedule extends Model
         'enabled',
         'cron',
         'cc',
-        'filters'
+        'filters',
     ];
 
     /**
@@ -197,13 +198,13 @@ class ExportSchedule extends Model
 
     public static function getDefaultColumnsForExporter(string $exporter): Collection
     {
-        if (!class_exists($exporter) || !method_exists($exporter, 'getColumns')) {
+        if (! class_exists($exporter) || ! method_exists($exporter, 'getColumns')) {
             return collect();
         }
 
         return collect($exporter::getColumns())
-            ->filter(fn($column) => $column instanceof ExportColumn) // Ensure only ExportColumn instances
-            ->map(fn(ExportColumn $column) => [
+            ->filter(fn ($column) => $column instanceof ExportColumn) // Ensure only ExportColumn instances
+            ->map(fn (ExportColumn $column) => [
                 'name' => $column->getName(),
                 'label' => $column->getLabel() ?? $column->getName(),
             ]);
@@ -228,6 +229,7 @@ class ExportSchedule extends Model
         if ($nextRunAt->lessThanOrEqualTo(now())) {
             $nextRunAt->addDay();
         }
+
         return $nextRunAt;
     }
 
@@ -237,6 +239,7 @@ class ExportSchedule extends Model
         if ($nextRunAt->lessThanOrEqualTo(now())) {
             $nextRunAt->addWeek();
         }
+
         return $nextRunAt;
     }
 
@@ -250,12 +253,12 @@ class ExportSchedule extends Model
             if ($this->schedule_day_of_month < 0) {
                 // -1 => last day of the month
                 $nextRunAt = $nextMonth->copy()->endOfMonth()->setTime($nextMonth->hour, $nextMonth->minute, $nextMonth->second);
-            } else if ($lastDayOfTheMonth < $this->schedule_day_of_month) {
+            } elseif ($lastDayOfTheMonth < $this->schedule_day_of_month) {
                 // if the day is 29, 30 or 31 & isn't
                 // a valid date for that month, set
                 // it to the last day of that month
                 $nextRunAt = $nextMonth;
-            } else if ($lastDayOfTheMonth >= $this->schedule_day_of_month) {
+            } elseif ($lastDayOfTheMonth >= $this->schedule_day_of_month) {
                 $nextRunAt = $nextMonth->setDay($this->schedule_day_of_month);
             } else {
                 $nextRunAt->addMonth();
@@ -276,7 +279,7 @@ class ExportSchedule extends Model
 
             if ($lastDayOfTheMonth < $this->schedule_day_of_month) {
                 $nextRunAt = $next;
-            } else if ($lastDayOfTheMonth >= $this->schedule_day_of_month) {
+            } elseif ($lastDayOfTheMonth >= $this->schedule_day_of_month) {
                 // if the day is 29, 30 or 31 & isn't
                 // a valid date for that month, set
                 // it to the last day of that month
@@ -285,6 +288,7 @@ class ExportSchedule extends Model
                 $nextRunAt->addMonths($numOfMonthsInAYear);
             }
         }
+
         return $nextRunAt;
     }
 
@@ -295,7 +299,7 @@ class ExportSchedule extends Model
 
     public function willLogoutUser(): bool
     {
-        return !$this->isCurrentUserOwner() && $this->isSyncQueue();
+        return ! $this->isCurrentUserOwner() && $this->isSyncQueue();
     }
 
     public function isCurrentUserOwner(): bool
@@ -307,9 +311,10 @@ class ExportSchedule extends Model
 
     public function isSyncQueue(): bool
     {
-        $export = new Export();
+        $export = new Export;
         $export->exporter = $this->exporter;
         $exporter = $export->getExporter([], []);
+
         return $exporter->getJobQueue() === 'sync' || (config('queue.default') === 'sync');
     }
 }

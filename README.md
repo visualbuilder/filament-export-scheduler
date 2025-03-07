@@ -230,6 +230,40 @@ Make some export classes with
 php artisan make:filament-exporter
 ```
 
+
+## New Feature - Filtering Exports by a related model
+
+Typical scenario might be exporting all Orders but filtered by a specific Organisation.  In order to filter by organisation we need to know the field that should be searchable.
+This requires adding the ``InteractsWithExportSchedulerFilter`` to the Models that can be filtered.
+
+The trait has the $filterOptionLabel property allowing us to define which column should be used for the filter label.
+And excludeFilterableRelations allows you to exclude relations which should not be included in the filter, by default all belongsTo relations will be included.
+NB. Next release will include morphsTo relation options.
+
+}
+
+```php
+trait InteractsWithExportSchedulerFilter
+{
+    protected $filterOptionLabel = 'name';
+
+    public function getFilterLabel(): string
+    {
+        return $this->filterOptionLabel;
+    }
+
+    /*
+     * Exclude relations that should
+     * not be added to the filter
+     * @return <array>Illuminate\Database\Eloquent\Relations\Relations
+     */
+    public static function excludeFilterableRelations(): array
+    {
+        return [];
+    }
+}
+```
+
 ## Testing
 
 ```bash

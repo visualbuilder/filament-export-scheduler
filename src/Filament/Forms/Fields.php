@@ -6,7 +6,6 @@ use Closure;
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\Fieldset;
-use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\MorphToSelect;
 use Filament\Forms\Components\Placeholder;
@@ -31,9 +30,6 @@ use VisualBuilder\ExportScheduler\Traits\InteractsWithExportSchedulerFilter;
 
 class Fields
 {
-    /**
-     * @return TextInput
-     */
     public static function name(): TextInput
     {
         return TextInput::make('name')
@@ -43,45 +39,12 @@ class Fields
             ->maxLength(191);
     }
 
-    /**
-     * Helper method that builds a dynamic Select field for a given relation.
-     */
-    protected static function buildRelationSelectField(string $relation, $exporter): Select
-    {
-        // Get the exporter model via reflection.
-        $exporterModel = (new \ReflectionClass($exporter))->getStaticPropertyValue('model');
-        // Instantiate and get the relationship instance.
-        $relationshipInstance = (new $exporterModel)->$relation();
-        // Determine the related model's class.
-        $relatedModelClass = get_class($relationshipInstance->getRelated());
-        // Get the filter label for the related model's class;
-        $filterLabel = (new $relatedModelClass())->getFilterLabel();
-
-        return Select::make("filters.$relation")
-            ->label(ucwords(preg_replace('/(?<!^)([A-Z])/', ' $1', $relation)))
-            ->live()
-            ->preload()
-            ->multiple()
-            ->searchable()
-            ->getSearchResultsUsing(function (string $search) use ($filterLabel, $relatedModelClass): array {
-                return $relatedModelClass::where($filterLabel, 'like', "%{$search}%")
-                    ->limit(50)
-                    ->pluck($filterLabel, 'id')
-                    ->toArray();
-            })
-            ->getOptionLabelsUsing(function (array $values) use ($filterLabel, $relatedModelClass): array {
-                return $relatedModelClass::whereIn('id', $values)
-                    ->pluck($filterLabel, 'id')
-                    ->toArray();
-            });
-    }
-
     public static function filterReportSection(): Section
     {
         return Section::make('Filter By Associated Records (optional)')
             ->columns()
             ->live()
-            ->visible(fn(Get $get) => $get('exporter'))
+            ->visible(fn (Get $get) => $get('exporter'))
             ->schema([
                 // Section for choosing which relation types to filter by.
                 Section::make('Choose the Associated Record Type')
@@ -91,16 +54,19 @@ class Fields
                             ->hiddenLabel()
                             ->multiple()
                             ->live()
-                            ->formatStateUsing(fn(?ExportSchedule $record) => array_keys($record?->filters ?? []))
+                            ->preload()
+                            ->formatStateUsing(fn (?ExportSchedule $record) => array_keys($record?->filters ?? []))
                             ->options(function (Get $get) {
                                 $exporter = $get('exporter');
-                                if (!$exporter) {
+                                if (! $exporter) {
                                     return [];
                                 }
 
                                 $exporterReflection = new \ReflectionClass($exporter);
                                 $exporterModel = $exporterReflection->getStaticPropertyValue('model');
 
+
+                                $allRelations = collect((new \ReflectionClass($exporterModel))->getMethods(\ReflectionMethod::IS_PUBLIC));
                                 // Filter methods on the exporter model to only include relationships that
                                 // - is an instance of a BelongsTo relation
                                 // - doesn't require any arguments
@@ -123,6 +89,10 @@ class Fields
                                             return false;
                                         }
 
+                                        return true;
+                                        /**
+                                         * Maybe not needed
+                                         */
                                         $relationshipInstance = (new $exporterModel)->$relationship();
                                         $relatedModelClass = get_class($relationshipInstance->getRelated());
                                         $relatedModelTraits = (new \ReflectionClass($relatedModelClass))->getTraitNames();
@@ -131,9 +101,10 @@ class Fields
                                     })
                                     ->mapWithKeys(function (\ReflectionMethod $method) {
                                         $relationship = $method->getName();
+
                                         // Convert camelCase to spaced words.
                                         return [
-                                            $relationship => ucwords(preg_replace('/(?<!^)([A-Z])/', ' $1', $relationship))
+                                            $relationship => ucwords(preg_replace('/(?<!^)([A-Z])/', ' $1', $relationship)),
                                         ];
                                     });
 
@@ -141,10 +112,11 @@ class Fields
                             })
                             ->afterStateUpdated(function ($livewire, $state) {
                                 // Remove field data from livewire if not selected
-                                if (array_key_exists('filters', $livewire->data)) {
+                                if (array_key_exists('filters', $livewire->data) && is_array($livewire->data['filters'])) {
+
                                     $livewire->data['filters'] = array_filter(
                                         $livewire->data['filters'],
-                                        fn($filter) => in_array($filter, $state),
+                                        fn ($filter) => in_array($filter, $state),
                                         ARRAY_FILTER_USE_KEY,
                                     );
                                 }
@@ -154,43 +126,71 @@ class Fields
                 // Section that dynamically creates a Select field for each chosen relation.
                 Section::make('Select Records for Each Associated Type')
                     ->columnSpan(1)
-                    ->visible(fn(Get $get) => $get('selected_relations'))
+                    ->visible(fn (Get $get) => $get('selected_relations'))
                     ->live()
                     ->schema(function (Get $get, $livewire) {
                         $exporter = $get('exporter');
-                        if (!$exporter) {
+                        if (! $exporter) {
                             return [];
                         }
                         $selectedRelations = $get('selected_relations') ?? [];
 
                         // Use the helper method to build each Select field.
                         $selectFields = collect($selectedRelations)
-                            ->map(fn($relation) => self::buildRelationSelectField($relation, $exporter))
+                            ->map(fn ($relation) => self::buildRelationSelectField($relation, $exporter))
                             ->toArray();
 
                         // Add field data to the livewire
                         $livewireData = $livewire->data;
-                        if (!array_key_exists('filters', $livewireData)) {
+                        if (! array_key_exists('filters', $livewireData) || is_null($livewireData['filters'])) {
                             $livewireData['filters'] = [];
                         }
                         foreach ($selectFields as $field) {
                             $fieldName = str_replace('filters.', '', $field->getName());
-                            if (!array_key_exists($fieldName, $livewireData['filters'])) {
+                            if (! array_key_exists($fieldName, $livewireData['filters'])) {
                                 $livewireData['filters'][$fieldName] = null;
                             }
                         }
                         $livewire->data = $livewireData;
 
                         return $selectFields;
-                    })
-                // Assigning a key is not necessary here anymore since the schema is entirely dynamic.
-                // ->key('relationRecordsKey')
+                    }),
             ]);
     }
 
     /**
-     * @return Select
+     * Helper method that builds a dynamic Select field for a given relation.
      */
+    protected static function buildRelationSelectField(string $relation, $exporter): Select
+    {
+        // Get the exporter model via reflection.
+        $exporterModel = (new \ReflectionClass($exporter))->getStaticPropertyValue('model');
+        // Instantiate and get the relationship instance.
+        $relationshipInstance = (new $exporterModel)->$relation();
+        // Determine the related model's class.
+        $relatedModelClass = get_class($relationshipInstance->getRelated());
+        // Get the filter label for the related model's class;
+        $filterLabel = (new $relatedModelClass)->getFilterLabel();
+
+        return Select::make("filters.$relation")
+            ->label(ucwords(preg_replace('/(?<!^)([A-Z])/', ' $1', $relation)))
+            ->live()
+            ->preload()
+            ->multiple()
+            ->searchable()
+            ->getSearchResultsUsing(function (string $search) use ($filterLabel, $relatedModelClass): array {
+                return $relatedModelClass::where($filterLabel, 'like', "%{$search}%")
+                    ->limit(50)
+                    ->pluck($filterLabel, 'id')
+                    ->toArray();
+            })
+            ->getOptionLabelsUsing(function (array $values) use ($filterLabel, $relatedModelClass): array {
+                return $relatedModelClass::whereIn('id', $values)
+                    ->pluck($filterLabel, 'id')
+                    ->toArray();
+            });
+    }
+
     public static function exporter(): Select
     {
         return Select::make('exporter')
@@ -224,9 +224,6 @@ class Fields
             });
     }
 
-    /**
-     * @return Select
-     */
     public static function scheduleFrequency(): Select
     {
         return Select::make('schedule_frequency')
@@ -242,7 +239,7 @@ class Fields
                 if ($state !== ScheduleFrequency::YEARLY->value) {
                     $set('schedule_month', null);
                 }
-                if (!in_array(
+                if (! in_array(
                     $state,
                     [ScheduleFrequency::MONTHLY->value, ScheduleFrequency::QUARTERLY->value, ScheduleFrequency::HALF_YEARLY->value,
                         ScheduleFrequency::YEARLY->value]
@@ -258,21 +255,17 @@ class Fields
             });
     }
 
-
-    /**
-     * @return TextInput
-     */
     public static function customCronExpression(): TextInput
     {
         return TextInput::make('custom_cron_expression')
             ->label(__('export-scheduler::scheduler.custom_cron_expression'))
-            ->visible(fn(Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))
-            ->required(fn(Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))
+            ->visible(fn (Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))
+            ->required(fn (Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))
             ->hintColor('info')
-            ->placeholder("eg 0 0 * * 0 ")
+            ->placeholder('eg 0 0 * * 0 ')
             ->rules([
-                fn(): Closure => function (string $attribute, $value, Closure $fail) {
-                    if (!ExportScheduler::isValidCronExpression($value)) {
+                fn (): Closure => function (string $attribute, $value, Closure $fail) {
+                    if (! ExportScheduler::isValidCronExpression($value)) {
                         $fail(__('Invalid cron expression'));
                     }
                 },
@@ -282,14 +275,11 @@ class Fields
     public static function cronHint(): Placeholder
     {
         return Placeholder::make('cron_hint')
-            ->visible(fn(Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))
+            ->visible(fn (Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))
             ->label(__('Cron Tips'))
-            ->content(new HtmlString("<div style='line-height: 1.7'><p>" . __('export-scheduler::scheduler.cron_expression_hint') . "</p></div>"));
+            ->content(new HtmlString("<div style='line-height: 1.7'><p>" . __('export-scheduler::scheduler.cron_expression_hint') . '</p></div>'));
     }
 
-    /**
-     * @return Select
-     */
     public static function scheduleDayOfWeek(): Select
     {
         return Select::make('schedule_day_of_week')
@@ -298,13 +288,10 @@ class Fields
             ->options(DayOfWeek::class)
             ->native(false)
             ->nullable()
-            ->visible(fn(Get $get) => $get('schedule_frequency') === ScheduleFrequency::WEEKLY->value)
-            ->required(fn(Get $get) => $get('schedule_frequency') === ScheduleFrequency::WEEKLY->value);
+            ->visible(fn (Get $get) => $get('schedule_frequency') === ScheduleFrequency::WEEKLY->value)
+            ->required(fn (Get $get) => $get('schedule_frequency') === ScheduleFrequency::WEEKLY->value);
     }
 
-    /**
-     * @return Select
-     */
     public static function scheduleDayOfMonth(): Select
     {
         return Select::make('schedule_day_of_month')
@@ -316,13 +303,10 @@ class Fields
             ))
             ->native(false)
             ->nullable()
-            ->visible(fn(Get $get) => Helper::isDayOfMonthFieldRequired($get))
-            ->required(fn(Get $get) => Helper::isDayOfMonthFieldRequired($get));
+            ->visible(fn (Get $get) => Helper::isDayOfMonthFieldRequired($get))
+            ->required(fn (Get $get) => Helper::isDayOfMonthFieldRequired($get));
     }
 
-    /**
-     * @return Select
-     */
     public static function scheduleMonth(): Select
     {
         return Select::make('schedule_month')
@@ -331,13 +315,10 @@ class Fields
             ->options(Month::class)
             ->native(false)
             ->nullable()
-            ->visible(fn(Get $get) => $get('schedule_frequency') === ScheduleFrequency::YEARLY->value)
-            ->required(fn(Get $get) => $get('schedule_frequency') === ScheduleFrequency::YEARLY->value);
+            ->visible(fn (Get $get) => $get('schedule_frequency') === ScheduleFrequency::YEARLY->value)
+            ->required(fn (Get $get) => $get('schedule_frequency') === ScheduleFrequency::YEARLY->value);
     }
 
-    /**
-     * @return Select
-     */
     public static function scheduleStartMonth(): Select
     {
         return Select::make('schedule_start_month')
@@ -346,14 +327,10 @@ class Fields
             ->options(Month::class)
             ->native(false)
             ->nullable()
-            ->visible(fn(Get $get) => Helper::isStartDateRequired($get))
-            ->required(fn(Get $get) => Helper::isStartDateRequired($get));
+            ->visible(fn (Get $get) => Helper::isStartDateRequired($get))
+            ->required(fn (Get $get) => Helper::isStartDateRequired($get));
     }
 
-
-    /**
-     * @return Select
-     */
     public static function scheduleTimeZone(): Select
     {
         return Select::make('schedule_timezone')
@@ -364,23 +341,16 @@ class Fields
             ->default(config('app.timezone'));
     }
 
-    /**
-     * @return TimePicker
-     */
     public static function scheduleTime(): TimePicker
     {
         return TimePicker::make('schedule_time')
             ->seconds(false)
             ->label(__('export-scheduler::scheduler.schedule_time'))
-            ->visible(fn(Get $get) => $get('schedule_frequency') !== ScheduleFrequency::CRON->value)
-            ->required(fn(Get $get) => $get('schedule_frequency') !== ScheduleFrequency::CRON->value)
+            ->visible(fn (Get $get) => $get('schedule_frequency') !== ScheduleFrequency::CRON->value)
+            ->required(fn (Get $get) => $get('schedule_frequency') !== ScheduleFrequency::CRON->value)
             ->default('00:00');
     }
 
-
-    /**
-     * @return Select
-     */
     public static function dateRange(): Select
     {
         return Select::make('date_range')
@@ -392,10 +362,6 @@ class Fields
             ->native(false);
     }
 
-
-    /**
-     * @return Select
-     */
     public static function formats(): Select
     {
         return Select::make('formats')
@@ -410,10 +376,6 @@ class Fields
             ->required();
     }
 
-
-    /**
-     * @return Repeater
-     */
     public static function columnsRepeater(): Repeater
     {
         return Repeater::make('columns')
@@ -423,12 +385,12 @@ class Fields
             ->addable(false)
             ->collapsed()
             ->deleteAction(
-                fn(Action $action) => $action
+                fn (Action $action) => $action
                     ->label('Remove')
                     ->button(),
             )
             ->afterStateUpdated(function (?ExportSchedule $record, $state, Get $get, Set $set) {
-                $allColumns = ExportSchedule::getDefaultColumnsForExporter($get('exporter') ?? "");
+                $allColumns = ExportSchedule::getDefaultColumnsForExporter($get('exporter') ?? '');
                 $currentColumnNames = collect($state)->pluck('name')->all();
                 $newAvailableColumns = $allColumns->reject(function ($column) use ($currentColumnNames) {
                     return in_array($column['name'], $currentColumnNames);
@@ -437,18 +399,14 @@ class Fields
 
             })
             ->live()
-            ->itemLabel(fn(array $state): ?string => $state['label'] ?? null)
-            ->maxItems(fn(Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->count() : 0)
+            ->itemLabel(fn (array $state): ?string => $state['label'] ?? null)
+            ->maxItems(fn (Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->count() : 0)
             ->schema([
                 TextInput::make('name')->visible(false),
                 TextInput::make('label'),
-            ])->default(fn(Get $get) => ExportSchedule::getDefaultColumnsForExporter($get('exporter') ?? "")->toArray());
+            ])->default(fn (Get $get) => ExportSchedule::getDefaultColumnsForExporter($get('exporter') ?? '')->toArray());
     }
 
-
-    /**
-     * @return Repeater
-     */
     public static function availableColumns(): Repeater
     {
         return Repeater::make('available_columns')
@@ -484,30 +442,27 @@ class Fields
                         })->first();
 
                         if ($deletedItem) {
-                            $deletedItemKey = (string)Str::uuid(); // Generate a unique key
+                            $deletedItemKey = (string) Str::uuid(); // Generate a unique key
                             $newColumns = [$deletedItemKey => $deletedItem];
                             $updatedColumns = $currentSelectedColumns + $newColumns;
                             $set('columns', $updatedColumns); // Update the columns
                         }
                     });
             })
-            ->itemLabel(fn(array $state): ?string => $state['label'] ?? null)
-            ->maxItems(fn(Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->count() : 0)
+            ->itemLabel(fn (array $state): ?string => $state['label'] ?? null)
+            ->maxItems(fn (Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->count() : 0)
             ->addable(false)
             ->formatStateUsing(function (Get $get) {
-                $allColumns = ExportSchedule::getDefaultColumnsForExporter($get('exporter') ?? "");
+                $allColumns = ExportSchedule::getDefaultColumnsForExporter($get('exporter') ?? '');
                 $currentColumnNames = collect($get('columns'))->pluck('name')->all();
                 $availableColumns = $allColumns->reject(function ($column) use ($currentColumnNames) {
                     return in_array($column['name'], $currentColumnNames);
                 });
+
                 return $availableColumns->toArray();
             });
     }
 
-
-    /**
-     * @return Toggle|string|null
-     */
     public static function enableToggle(): Toggle
     {
         return Toggle::make('enabled')
@@ -521,16 +476,15 @@ class Fields
             ->schema(
                 self::copyToUserFields()
             )
-            ->visible(fn(Get $get) => $get('owner_id'));
+            ->visible(fn (Get $get) => $get('owner_id'));
     }
-
 
     public static function copyToUserFields(): array
     {
         return [
 
             Placeholder::make('Data Security Warning')
-                ->content(fn(Get $get) => new HtmlString(__('export-scheduler::scheduler.cc_warning', ['owner_type' => class_basename($get('owner_type'))]))),
+                ->content(fn (Get $get) => new HtmlString(__('export-scheduler::scheduler.cc_warning', ['owner_type' => class_basename($get('owner_type'))]))),
 
             Repeater::make('cc')
                 ->label('')
@@ -553,10 +507,12 @@ class Fields
                     $ccIds = collect($ccItems)->pluck('id')->toArray();
                 }
                 $excludeIds = array_filter(array_merge($ccIds, [$ownerId]));
+
                 return $type ? $type::query()->whereNotIn('id', $excludeIds)->pluck('email', 'id') : [];
             })->getOptionLabelUsing(function ($value, Get $get) {
                 $type = $get('../../owner_type');
-                return $type ? $type::query()->find($value)?->email : "";
+
+                return $type ? $type::query()->find($value)?->email : '';
             })
             ->placeholder(__('export-scheduler::scheduler.cc_placeholder'))
             ->searchable();
@@ -582,6 +538,4 @@ class Fields
             ->live()
             ->searchable($searchable);
     }
-
-
 }

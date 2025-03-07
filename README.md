@@ -21,6 +21,11 @@ Email automated exports on a defined schedule - keep the management happy with t
 
 ![Setup Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/edit-export.png)
 
+## Filter By Available Relationships
+- BelongsTo relations (with 'InteractsWithExportScheduler' trait set on the relation class) are automatically discovered.
+- Exclude relations with the 'excludeFilterableRelations' method available in the 'InteractsWithExportScheduler' trait.
+
+![Filter by relations](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3x-with-relationships/media/filter-by-relations.png)
 
 ## Easy Frequency Selection
 
@@ -223,6 +228,40 @@ Make some export classes with
 
 ```bash
 php artisan make:filament-exporter
+```
+
+
+## New Feature - Filtering Exports by a related model
+
+Typical scenario might be exporting all Orders but filtered by a specific Organisation.  In order to filter by organisation we need to know the field that should be searchable.
+This requires adding the ``InteractsWithExportSchedulerFilter`` to the Models that can be filtered.
+
+The trait has the $filterOptionLabel property allowing us to define which column should be used for the filter label.
+And excludeFilterableRelations allows you to exclude relations which should not be included in the filter, by default all belongsTo relations will be included.
+NB. Next release will include morphsTo relation options.
+
+}
+
+```php
+trait InteractsWithExportSchedulerFilter
+{
+    protected $filterOptionLabel = 'name';
+
+    public function getFilterLabel(): string
+    {
+        return $this->filterOptionLabel;
+    }
+
+    /*
+     * Exclude relations that should
+     * not be added to the filter
+     * @return <array>Illuminate\Database\Eloquent\Relations\Relations
+     */
+    public static function excludeFilterableRelations(): array
+    {
+        return [];
+    }
+}
 ```
 
 ## Testing

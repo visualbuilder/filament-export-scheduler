@@ -24,6 +24,7 @@ class ScheduledExporter
     protected ?Builder $query = null;
     protected array $columnMap = [];
     protected array $options = [];
+    protected array $relations = [];
 
     public function __construct(public ExportSchedule $exportSchedule)
     {
@@ -61,6 +62,11 @@ class ScheduledExporter
 
                 ['start' => $startDate, 'end' => $endDate] = $this->exportSchedule->date_range->getDateRange();
                 $this->query->whereBetween($dateColumn, [$startDate, $endDate]);
+            }
+
+            // Apply custom relation filter if available
+            foreach ($this->exportSchedule->filters as $relation => $selectedRelations) {
+                $this->query->whereHas($relation, fn ($query) => $query->whereIn('id', $selectedRelations));
             }
 
             // Prepare column mappings

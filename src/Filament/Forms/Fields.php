@@ -89,10 +89,6 @@ class Fields
                                             return false;
                                         }
 
-                                        return true;
-                                        /**
-                                         * Maybe not needed
-                                         */
                                         $relationshipInstance = (new $exporterModel)->$relationship();
                                         $relatedModelClass = get_class($relationshipInstance->getRelated());
                                         $relatedModelTraits = (new \ReflectionClass($relatedModelClass))->getTraitNames();

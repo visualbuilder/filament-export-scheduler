@@ -20,15 +20,18 @@ use VisualBuilder\ExportScheduler\Models\ExportSchedule;
 class ScheduledExporter
 {
     protected ?Exporter $exporterInstance = null;
+
     protected ?Export $export = null;
+
     protected ?Builder $query = null;
+
     protected array $columnMap = [];
+
     protected array $options = [];
+
     protected array $relations = [];
 
-    public function __construct(public ExportSchedule $exportSchedule)
-    {
-    }
+    public function __construct(public ExportSchedule $exportSchedule) {}
 
     public function getTotalRows(): int
     {
@@ -40,10 +43,8 @@ class ScheduledExporter
         return $this->init() && $this->buildJobChain();
     }
 
-
     /**
      * Create the export record and calculate the query results count
-     *
      */
     protected function init(): bool
     {
@@ -65,8 +66,10 @@ class ScheduledExporter
             }
 
             // Apply custom relation filter if available
-            foreach ($this->exportSchedule->filters as $relation => $selectedRelations) {
-                $this->query->whereHas($relation, fn ($query) => $query->whereIn('id', $selectedRelations));
+            if (is_array($this->exportSchedule->filters)) {
+                foreach ($this->exportSchedule->filters as $relation => $selectedRelations) {
+                    $this->query->whereHas($relation, fn ($query) => $query->whereIn('id', $selectedRelations));
+                }
             }
 
             // Prepare column mappings
@@ -95,17 +98,17 @@ class ScheduledExporter
             return true;
         } catch (\Exception $exception) {
             Log::error($exception->getMessage());
+
             return false;
         }
     }
 
-
     protected function generateFileName(): string
     {
-        return Str::slug($this->exportSchedule->name.'_'.now()->format('Y-m-d_Hi'));
+        return Str::slug($this->exportSchedule->name . '_' . now()->format('Y-m-d_Hi'));
     }
 
-    public function buildJobChain():bool
+    public function buildJobChain(): bool
     {
         try {
             $formats = $this->exportSchedule->formats;
@@ -121,26 +124,25 @@ class ScheduledExporter
             // in case it contains attributes that are not serializable, such as binary columns.
             $this->export->unsetRelation('user');
 
-
-            $makeCreateXlsxFileJob = fn(): CreateXlsxFile => app(CreateXlsxFile::class, [
-                'export'    => $this->export,
+            $makeCreateXlsxFileJob = fn (): CreateXlsxFile => app(CreateXlsxFile::class, [
+                'export' => $this->export,
                 'columnMap' => $this->columnMap,
-                'options'   => $this->options,
+                'options' => $this->options,
             ]);
 
             Bus::chain([
                 // 1. Batch Job: Processes the export data (CSV).
                 Bus::batch([app($job, [
-                    'export'    => $this->export,
-                    'query'     => $serializedQuery,
+                    'export' => $this->export,
+                    'query' => $serializedQuery,
                     'columnMap' => $this->columnMap,
-                    'options'   => $this->options,
+                    'options' => $this->options,
                     'chunkSize' => 100,
-                    'records'   => null,
+                    'records' => null,
                 ])])
-                    ->when(filled($jobQueue), fn(PendingBatch $batch) => $batch->onQueue($jobQueue))
-                    ->when(filled($jobConnection), fn(PendingBatch $batch) => $batch->onConnection($jobConnection))
-                    ->when(filled($jobBatchName), fn(PendingBatch $batch) => $batch->name($jobBatchName))
+                    ->when(filled($jobQueue), fn (PendingBatch $batch) => $batch->onQueue($jobQueue))
+                    ->when(filled($jobConnection), fn (PendingBatch $batch) => $batch->onConnection($jobConnection))
+                    ->when(filled($jobBatchName), fn (PendingBatch $batch) => $batch->name($jobBatchName))
                     ->allowFailures(),
 
                 // 2. Conditional Job: CreateXlsxFile if XLSX format is requested.
@@ -152,19 +154,17 @@ class ScheduledExporter
                     exportSchedule: $this->exportSchedule,
                 ),
             ])
-                ->when(filled($jobQueue), fn(PendingChain $chain) => $chain->onQueue($jobQueue))
-                ->when(filled($jobConnection), fn(PendingChain $chain) => $chain->onConnection($jobConnection))
+                ->when(filled($jobQueue), fn (PendingChain $chain) => $chain->onQueue($jobQueue))
+                ->when(filled($jobConnection), fn (PendingChain $chain) => $chain->onConnection($jobConnection))
                 ->dispatch();
-            return true;
 
+            return true;
 
         } catch (\Exception $exception) {
             Log::error($exception->getMessage());
+
             return false;
         }
 
-
     }
-
-
 }

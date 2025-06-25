@@ -281,8 +281,10 @@ class Fields
 
                                     // value
                                     Group::make()
-                                        ->visible(fn(Get $get) => $get('operator'))
-                                        ->schema(function (Get $get) use ($columns, $exporterClass) {
+                                        ->visible(function(Get $get) use ($exporterClass) {return $exporterClass&& $get('operator'); })
+                                        ->schema(function (Get $get) use ($exporterClass) {
+                                            if(!$exporterClass)
+                                                return [];
                                             $column = $get('column');
                                             $exporterModel = (new \ReflectionClass($exporterClass))->getStaticPropertyValue('model');
                                             $casts = (new $exporterModel)->getCasts();

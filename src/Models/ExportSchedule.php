@@ -40,8 +40,8 @@ use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
  * @property \Illuminate\Support\Carbon|null $last_successful_run_at
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
- * @property-read string $date_range_label
- * @property-read Carbon $ends_at
+ * @property-read string|null $date_range_label
+ * @property-read Carbon|null $ends_at
  * @property-read string $ends_at_formatted
  * @property-read string $frequency
  * @property-read Carbon|null $starts_at
@@ -145,24 +145,24 @@ class ExportSchedule extends Model
             ->where('next_run_at', '<=', Carbon::now());
     }
 
-    public function getStartsAtAttribute(): Carbon
+    public function getStartsAtAttribute(): ?Carbon
     {
-        return $this->date_range->getDateRange()['start'];
+        return $this->date_range?->getDateRange()['start'] ?? null;
     }
 
-    public function getEndsAtAttribute(): Carbon
+    public function getEndsAtAttribute(): ?Carbon
     {
-        return $this->date_range->getDateRange()['end'];
+        return $this->date_range?->getDateRange()['end'] ?? null;
     }
 
     public function getStartsAtFormattedAttribute(): string
     {
-        return $this->starts_at->format("l jS F Y \a\t h:i A");
+        return $this->starts_at ? $this->starts_at->format("l jS F Y \a\t h:i A") : '';
     }
 
     public function getEndsAtFormattedAttribute(): string
     {
-        return $this->ends_at->format("l jS F Y \a\t h:i A");
+        return $this->ends_at ? $this->ends_at->format("l jS F Y \a\t h:i A") : '';
     }
 
     public function getFrequencyAttribute(): string
@@ -170,9 +170,9 @@ class ExportSchedule extends Model
         return $this->schedule_frequency->getLabel();
     }
 
-    public function getDateRangeLabelAttribute(): string
+    public function getDateRangeLabelAttribute(): ?string
     {
-        return $this->date_range->getLabel();
+        return $this->date_range?->getLabel();
     }
 
     public function getAvailableColumnsAttribute(): Collection

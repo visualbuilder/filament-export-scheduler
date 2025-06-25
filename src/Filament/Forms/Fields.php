@@ -289,65 +289,36 @@ class Fields
                                     // value
                                     Group::make()
                                         ->visible(fn(Get $get) => $get('operator'))
-                                        ->schema([
-                                            // enum
-                                            Select::make('value')
-                                                ->required()
-                                                ->multiple()
-                                                ->selectablePlaceholder(false)
-                                                ->native(false)
-                                                ->visible(function (Get $get) use ($columns, $exporterClass) {
-                                                    $column = $get('column');
-                                                    $exporterModel = (new \ReflectionClass($exporterClass))->getStaticPropertyValue('model');
-                                                    $casts = (new $exporterModel)->getCasts();
-                                                    $type = $casts[$column] ?? null;
+                                        ->schema(function (Get $get) use ($columns, $exporterClass) {
+                                            $column = $get('column');
+                                            $exporterModel = (new \ReflectionClass($exporterClass))->getStaticPropertyValue('model');
+                                            $casts = (new $exporterModel)->getCasts();
+                                            $type = $casts[$column] ?? null;
+                                            $key = 'value';
 
-                                                    return enum_exists($type) && class_exists($type);
-                                                })
-                                                ->options(function (Get $get) use ($columns, $exporterClass) {
-                                                    $column = $get('column');
-                                                    $exporterModel = (new \ReflectionClass($exporterClass))->getStaticPropertyValue('model');
-                                                    $enumClass = (new $exporterModel)->getCasts()[$column];
+                                            $field = match (true) {
+                                                // enum
+                                                enum_exists($type) && class_exists($type) => Select::make($key)
+                                                    ->multiple()
+                                                    ->selectablePlaceholder(false)
+                                                    ->native(false)
+                                                    ->options(fn() => collect($casts[$column]::cases())
+                                                        ->mapWithKeys(fn($case) => [$case->value => $case->getLabel()])
+                                                    ),
 
-                                                    return collect($enumClass::cases())->mapWithKeys(fn($case) => [$case->value => $case->getLabel()]);
-                                                }),
+                                                // date/datetime/timestamp
+                                                in_array($casts[$column] ?? null, ['date', 'datetime', 'timestamp']),
+                                                in_array($column, ['created_at', 'updated_at', 'deleted_at']) => self::dateRange($key),
 
-                                            // date|datetime|timestamp
-                                            self::dateRange('value')
-                                                ->required()
-                                                ->visible(function (Get $get) use ($columns, $exporterClass) {
-                                                    $column = $get('column');
-                                                    $exporterModel = (new \ReflectionClass($exporterClass))->getStaticPropertyValue('model');
-                                                    $casts = (new $exporterModel)->getCasts();
+                                                // boolean
+                                                $type === 'boolean' => Toggle::make($key),
 
-                                                    return in_array($column, ['created_at', 'updated_at', 'deleted_at'])
-                                                        || in_array($casts[$column] ?? null, ['date', 'datetime', 'timestamp']);
-                                                }),
+                                                // others
+                                                default => TextInput::make($key)
+                                            };
 
-                                            // boolean
-                                            Toggle::make('value')
-                                                ->required()
-                                                ->visible(function (Get $get) use ($columns, $exporterClass) {
-                                                    $column = $get('column');
-                                                    $exporterModel = (new \ReflectionClass($exporterClass))->getStaticPropertyValue('model');
-                                                    $casts = (new $exporterModel)->getCasts();
-
-                                                    return ($casts[$column] ?? null) === 'boolean';
-                                                }),
-
-                                            // others
-                                            TextInput::make('value')
-                                                ->required()
-                                                ->hidden(function (Get $get) use ($columns, $exporterClass) {
-                                                    $column = $get('column');
-                                                    $exporterModel = (new \ReflectionClass($exporterClass))->getStaticPropertyValue('model');
-                                                    $casts = (new $exporterModel)->getCasts();
-                                                    $type = $casts[$column] ?? null;
-
-                                                    return (enum_exists($type) && class_exists($type))
-                                                        || in_array($type, ['date', 'datetime', 'timestamp']) || in_array($column, ['created_at', 'updated_at', 'deleted_at']);
-                                                }),
-                                        ])
+                                            return [$field->required()];
+                                        })
                                 ])
                         ])
                         ->addActionLabel('Add filter')

@@ -255,35 +255,28 @@ class Fields
                                             $casts = (new $exporterModel)->getCasts();
                                             $type = $casts[$column] ?? null;
 
-                                            // enum
-                                            if (enum_exists($type) && class_exists($type)) {
-                                                return [
+                                            return match (true) {
+                                                // enum
+                                                filled(Helper::extractEnumCast($column, $exporterModel)) => [
                                                     'in' => 'is present in',
                                                     'not_in' => 'is not present in'
-                                                ];
-                                            }
+                                                ],
 
-                                            // boolean
-                                            if ($type === 'boolean') {
-                                                return [
+                                                // date/datetime/timestamp
+                                                Helper::isDateTimeCast($column, $type) => ['<>' => 'is from'],
+
+                                                // boolean
+                                                Helper::isBooleanCast($type) => [
                                                     '=' => 'is',
                                                     '!=' => 'is not'
-                                                ];
-                                            }
+                                                ],
 
-                                            // date
-                                            if (
-                                                in_array($column, ['created_at', 'updated_at', 'deleted_at'])
-                                                || in_array($type, ['date', 'datetime', 'timestamp'])
-                                            ) {
-                                                return ['<>' => 'is from'];
-                                            }
-
-                                            return [
-                                                '=' => 'is equal to',
-                                                '!=' => 'is not equal to',
-                                                'like' => 'is like',
-                                            ];
+                                                default => [
+                                                    '=' => 'is equal to',
+                                                    '!=' => 'is not equal to',
+                                                    'like' => 'is like',
+                                                ]
+                                            };
                                         }),
 
                                     // value
@@ -295,23 +288,23 @@ class Fields
                                             $casts = (new $exporterModel)->getCasts();
                                             $type = $casts[$column] ?? null;
                                             $key = 'value';
+                                            $enumCast = Helper::extractEnumCast($column, $exporterModel);
 
                                             $field = match (true) {
                                                 // enum
-                                                enum_exists($type) && class_exists($type) => Select::make($key)
+                                                filled($enumCast) => Select::make($key)
                                                     ->multiple()
                                                     ->selectablePlaceholder(false)
                                                     ->native(false)
-                                                    ->options(fn() => collect($casts[$column]::cases())
+                                                    ->options(fn() => collect($enumCast::cases())
                                                         ->mapWithKeys(fn($case) => [$case->value => $case->getLabel()])
                                                     ),
 
                                                 // date/datetime/timestamp
-                                                in_array($casts[$column] ?? null, ['date', 'datetime', 'timestamp']),
-                                                in_array($column, ['created_at', 'updated_at', 'deleted_at']) => self::dateRange($key),
+                                                Helper::isDateTimeCast($column, $type) => self::dateRange($key),
 
                                                 // boolean
-                                                $type === 'boolean' => Toggle::make($key),
+                                                Helper::isBooleanCast($type) => Toggle::make($key),
 
                                                 // others
                                                 default => TextInput::make($key)

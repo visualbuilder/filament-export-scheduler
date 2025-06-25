@@ -13,6 +13,7 @@ use Illuminate\Foundation\Bus\PendingChain;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use VisualBuilder\ExportScheduler\Enums\DateRange;
 use VisualBuilder\ExportScheduler\Jobs\PrepareCsvExport;
 use VisualBuilder\ExportScheduler\Jobs\ScheduledExportCompletion;
 use VisualBuilder\ExportScheduler\Models\ExportSchedule;
@@ -31,7 +32,9 @@ class ScheduledExporter
 
     protected array $relations = [];
 
-    public function __construct(public ExportSchedule $exportSchedule) {}
+    public function __construct(public ExportSchedule $exportSchedule)
+    {
+    }
 
     public function getTotalRows(): int
     {
@@ -57,19 +60,65 @@ class ScheduledExporter
 
             // Apply custom date range filter if available
             if ($this->exportSchedule->date_range) {
-                $dateColumn = method_exists($exporter, 'getDateColumn')
-                    ? $exporter::getDateColumn()
-                    : 'created_at'; // Default to 'created_at' if method doesn't exist
+                // Default to 'created_at' if method doesn't exist
+                $dateColumn = method_exists($exporter, 'getDateColumn') ? $exporter::getDateColumn() : 'created_at';
 
                 ['start' => $startDate, 'end' => $endDate] = $this->exportSchedule->date_range->getDateRange();
                 $this->query->whereBetween($dateColumn, [$startDate, $endDate]);
             }
 
             // Apply custom relation filter if available
-            if (is_array($this->exportSchedule->filters)) {
-                foreach ($this->exportSchedule->filters as $relation => $selectedRelations) {
-                    $this->query->whereHas($relation, fn ($query) => $query->whereIn('id', $selectedRelations));
-                }
+            $filters = $this->exportSchedule->filters ?? [];
+            $relationFilters = array_filter($filters, fn($key) => $key !== 'attributes', ARRAY_FILTER_USE_KEY);
+            $attributeFilters = array_diff_key($filters, $relationFilters)['attributes'] ?? [];
+
+            // filter by relations
+            foreach ($relationFilters as $relation => $selectedRelations) {
+                $this->query->whereHas($relation, fn($query) => $query->whereIn('id', $selectedRelations));
+            }
+
+            // filter by attributes
+            if (filled($attributeFilters)) {
+                $this->query->where(function ($query) use ($attributeFilters) {
+                    foreach ($attributeFilters as $filter) {
+                        $column = $filter['column'] ?? null;
+                        $value = $filter['value'] ?? null;
+                        $operator = $filter['operator'] ?? null;
+                        $condition = $filter['condition'] ?? 'and';
+
+                        if (blank($column) || blank($value)) {
+                            continue;
+                        }
+
+                        // support nested relations with dot notation
+                        if (str_contains($column, '.')) {
+                            $parts = explode('.', $column);
+                            $column = array_pop($parts);
+                            $relationPath = implode('.', $parts);
+
+                            $query->{$condition === 'or' ? 'orWhereHas' : 'whereHas'}($relationPath, function ($subQuery) use ($column, $operator, $value) {
+                                if (in_array($operator, ['in', 'not_in']) && is_array($value)) {
+                                    $subQuery->{$operator === 'in' ? 'whereIn' : 'whereNotIn'}($column, $value);
+                                } else if ($operator === 'like') {
+                                    $subQuery->where($column, 'LIKE', "%$value%");
+                                } else {
+                                    $subQuery->where($column, $operator, $value);
+                                }
+                            });
+                        } else {
+                            if ($operator === '<>' && filled($dateRange = DateRange::tryFrom($value))) {
+                                ['start' => $startDate, 'end' => $endDate] = $dateRange->getDateRange();
+                                $query->{$condition === 'or' ? 'orWhereBetween' : 'whereBetween'}($column, [$startDate, $endDate]);
+                            } else if (in_array($operator, ['in', 'not_in']) && is_array($value)) {
+                                $query->{$condition === 'or' ? 'orWhereIn' : 'whereIn'}($column, $value);
+                            } elseif ($operator === 'like') {
+                                $query->{$condition === 'or' ? 'orWhere' : 'where'}($column, 'LIKE', "%$value%");
+                            } else {
+                                $query->{$condition === 'or' ? 'orWhere' : 'where'}($column, $operator, $value);
+                            }
+                        }
+                    }
+                });
             }
 
             // Prepare column mappings
@@ -92,7 +141,7 @@ class ScheduledExporter
 
             $this->exporterInstance = $export->getExporter(
                 columnMap: $this->columnMap,
-                options: $this->options,
+                options: $this->options
             );
 
             return true;
@@ -124,25 +173,26 @@ class ScheduledExporter
             // in case it contains attributes that are not serializable, such as binary columns.
             $this->export->unsetRelation('user');
 
-            $makeCreateXlsxFileJob = fn (): CreateXlsxFile => app(CreateXlsxFile::class, [
+            $makeCreateXlsxFileJob = fn(): CreateXlsxFile => app(CreateXlsxFile::class, [
                 'export' => $this->export,
                 'columnMap' => $this->columnMap,
-                'options' => $this->options,
+                'options' => $this->options
             ]);
 
-            Bus::chain([
-                // 1. Batch Job: Processes the export data (CSV).
-                Bus::batch([app($job, [
-                    'export' => $this->export,
-                    'query' => $serializedQuery,
-                    'columnMap' => $this->columnMap,
-                    'options' => $this->options,
-                    'chunkSize' => 100,
-                    'records' => null,
-                ])])
-                    ->when(filled($jobQueue), fn (PendingBatch $batch) => $batch->onQueue($jobQueue))
-                    ->when(filled($jobConnection), fn (PendingBatch $batch) => $batch->onConnection($jobConnection))
-                    ->when(filled($jobBatchName), fn (PendingBatch $batch) => $batch->name($jobBatchName))
+            Bus::chain([// 1. Batch Job: Processes the export data (CSV).
+                Bus::batch([
+                    app($job, [
+                        'export' => $this->export,
+                        'query' => $serializedQuery,
+                        'columnMap' => $this->columnMap,
+                        'options' => $this->options,
+                        'chunkSize' => 100,
+                        'records' => null
+                    ])
+                ])
+                    ->when(filled($jobQueue), fn(PendingBatch $batch) => $batch->onQueue($jobQueue))
+                    ->when(filled($jobConnection), fn(PendingBatch $batch) => $batch->onConnection($jobConnection))
+                    ->when(filled($jobBatchName), fn(PendingBatch $batch) => $batch->name($jobBatchName))
                     ->allowFailures(),
 
                 // 2. Conditional Job: CreateXlsxFile if XLSX format is requested.
@@ -151,20 +201,18 @@ class ScheduledExporter
                 // 3. ScheduledExportCompletion Job: Marks export as complete after all files are ready.
                 new ScheduledExportCompletion(
                     export: $this->export,
-                    exportSchedule: $this->exportSchedule,
-                ),
+                    exportSchedule: $this->exportSchedule
+                )
             ])
-                ->when(filled($jobQueue), fn (PendingChain $chain) => $chain->onQueue($jobQueue))
-                ->when(filled($jobConnection), fn (PendingChain $chain) => $chain->onConnection($jobConnection))
+                ->when(filled($jobQueue), fn(PendingChain $chain) => $chain->onQueue($jobQueue))
+                ->when(filled($jobConnection), fn(PendingChain $chain) => $chain->onConnection($jobConnection))
                 ->dispatch();
 
             return true;
-
         } catch (\Exception $exception) {
             Log::error($exception->getMessage());
 
             return false;
         }
-
     }
 }

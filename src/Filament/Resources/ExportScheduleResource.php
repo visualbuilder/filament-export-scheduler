@@ -2,7 +2,6 @@
 
 namespace VisualBuilder\ExportScheduler\Filament\Resources;
 
-
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Tabs;
@@ -89,22 +88,22 @@ class ExportScheduleResource extends Resource
                                     Fields::copyToUser(),
                                 ])->columns(),
 
-                            Fields::filterReportSection()
+                            Fields::filterByAttributeSection(),
+                            Fields::filterReportSection(),
                         ]),
 
                     Tabs\Tab::make('Schedule')->schema([
                         Section::make('When to Run')
                             ->schema([
-
                                 Grid::make()->schema([
                                     Fields::scheduleFrequency(),
                                     Fields::enableToggle()
-                                ])->columns(2),
+                                ])->columns(),
 
                                 Grid::make()->schema([
                                     Fields::customCronExpression(),
                                     Fields::cronHint(),
-                                ])->columns(2),
+                                ])->columns(),
 
                                 Fields::scheduleDayOfWeek(),
                                 Fields::scheduleDayOfMonth(),
@@ -137,7 +136,6 @@ class ExportScheduleResource extends Resource
                         ->columns(4)
                         ->visible(fn(Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->count() : false)
                         ->extraAttributes(['class' => 'column_picker'])
-
                 ])
                     ->contained(false)
                     ->persistTab()
@@ -145,7 +143,6 @@ class ExportScheduleResource extends Resource
                     ->columnSpanFull(),
             ]);
     }
-
 
     public static function table(Table $table): Table
     {
@@ -160,12 +157,10 @@ class ExportScheduleResource extends Resource
                 Tables\Columns\TextColumn::make('last_successful_run_at')->label(__('export-scheduler::scheduler.last_success'))->date(),
                 Tables\Columns\TextColumn::make('next_run_at')->label(__('export-scheduler::scheduler.next_run_at'))->date(),
                 Tables\Columns\ToggleColumn::make('enabled')->label(__('export-scheduler::scheduler.enabled')),
-
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
                 RunExport::make('run'),
-
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -182,6 +177,4 @@ class ExportScheduleResource extends Resource
             'edit' => Pages\EditExportSchedule::route('/{record}/edit'),
         ];
     }
-
-
 }

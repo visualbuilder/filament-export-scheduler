@@ -6,6 +6,7 @@ use Closure;
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\Fieldset;
+use Filament\Forms\Components\Group;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\MorphToSelect;
 use Filament\Forms\Components\Placeholder;
@@ -44,7 +45,7 @@ class Fields
         return Section::make('Filter By Associated Records (optional)')
             ->columns()
             ->live()
-            ->visible(fn (Get $get) => $get('exporter'))
+            ->visible(fn(Get $get) => $get('exporter'))
             ->schema([
                 // Section for choosing which relation types to filter by.
                 Section::make('Choose the Associated Record Type')
@@ -55,18 +56,21 @@ class Fields
                             ->multiple()
                             ->live()
                             ->preload()
-                            ->formatStateUsing(fn (?ExportSchedule $record) => array_keys($record?->filters ?? []))
+                            ->formatStateUsing(fn(?ExportSchedule $record) => collect($record?->filters ?? [])
+                                ->keys()
+                                ->reject(fn($key) => $key === 'attributes')
+                                ->values()
+                                ->all()
+                            )
                             ->options(function (Get $get) {
                                 $exporter = $get('exporter');
-                                if (! $exporter) {
+                                if (!$exporter) {
                                     return [];
                                 }
 
                                 $exporterReflection = new \ReflectionClass($exporter);
                                 $exporterModel = $exporterReflection->getStaticPropertyValue('model');
 
-
-                                $allRelations = collect((new \ReflectionClass($exporterModel))->getMethods(\ReflectionMethod::IS_PUBLIC));
                                 // Filter methods on the exporter model to only include relationships that
                                 // - is an instance of a BelongsTo relation
                                 // - doesn't require any arguments
@@ -107,14 +111,19 @@ class Fields
                                 return $belongsToRelations->toArray();
                             })
                             ->afterStateUpdated(function ($livewire, $state) {
+                                $attributes = $livewire->data['filters']['attributes'] ?? null;
+
                                 // Remove field data from livewire if not selected
                                 if (array_key_exists('filters', $livewire->data) && is_array($livewire->data['filters'])) {
-
                                     $livewire->data['filters'] = array_filter(
                                         $livewire->data['filters'],
-                                        fn ($filter) => in_array($filter, $state),
+                                        fn($filter) => in_array($filter, $state),
                                         ARRAY_FILTER_USE_KEY,
                                     );
+                                }
+
+                                if ($attributes) {
+                                    $livewire->data['filters']['attributes'] = $attributes;
                                 }
                             }),
                     ]),
@@ -122,36 +131,228 @@ class Fields
                 // Section that dynamically creates a Select field for each chosen relation.
                 Section::make('Select Records for Each Associated Type')
                     ->columnSpan(1)
-                    ->visible(fn (Get $get) => $get('selected_relations'))
+                    ->visible(fn(Get $get) => $get('selected_relations'))
                     ->live()
                     ->schema(function (Get $get, $livewire) {
                         $exporter = $get('exporter');
-                        if (! $exporter) {
+                        if (!$exporter) {
                             return [];
                         }
-                        $selectedRelations = $get('selected_relations') ?? [];
 
                         // Use the helper method to build each Select field.
-                        $selectFields = collect($selectedRelations)
-                            ->map(fn ($relation) => self::buildRelationSelectField($relation, $exporter))
+                        $selectFields = collect($get('selected_relations') ?? [])
+                            ->map(fn($relation) => self::buildRelationSelectField($relation, $exporter))
                             ->toArray();
 
                         // Add field data to the livewire
                         $livewireData = $livewire->data;
-                        if (! array_key_exists('filters', $livewireData) || is_null($livewireData['filters'])) {
+                        if (!array_key_exists('filters', $livewireData) || is_null($livewireData['filters'])) {
                             $livewireData['filters'] = [];
                         }
+
+                        $attributes = array_filter(
+                            $livewireData['filters'],
+                            fn($key) => $key === 'attributes',
+                            ARRAY_FILTER_USE_KEY
+                        );
+                        $relations = array_filter(
+                            $livewireData['filters'],
+                            fn($key) => $key !== 'attributes',
+                            ARRAY_FILTER_USE_KEY
+                        );
+
+                        $livewireData['filters'] = $relations;
+
                         foreach ($selectFields as $field) {
                             $fieldName = str_replace('filters.', '', $field->getName());
-                            if (! array_key_exists($fieldName, $livewireData['filters'])) {
+                            if (!array_key_exists($fieldName, $livewireData['filters'])) {
                                 $livewireData['filters'][$fieldName] = null;
                             }
                         }
+
+                        $livewireData['filters'] = $livewireData['filters'] + $attributes;
                         $livewire->data = $livewireData;
 
                         return $selectFields;
                     }),
             ]);
+    }
+
+    public static function filterByAttributeSection(): Section
+    {
+        return Section::make('Filter By Attributes (optional)')
+            ->live()
+            ->visible(fn(Get $get) => $get('exporter'))
+            ->schema(function (Get $get) {
+                $exporterClass = $get('exporter');
+                $columns = ExportSchedule::getDefaultColumnsForExporter($exporterClass ?? '');
+
+                return [
+                    Repeater::make('filters.attributes')
+                        ->hiddenLabel()
+                        ->reorderable(false)
+                        ->columns(3)
+                        ->dehydrated(fn($state) => filled($state))
+                        ->schema([
+                            Group::make()
+                                ->columns(3)
+                                ->columnSpanFull()
+                                ->schema([
+                                    Select::make('condition')
+                                        ->columnStart(2)
+                                        ->options([
+                                            'and' => 'AND',
+                                            'or' => 'OR'
+                                        ])
+                                        ->required()
+                                        ->hidden(function (Get $get, $component) {
+                                            $itemId = str_replace(['data.filters.attributes.', '.condition'], '', $component->getId());
+
+                                            return $itemId === array_key_first($get('../'));
+                                        })
+                                ]),
+
+                            // field/attribute
+                            Select::make('column')
+                                ->options(function () use ($columns, $exporterClass) {
+                                    $exporterModel = (new \ReflectionClass($exporterClass))->getStaticPropertyValue('model');
+
+                                    return $columns
+                                        ->filter(function ($column) use ($exporterModel) {
+                                            if (!($name = $column['name'] ?? null)) {
+                                                return false;
+                                            }
+
+                                            if (!method_exists($exporterModel, $name)) {
+                                                return true;
+                                            }
+
+                                            return !(new $exporterModel)->{$name}() instanceof \Illuminate\Database\Eloquent\Relations\BelongsTo;
+                                        })
+                                        ->pluck('label', 'name')
+                                        ->toArray();
+                                })
+                                ->native(false)
+                                ->live()
+                                ->required()
+                                ->afterStateUpdated(function (Set $set) {
+                                    $set('value', null);
+                                    $set('operator', null);
+                                }),
+
+                            Group::make()
+                                ->columnSpan(2)
+                                ->columns()
+                                ->visible(fn(Get $get) => $columns->contains(fn($item) => $item['name'] === $get('column')))
+                                ->schema([
+                                    // operator
+                                    Select::make('operator')
+                                        ->required()
+                                        ->native(false)
+                                        ->options(function (Get $get) use ($columns, $exporterClass) {
+                                            $column = $get('column');
+                                            $exporterModel = (new \ReflectionClass($exporterClass))->getStaticPropertyValue('model');
+                                            $casts = (new $exporterModel)->getCasts();
+                                            $type = $casts[$column] ?? null;
+
+                                            // enum
+                                            if (enum_exists($type) && class_exists($type)) {
+                                                return [
+                                                    'in' => 'is present in',
+                                                    'not_in' => 'is not present in'
+                                                ];
+                                            }
+
+                                            // boolean
+                                            if ($type === 'boolean') {
+                                                return [
+                                                    '=' => 'is',
+                                                    '!=' => 'is not'
+                                                ];
+                                            }
+
+                                            // date
+                                            if (
+                                                in_array($column, ['created_at', 'updated_at', 'deleted_at'])
+                                                || in_array($type, ['date', 'datetime', 'timestamp'])
+                                            ) {
+                                                return ['<>' => 'is from'];
+                                            }
+
+                                            return [
+                                                '=' => 'is equal to',
+                                                '!=' => 'is not equal to',
+                                                'like' => 'is like',
+                                            ];
+                                        }),
+
+                                    // value
+                                    Group::make()
+                                        ->visible(fn(Get $get) => $get('operator'))
+                                        ->schema([
+                                            // enum
+                                            Select::make('value')
+                                                ->required()
+                                                ->multiple()
+                                                ->selectablePlaceholder(false)
+                                                ->native(false)
+                                                ->visible(function (Get $get) use ($columns, $exporterClass) {
+                                                    $column = $get('column');
+                                                    $exporterModel = (new \ReflectionClass($exporterClass))->getStaticPropertyValue('model');
+                                                    $casts = (new $exporterModel)->getCasts();
+                                                    $type = $casts[$column] ?? null;
+
+                                                    return enum_exists($type) && class_exists($type);
+                                                })
+                                                ->options(function (Get $get) use ($columns, $exporterClass) {
+                                                    $column = $get('column');
+                                                    $exporterModel = (new \ReflectionClass($exporterClass))->getStaticPropertyValue('model');
+                                                    $enumClass = (new $exporterModel)->getCasts()[$column];
+
+                                                    return collect($enumClass::cases())->mapWithKeys(fn($case) => [$case->value => $case->getLabel()]);
+                                                }),
+
+                                            // date|datetime|timestamp
+                                            self::dateRange('value')
+                                                ->required()
+                                                ->visible(function (Get $get) use ($columns, $exporterClass) {
+                                                    $column = $get('column');
+                                                    $exporterModel = (new \ReflectionClass($exporterClass))->getStaticPropertyValue('model');
+                                                    $casts = (new $exporterModel)->getCasts();
+
+                                                    return in_array($column, ['created_at', 'updated_at', 'deleted_at'])
+                                                        || in_array($casts[$column] ?? null, ['date', 'datetime', 'timestamp']);
+                                                }),
+
+                                            // boolean
+                                            Toggle::make('value')
+                                                ->required()
+                                                ->visible(function (Get $get) use ($columns, $exporterClass) {
+                                                    $column = $get('column');
+                                                    $exporterModel = (new \ReflectionClass($exporterClass))->getStaticPropertyValue('model');
+                                                    $casts = (new $exporterModel)->getCasts();
+
+                                                    return ($casts[$column] ?? null) === 'boolean';
+                                                }),
+
+                                            // others
+                                            TextInput::make('value')
+                                                ->required()
+                                                ->hidden(function (Get $get) use ($columns, $exporterClass) {
+                                                    $column = $get('column');
+                                                    $exporterModel = (new \ReflectionClass($exporterClass))->getStaticPropertyValue('model');
+                                                    $casts = (new $exporterModel)->getCasts();
+                                                    $type = $casts[$column] ?? null;
+
+                                                    return (enum_exists($type) && class_exists($type))
+                                                        || in_array($type, ['date', 'datetime', 'timestamp']) || in_array($column, ['created_at', 'updated_at', 'deleted_at']);
+                                                }),
+                                        ])
+                                ])
+                        ])
+                        ->addActionLabel('Add filter')
+                ];
+            });
     }
 
     /**
@@ -195,7 +396,7 @@ class Fields
             ->hintColor('info')
             ->options(ExportScheduler::listExporters())
             ->native(false)
-            ->reactive()
+            ->live()
             ->required()
             ->afterStateUpdated(function (?ExportSchedule $record, $state, Set $set, $livewire) {
                 /** Clear any existing selected_relations & filter data */
@@ -235,7 +436,7 @@ class Fields
                 if ($state !== ScheduleFrequency::YEARLY->value) {
                     $set('schedule_month', null);
                 }
-                if (! in_array(
+                if (!in_array(
                     $state,
                     [ScheduleFrequency::MONTHLY->value, ScheduleFrequency::QUARTERLY->value, ScheduleFrequency::HALF_YEARLY->value,
                         ScheduleFrequency::YEARLY->value]
@@ -255,13 +456,13 @@ class Fields
     {
         return TextInput::make('custom_cron_expression')
             ->label(__('export-scheduler::scheduler.custom_cron_expression'))
-            ->visible(fn (Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))
-            ->required(fn (Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))
+            ->visible(fn(Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))
+            ->required(fn(Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))
             ->hintColor('info')
             ->placeholder('eg 0 0 * * 0 ')
             ->rules([
-                fn (): Closure => function (string $attribute, $value, Closure $fail) {
-                    if (! ExportScheduler::isValidCronExpression($value)) {
+                fn(): Closure => function (string $attribute, $value, Closure $fail) {
+                    if (!ExportScheduler::isValidCronExpression($value)) {
                         $fail(__('Invalid cron expression'));
                     }
                 },
@@ -271,7 +472,7 @@ class Fields
     public static function cronHint(): Placeholder
     {
         return Placeholder::make('cron_hint')
-            ->visible(fn (Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))
+            ->visible(fn(Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))
             ->label(__('Cron Tips'))
             ->content(new HtmlString("<div style='line-height: 1.7'><p>" . __('export-scheduler::scheduler.cron_expression_hint') . '</p></div>'));
     }
@@ -284,8 +485,8 @@ class Fields
             ->options(DayOfWeek::class)
             ->native(false)
             ->nullable()
-            ->visible(fn (Get $get) => $get('schedule_frequency') === ScheduleFrequency::WEEKLY->value)
-            ->required(fn (Get $get) => $get('schedule_frequency') === ScheduleFrequency::WEEKLY->value);
+            ->visible(fn(Get $get) => $get('schedule_frequency') === ScheduleFrequency::WEEKLY->value)
+            ->required(fn(Get $get) => $get('schedule_frequency') === ScheduleFrequency::WEEKLY->value);
     }
 
     public static function scheduleDayOfMonth(): Select
@@ -299,8 +500,8 @@ class Fields
             ))
             ->native(false)
             ->nullable()
-            ->visible(fn (Get $get) => Helper::isDayOfMonthFieldRequired($get))
-            ->required(fn (Get $get) => Helper::isDayOfMonthFieldRequired($get));
+            ->visible(fn(Get $get) => Helper::isDayOfMonthFieldRequired($get))
+            ->required(fn(Get $get) => Helper::isDayOfMonthFieldRequired($get));
     }
 
     public static function scheduleMonth(): Select
@@ -311,8 +512,8 @@ class Fields
             ->options(Month::class)
             ->native(false)
             ->nullable()
-            ->visible(fn (Get $get) => $get('schedule_frequency') === ScheduleFrequency::YEARLY->value)
-            ->required(fn (Get $get) => $get('schedule_frequency') === ScheduleFrequency::YEARLY->value);
+            ->visible(fn(Get $get) => $get('schedule_frequency') === ScheduleFrequency::YEARLY->value)
+            ->required(fn(Get $get) => $get('schedule_frequency') === ScheduleFrequency::YEARLY->value);
     }
 
     public static function scheduleStartMonth(): Select
@@ -323,8 +524,8 @@ class Fields
             ->options(Month::class)
             ->native(false)
             ->nullable()
-            ->visible(fn (Get $get) => Helper::isStartDateRequired($get))
-            ->required(fn (Get $get) => Helper::isStartDateRequired($get));
+            ->visible(fn(Get $get) => Helper::isStartDateRequired($get))
+            ->required(fn(Get $get) => Helper::isStartDateRequired($get));
     }
 
     public static function scheduleTimeZone(): Select
@@ -342,14 +543,14 @@ class Fields
         return TimePicker::make('schedule_time')
             ->seconds(false)
             ->label(__('export-scheduler::scheduler.schedule_time'))
-            ->visible(fn (Get $get) => $get('schedule_frequency') !== ScheduleFrequency::CRON->value)
-            ->required(fn (Get $get) => $get('schedule_frequency') !== ScheduleFrequency::CRON->value)
+            ->visible(fn(Get $get) => $get('schedule_frequency') !== ScheduleFrequency::CRON->value)
+            ->required(fn(Get $get) => $get('schedule_frequency') !== ScheduleFrequency::CRON->value)
             ->default('00:00');
     }
 
-    public static function dateRange(): Select
+    public static function dateRange($key = 'date_range'): Select
     {
-        return Select::make('date_range')
+        return Select::make($key)
             ->placeholder(__('export-scheduler::scheduler.date_range_placeholder'))
             ->hintIcon('heroicon-m-question-mark-circle', tooltip: __('export-scheduler::scheduler.date_range_tooltip'))
             ->hintColor('info')
@@ -381,7 +582,7 @@ class Fields
             ->addable(false)
             ->collapsed()
             ->deleteAction(
-                fn (Action $action) => $action
+                fn(Action $action) => $action
                     ->label('Remove')
                     ->button(),
             )
@@ -395,20 +596,21 @@ class Fields
 
             })
             ->live()
-            ->itemLabel(fn (array $state): ?string => $state['label'] ?? null)
-            ->maxItems(fn (Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->count() : 0)
+            ->itemLabel(fn(array $state): ?string => $state['label'] ?? null)
+            ->maxItems(fn(Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->count() : 0)
+            ->default(fn(Get $get) => ExportSchedule::getDefaultColumnsForExporter($get('exporter') ?? '')->toArray())
             ->schema([
-                TextInput::make('name')->visible(false),
-                TextInput::make('label'),
-            ])->default(fn (Get $get) => ExportSchedule::getDefaultColumnsForExporter($get('exporter') ?? '')->toArray());
+                Hidden::make('name'),
+                TextInput::make('label')->hiddenLabel(),
+            ]);
     }
 
     public static function availableColumns(): Repeater
     {
         return Repeater::make('available_columns')
             ->schema([
-                Hidden::make('name')->visible(false),
-                TextInput::make('label')->label(false),
+                Hidden::make('name'),
+                TextInput::make('label')->hiddenLabel(),
             ])
             ->label(__('export-scheduler::scheduler.available_columns'))
             ->columns(2)
@@ -424,7 +626,7 @@ class Fields
                     ->button()
                     ->after(function ($state, Get $get, Set $set) {
                         // Fetch all default columns as a collection using the static method
-                        $allColumns = ExportSchedule::getDefaultColumnsForExporter($state);
+                        $allColumns = ExportSchedule::getDefaultColumnsForExporter($get('exporter') ?? '');
                         $currentSelectedColumns = $get('columns'); // Current selected columns
                         $currentAvailableColumns = $state;         // Current available columns from state
                         $combinedCurrentColumns = collect($currentSelectedColumns)
@@ -438,15 +640,15 @@ class Fields
                         })->first();
 
                         if ($deletedItem) {
-                            $deletedItemKey = (string) Str::uuid(); // Generate a unique key
+                            $deletedItemKey = (string)Str::uuid(); // Generate a unique key
                             $newColumns = [$deletedItemKey => $deletedItem];
                             $updatedColumns = $currentSelectedColumns + $newColumns;
                             $set('columns', $updatedColumns); // Update the columns
                         }
                     });
             })
-            ->itemLabel(fn (array $state): ?string => $state['label'] ?? null)
-            ->maxItems(fn (Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->count() : 0)
+            ->itemLabel(fn(array $state): ?string => $state['label'] ?? null)
+            ->maxItems(fn(Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->count() : 0)
             ->addable(false)
             ->formatStateUsing(function (Get $get) {
                 $allColumns = ExportSchedule::getDefaultColumnsForExporter($get('exporter') ?? '');
@@ -469,31 +671,29 @@ class Fields
     public static function copyToUser(): Fieldset
     {
         return Fieldset::make(__('export-scheduler::scheduler.cc'))
-            ->schema(
-                self::copyToUserFields()
-            )
-            ->visible(fn (Get $get) => $get('owner_id'));
+            ->schema(self::copyToUserFields())
+            ->visible(fn(Get $get) => $get('owner_id'));
     }
 
     public static function copyToUserFields(): array
     {
         return [
-
             Placeholder::make('Data Security Warning')
-                ->content(fn (Get $get) => new HtmlString(__('export-scheduler::scheduler.cc_warning', ['owner_type' => class_basename($get('owner_type'))]))),
+                ->content(fn(Get $get) => new HtmlString(__('export-scheduler::scheduler.cc_warning', ['owner_type' => class_basename($get('owner_type'))]))),
 
             Repeater::make('cc')
                 ->label('')
                 ->addActionLabel(__('export-scheduler::scheduler.cc_add_label'))
-                ->simple(
-                    self::selectCopyToUser()
-                )];
+                ->simple(self::selectCopyToUser())
+        ];
     }
 
     public static function selectCopyToUser(): Select
     {
         return Select::make('id')
             ->label('User')
+            ->placeholder(__('export-scheduler::scheduler.cc_placeholder'))
+            ->searchable()
             ->options(function ($get) {
                 $type = $get('../../owner_type');
                 $ownerId = $get('../../owner_id');
@@ -505,20 +705,19 @@ class Fields
                 $excludeIds = array_filter(array_merge($ccIds, [$ownerId]));
 
                 return $type ? $type::query()->whereNotIn('id', $excludeIds)->pluck('email', 'id') : [];
-            })->getOptionLabelUsing(function ($value, Get $get) {
+            })
+            ->getOptionLabelUsing(function ($value, Get $get) {
                 $type = $get('../../owner_type');
 
                 return $type ? $type::query()->find($value)?->email : '';
-            })
-            ->placeholder(__('export-scheduler::scheduler.cc_placeholder'))
-            ->searchable();
+            });
     }
 
     public static function ownerMorphSelect(string $fieldName = 'owner', bool $native = false, bool $searchable = true): MorphToSelect
     {
+        $types = [];
         $userModels = config('export-scheduler.user_models', []);
 
-        $types = [];
         foreach ($userModels as $userModel) {
             if (is_array($userModel) && isset($userModel['model'], $userModel['title_attribute'])) {
                 $types[] = MorphToSelect\Type::make($userModel['model'])

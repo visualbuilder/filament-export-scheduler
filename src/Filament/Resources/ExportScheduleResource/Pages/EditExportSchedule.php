@@ -20,4 +20,12 @@ class EditExportSchedule extends EditRecord
         ];
     }
 
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        if (blank($data['filters'] ?? null)) {
+            $data['filters'] = null;
+        }
+
+        return $data;
+    }
 }

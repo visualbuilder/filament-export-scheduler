@@ -549,6 +549,7 @@ class Fields
                         'months' => __('export-scheduler::scheduler.months'),
                         'years' => __('export-scheduler::scheduler.years'),
                     ])
+                    ->default('days')
                     ->native(false)
                     ->required(),
             ]);

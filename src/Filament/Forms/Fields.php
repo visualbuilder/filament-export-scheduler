@@ -263,7 +263,7 @@ class Fields
                                                 ],
 
                                                 // date/datetime/timestamp
-                                                Helper::isDateTimeCast($column, $type) => ['<>' => 'is from'],
+                                                Helper::isDateTimeCast($column, $type) => ['<>' => 'is from', 'since' => 'since'],
 
                                                 // boolean
                                                 Helper::isBooleanCast($type) => [
@@ -292,6 +292,7 @@ class Fields
                                             $key = 'value';
                                             $enumCast = Helper::extractEnumCast($column, $exporterModel);
 
+                                            $operator = $get('operator');
                                             $field = match (true) {
                                                 // enum
                                                 filled($enumCast) => Select::make($key)
@@ -303,7 +304,9 @@ class Fields
                                                     ),
 
                                                 // date/datetime/timestamp
-                                                Helper::isDateTimeCast($column, $type) => self::dateRange($key),
+                                                Helper::isDateTimeCast($column, $type) => $operator === 'since'
+                                                    ? self::dateSince($key)
+                                                    : self::dateRange($key),
 
                                                 // boolean
                                                 Helper::isBooleanCast($type) => Toggle::make($key),
@@ -312,7 +315,11 @@ class Fields
                                                 default => TextInput::make($key)
                                             };
 
-                                            return [$field->required()];
+                                            if (method_exists($field, 'required')) {
+                                                $field = $field->required();
+                                            }
+
+                                            return [$field];
                                         })
                                 ])
                         ])
@@ -523,6 +530,27 @@ class Fields
             ->label(__('export-scheduler::scheduler.date_range'))
             ->options(DateRange::selectArray())
             ->native(false);
+    }
+
+    public static function dateSince($key = 'since'): Group
+    {
+        return Group::make()
+            ->columns(2)
+            ->schema([
+                TextInput::make("{$key}.amount")
+                    ->numeric()
+                    ->default(1)
+                    ->required(),
+                Select::make("{$key}.unit")
+                    ->options([
+                        'days' => __('export-scheduler::scheduler.days'),
+                        'weeks' => __('export-scheduler::scheduler.weeks'),
+                        'months' => __('export-scheduler::scheduler.months'),
+                        'years' => __('export-scheduler::scheduler.years'),
+                    ])
+                    ->native(false)
+                    ->required(),
+            ]);
     }
 
     public static function formats(): Select

@@ -24,6 +24,7 @@ return [
     'cron_expression_hint'       => "A Cron expression defines a schedule for tasks to run automatically.<br>It uses a format like * * * * * representing minutes, hours, days, months, and weekdays.</p><p>For example:<br>&nbsp;&nbsp;&nbsp;0 9 * * * runs every day at 9:00 AM.<br>&nbsp;&nbsp;&nbsp;0 0 1 * * runs on the 1st of every month at midnight.<br>You can use an online tool to generate Cron expressions<br><a class='underline' href='https://crontab.guru'>https://crontab.guru</a>",
 
     'date_range'             => 'Date Range',
+    'since'                  => 'Since',
     'date_range_tooltip'     => 'Leave blank for all records.  Attribute will be created_at unless changed in the Exporter',
     'date_range_placeholder' => 'Select a relative date range query. Blank for all records',
     'owner'                  => 'Report Owner',
@@ -68,6 +69,12 @@ return [
     'october'                => 'October',
     'november'               => 'November',
     'december'               => 'December',
+
+    // Relative date units
+    'days'                   => 'Days',
+    'weeks'                  => 'Weeks',
+    'months'                 => 'Months',
+    'years'                  => 'Years',
 
     //FileTypes
     'CSV'                    => 'CSV',

@@ -96,15 +96,47 @@ class ScheduledExporter
                             $column = array_pop($parts);
                             $relationPath = implode('.', $parts);
 
-                            $query->{$condition === 'or' ? 'orWhereHas' : 'whereHas'}($relationPath, function ($subQuery) use ($column, $operator, $value) {
-                                if (in_array($operator, ['in', 'not_in']) && is_array($value)) {
-                                    $subQuery->{$operator === 'in' ? 'whereIn' : 'whereNotIn'}($column, $value);
-                                } else if ($operator === 'like') {
-                                    $subQuery->where($column, 'LIKE', "%$value%");
-                                } else {
-                                    $subQuery->where($column, $operator, $value);
-                                }
-                            });
+                            $firstRelation = $parts[0];
+                            $modelClass = $this->exportSchedule->exporter::getModel();
+                            $relationMethod = method_exists($modelClass, $firstRelation)
+                                ? (new $modelClass)->$firstRelation()
+                                : null;
+
+                            if ($relationMethod instanceof \Illuminate\Database\Eloquent\Relations\MorphTo) {
+                                $remainingPath = implode('.', array_slice($parts, 1));
+                                $types = $this->getMorphTypes();
+                                $query->{$condition === 'or' ? 'orWhereHasMorph' : 'whereHasMorph'}($firstRelation, $types, function ($morphQuery) use ($remainingPath, $column, $operator, $value) {
+                                    if ($remainingPath) {
+                                        $morphQuery->whereHas($remainingPath, function ($subQuery) use ($column, $operator, $value) {
+                                            if (in_array($operator, ['in', 'not_in']) && is_array($value)) {
+                                                $subQuery->{$operator === 'in' ? 'whereIn' : 'whereNotIn'}($column, $value);
+                                            } elseif ($operator === 'like') {
+                                                $subQuery->where($column, 'LIKE', "%$value%");
+                                            } else {
+                                                $subQuery->where($column, $operator, $value);
+                                            }
+                                        });
+                                    } else {
+                                        if (in_array($operator, ['in', 'not_in']) && is_array($value)) {
+                                            $morphQuery->{$operator === 'in' ? 'whereIn' : 'whereNotIn'}($column, $value);
+                                        } elseif ($operator === 'like') {
+                                            $morphQuery->where($column, 'LIKE', "%$value%");
+                                        } else {
+                                            $morphQuery->where($column, $operator, $value);
+                                        }
+                                    }
+                                });
+                            } else {
+                                $query->{$condition === 'or' ? 'orWhereHas' : 'whereHas'}($relationPath, function ($subQuery) use ($column, $operator, $value) {
+                                    if (in_array($operator, ['in', 'not_in']) && is_array($value)) {
+                                        $subQuery->{$operator === 'in' ? 'whereIn' : 'whereNotIn'}($column, $value);
+                                    } elseif ($operator === 'like') {
+                                        $subQuery->where($column, 'LIKE', "%$value%");
+                                    } else {
+                                        $subQuery->where($column, $operator, $value);
+                                    }
+                                });
+                            }
                         } else {
                             if ($operator === '<>' && filled($dateRange = DateRange::tryFrom($value))) {
                                 ['start' => $startDate, 'end' => $endDate] = $dateRange->getDateRange();
@@ -155,6 +187,22 @@ class ScheduledExporter
     protected function generateFileName(): string
     {
         return Str::slug($this->exportSchedule->name . '_' . now()->format('Y-m-d_Hi'));
+    }
+
+    protected function getMorphTypes(): array
+    {
+        $types = collect(config('export-scheduler.user_models', []))
+            ->map(function ($model) {
+                return is_array($model) ? ($model['model'] ?? null) : $model;
+            })
+            ->filter()
+            ->values();
+
+        if ($this->exportSchedule->owner_type) {
+            $types->push($this->exportSchedule->owner_type);
+        }
+
+        return $types->unique()->all();
     }
 
     public function buildJobChain(): bool

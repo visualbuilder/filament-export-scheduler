@@ -181,6 +181,7 @@ class Fields
     public static function filterByAttributeSection(): Section
     {
         return Section::make('Filter By Attributes (optional)')
+            ->live()
             ->visible(fn(Get $get) => $get('exporter'))
             ->schema(function (Get $get) {
                 $exporterClass = $get('exporter');

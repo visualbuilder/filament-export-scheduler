@@ -181,7 +181,6 @@ class Fields
     public static function filterByAttributeSection(): Section
     {
         return Section::make('Filter By Attributes (optional)')
-            ->live()
             ->visible(fn(Get $get) => $get('exporter'))
             ->schema(function (Get $get) {
                 $exporterClass = $get('exporter');
@@ -207,7 +206,6 @@ class Fields
                                         ->required()
                                         ->hidden(function (Get $get, $component) {
                                             $itemId = str_replace(['data.filters.attributes.', '.condition'], '', $component->getId());
-
                                             return $itemId === array_key_first($get('../'));
                                         })
                                 ]),
@@ -216,7 +214,6 @@ class Fields
                             Select::make('column')
                                 ->options(function () use ($columns, $exporterClass) {
                                     $exporterModel = (new \ReflectionClass($exporterClass))->getStaticPropertyValue('model');
-
                                     return $columns
                                         ->filter(function ($column) use ($exporterModel) {
                                             if (!($name = $column['name'] ?? null)) {
@@ -281,7 +278,7 @@ class Fields
 
                                     // value
                                     Group::make()
-                                        ->visible(function(Get $get) use ($exporterClass) {return $exporterClass&& $get('operator'); })
+                                        ->visible(function(Get $get) use ($exporterClass) {return $exporterClass && $get('operator'); })
                                         ->schema(function (Get $get) use ($exporterClass) {
                                             if(!$exporterClass)
                                                 return [];
@@ -305,7 +302,7 @@ class Fields
 
                                                 // date/datetime/timestamp
                                                 Helper::isDateTimeCast($column, $type) => $operator === 'since'
-                                                    ? self::dateSince($key)
+                                                    ? self::dateSince()
                                                     : self::dateRange($key),
 
                                                 // boolean
@@ -532,16 +529,14 @@ class Fields
             ->native(false);
     }
 
-    public static function dateSince($key = 'since'): Group
+    public static function dateSince(): Group
     {
         return Group::make()
-            ->statePath($key)
             ->columns(2)
             ->schema([
                 TextInput::make('amount')
                     ->numeric()
-                    ->default(1)
-                    ->required(),
+                    ->default(1),
                 Select::make('unit')
                     ->options([
                         'days' => __('export-scheduler::scheduler.days'),
@@ -549,8 +544,8 @@ class Fields
                         'months' => __('export-scheduler::scheduler.months'),
                         'years' => __('export-scheduler::scheduler.years'),
                     ])
-                    ->native(false)
-                    ->required(),
+                    ->default('days')
+                    ->native(false),
             ]);
     }
 

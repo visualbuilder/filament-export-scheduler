@@ -286,6 +286,11 @@ To prove the integrity of the system the test suite creates these schedules and 
 | User Export Weekdays 10:30 AM   | CRON               | `30 10 * * 1-5`          | Every weekday (Monday-Friday) at 10:30 AM                        | Check for a new file/email at 10:30 AM each weekday.           |
 | User Export Quarter Ends 2:00 AM | CRON               | `0 2 1 3,6,9,12 *`      | The 1st day of March, June, September, and December at 2:00 AM    | Check for a new file/email on these dates at 2:00 AM.            |
 
+
+## Codex Setup
+
+When using this repository in the OpenAI Codex environment, a `.codex/setup.sh` script will install PHP, MySQL, and Composer during initialization when network access is available.
+
 ## Changelog
 
 Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.

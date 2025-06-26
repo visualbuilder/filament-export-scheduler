@@ -277,6 +277,13 @@ class Fields
                                                     'like' => 'is like',
                                                 ]
                                             };
+                                        })
+                                        ->afterStateUpdated(function ($state, Set $set) {
+                                            if ($state === 'since') {
+                                                $set('value', ['amount' => 1, 'unit' => 'days']);
+                                            } else {
+                                                $set('value', null);
+                                            }
                                         }),
 
                                     // value

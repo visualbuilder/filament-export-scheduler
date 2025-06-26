@@ -23,6 +23,7 @@ Email automated exports on a defined schedule - keep the management happy with t
 
 ## Filter By Available Relationships
 - BelongsTo relations (with 'InteractsWithExportScheduler' trait set on the relation class) are automatically discovered.
+- MorphTo relations can be filtered using dot notation paths.
 - Exclude relations with the 'excludeFilterableRelations' method available in the 'InteractsWithExportScheduler' trait.
 
 ![Filter by relations](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3x-with-relationships/media/filter-by-relations.png)
@@ -237,8 +238,8 @@ Typical scenario might be exporting all Orders but filtered by a specific Organi
 This requires adding the ``InteractsWithExportSchedulerFilter`` to the Models that can be filtered.
 
 The trait has the $filterOptionLabel property allowing us to define which column should be used for the filter label.
-And excludeFilterableRelations allows you to exclude relations which should not be included in the filter, by default all belongsTo relations will be included.
-NB. Next release will include morphsTo relation options.
+And excludeFilterableRelations allows you to exclude relations which should not be included in the filter, by default all BelongsTo relations will be included.
+MorphTo relations are also supported when filtering nested attributes.
 
 }
 

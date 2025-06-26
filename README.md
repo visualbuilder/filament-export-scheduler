@@ -21,10 +21,17 @@ Email automated exports on a defined schedule - keep the management happy with t
 
 ![Setup Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/edit-export.png)
 
+## Filter By Available Attributes
+Exclude attributes with the ```excludeFilterableAttributes``` method available in the ```InteractWithExportScheduler``` trait.
+
+This is useful for excluding attributes not present in the database or computed attributes/properties.
+
+![Filter by attributes](add-screenshot-here)
+
 ## Filter By Available Relationships
-- BelongsTo relations (with 'InteractsWithExportScheduler' trait set on the relation class) are automatically discovered.
+- BelongsTo relations (with ```InteractsWithExportScheduler``` trait set on the relation class) are automatically discovered.
 - MorphTo relations can be filtered using dot notation paths.
-- Exclude relations with the 'excludeFilterableRelations' method available in the 'InteractsWithExportScheduler' trait.
+- Exclude relations with the ```excludeFilterableRelations``` method available in the 'InteractsWithExportScheduler' trait.
 
 ![Filter by relations](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3x-with-relationships/media/filter-by-relations.png)
 
@@ -40,7 +47,6 @@ Email automated exports on a defined schedule - keep the management happy with t
 - Or use a custom Cron for non standard schedules
 
 ![Setup Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/cron.png)
-
 
 ## Customise query data range
 
@@ -234,16 +240,11 @@ php artisan make:filament-exporter
 ```
 
 
-## New Feature - Filtering Exports by a related model
+## New Feature - Filtering Exports by a related attribute/model
 
-Typical scenario might be exporting all Orders but filtered by a specific Organisation.  In order to filter by organisation we need to know the field that should be searchable.
+Typical scenario might be exporting all Orders but filtered by a specific Organisation. In order to filter by organisation we need to know the field that should be searchable.
+
 This requires adding the ``InteractsWithExportSchedulerFilter`` to the Models that can be filtered.
-
-The trait has the $filterOptionLabel property allowing us to define which column should be used for the filter label.
-And excludeFilterableRelations allows you to exclude relations which should not be included in the filter, by default all BelongsTo relations will be included.
-MorphTo relations are also supported when filtering nested attributes.
-
-}
 
 ```php
 trait InteractsWithExportSchedulerFilter
@@ -256,6 +257,16 @@ trait InteractsWithExportSchedulerFilter
     }
 
     /*
+     * Exclude attributes that should
+     * not be added to the filter
+     * @return <array>string
+     */
+    public static function excludeFilterableAttributes(): array
+    {
+        return [];
+    }
+
+    /*
      * Exclude relations that should
      * not be added to the filter
      * @return <array>Illuminate\Database\Eloquent\Relations\Relations
@@ -265,6 +276,15 @@ trait InteractsWithExportSchedulerFilter
         return [];
     }
 }
+```
+
+The trait has the ```$filterOptionLabel``` property allowing us to define which column should be used for the filter label.
+
+The ```excludeFilterableAttributes``` enables you to exclude attributes (including nested ones) when selecting a column. Suitable for attributes that do not exist in the database.
+
+The ```excludeFilterableRelations``` allows you to exclude relations which should not be included in the filter, by default all BelongsTo relations will be included.
+
+MorphTo relations are also supported when filtering nested attributes.
 ```
 
 ## Testing

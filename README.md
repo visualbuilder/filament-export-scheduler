@@ -26,7 +26,8 @@ Exclude attributes with the ```excludeFilterableAttributes``` method available i
 
 This is useful for excluding attributes not present in the database or computed attributes/properties.
 
-![Filter by attributes](add-screenshot-here)
+![Filter by attributes](https://github.com/user-attachments/assets/3208ec5f-a7ad-470b-9443-3506dce28f7b)
+
 
 ## Filter By Available Relationships
 - BelongsTo relations (with ```InteractsWithExportScheduler``` trait set on the relation class) are automatically discovered.

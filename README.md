@@ -54,8 +54,10 @@ Email automated exports on a defined schedule - keep the management happy with t
   - this month
   - last quarter
   - this year
-  - last year
+- last year
 - Custom date field if not created_at can be set in the Exporter
+
+You can also specify a custom period using **since X days/weeks/months/years ago** for even more flexibility.
 
 ## Users can choose which columns to include
 

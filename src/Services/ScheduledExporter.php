@@ -7,6 +7,7 @@ use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Actions\Exports\Exporter;
 use Filament\Actions\Exports\Jobs\CreateXlsxFile;
 use Filament\Actions\Exports\Models\Export;
+use Carbon\Carbon;
 use Illuminate\Bus\PendingBatch;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Bus\PendingChain;
@@ -108,7 +109,18 @@ class ScheduledExporter
                                 $query->{$condition === 'or' ? 'orWhereHasMorph' : 'whereHasMorph'}($firstRelation, $types, function ($morphQuery) use ($remainingPath, $column, $operator, $value) {
                                     if ($remainingPath) {
                                         $morphQuery->whereHas($remainingPath, function ($subQuery) use ($column, $operator, $value) {
-                                            if (in_array($operator, ['in', 'not_in']) && is_array($value)) {
+                                            if ($operator === 'since' && is_array($value)) {
+                                                $date = Carbon::now();
+                                                $amount = (int) ($value['amount'] ?? 0);
+                                                $unit = $value['unit'] ?? 'days';
+                                                match ($unit) {
+                                                    'weeks' => $date->subWeeks($amount),
+                                                    'months' => $date->subMonths($amount),
+                                                    'years' => $date->subYears($amount),
+                                                    default => $date->subDays($amount),
+                                                };
+                                                $subQuery->where($column, '>=', $date);
+                                            } elseif (in_array($operator, ['in', 'not_in']) && is_array($value)) {
                                                 $subQuery->{$operator === 'in' ? 'whereIn' : 'whereNotIn'}($column, $value);
                                             } elseif ($operator === 'like') {
                                                 $subQuery->where($column, 'LIKE', "%$value%");
@@ -117,7 +129,18 @@ class ScheduledExporter
                                             }
                                         });
                                     } else {
-                                        if (in_array($operator, ['in', 'not_in']) && is_array($value)) {
+                                    if ($operator === 'since' && is_array($value)) {
+                                            $date = Carbon::now();
+                                            $amount = (int) ($value['amount'] ?? 0);
+                                            $unit = $value['unit'] ?? 'days';
+                                            match ($unit) {
+                                                'weeks' => $date->subWeeks($amount),
+                                                'months' => $date->subMonths($amount),
+                                                'years' => $date->subYears($amount),
+                                                default => $date->subDays($amount),
+                                            };
+                                            $morphQuery->where($column, '>=', $date);
+                                        } elseif (in_array($operator, ['in', 'not_in']) && is_array($value)) {
                                             $morphQuery->{$operator === 'in' ? 'whereIn' : 'whereNotIn'}($column, $value);
                                         } elseif ($operator === 'like') {
                                             $morphQuery->where($column, 'LIKE', "%$value%");
@@ -141,7 +164,18 @@ class ScheduledExporter
                             if ($operator === '<>' && filled($dateRange = DateRange::tryFrom($value))) {
                                 ['start' => $startDate, 'end' => $endDate] = $dateRange->getDateRange();
                                 $query->{$condition === 'or' ? 'orWhereBetween' : 'whereBetween'}($column, [$startDate, $endDate]);
-                            } else if (in_array($operator, ['in', 'not_in']) && is_array($value)) {
+                            } elseif ($operator === 'since' && is_array($value)) {
+                                $date = Carbon::now();
+                                $amount = (int) ($value['amount'] ?? 0);
+                                $unit = $value['unit'] ?? 'days';
+                                match ($unit) {
+                                    'weeks' => $date->subWeeks($amount),
+                                    'months' => $date->subMonths($amount),
+                                    'years' => $date->subYears($amount),
+                                    default => $date->subDays($amount),
+                                };
+                                $query->{$condition === 'or' ? 'orWhere' : 'where'}($column, '>=', $date);
+                            } elseif (in_array($operator, ['in', 'not_in']) && is_array($value)) {
                                 $query->{$condition === 'or' ? 'orWhereIn' : 'whereIn'}($column, $value);
                             } elseif ($operator === 'like') {
                                 $query->{$condition === 'or' ? 'orWhere' : 'where'}($column, 'LIKE', "%$value%");

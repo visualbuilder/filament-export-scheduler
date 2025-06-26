@@ -185,7 +185,15 @@ class Fields
             ->visible(fn(Get $get) => $get('exporter'))
             ->schema(function (Get $get) {
                 $exporterClass = $get('exporter');
-                $columns = ExportSchedule::getDefaultColumnsForExporter($exporterClass ?? '');
+                $columns = ExportSchedule::getDefaultColumnsForExporter($exporterClass ?? '')
+                    ->reject(function ($column) use ($exporterClass) {
+                        $excludedMethod = 'excludeFilterableAttributes';
+                        $columnName = $column['name'] ?? null;
+
+                        return filled($columnName)
+                            && method_exists($exporterClass, $excludedMethod)
+                            && in_array($columnName, $exporterClass::$excludedMethod());
+                    });
 
                 return [
                     Repeater::make('filters.attributes')
@@ -279,10 +287,10 @@ class Fields
 
                                     // value
                                     Group::make()
-                                        ->visible(function(Get $get) use ($exporterClass) {return $exporterClass && $get('operator'); })
+                                        ->visible(fn(Get $get) => $exporterClass && $get('operator'))
                                         ->schema(function (Get $get) use ($exporterClass) {
-                                            if(!$exporterClass)
-                                                return [];
+                                            if (!$exporterClass) return [];
+
                                             $column = $get('column');
                                             $exporterModel = (new \ReflectionClass($exporterClass))->getStaticPropertyValue('model');
                                             $casts = (new $exporterModel)->getCasts();

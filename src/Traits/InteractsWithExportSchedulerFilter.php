@@ -12,6 +12,16 @@ trait InteractsWithExportSchedulerFilter
     }
 
     /*
+     * Exclude attributes that should
+     * not be added to the filter
+     * @return <array>string
+     */
+    public static function excludeFilterableAttributes(): array
+    {
+        return [];
+    }
+
+    /*
      * Exclude relations that should
      * not be added to the filter
      * @return <array>Illuminate\Database\Eloquent\Relations\Relations

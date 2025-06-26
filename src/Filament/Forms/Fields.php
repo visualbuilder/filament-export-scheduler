@@ -535,13 +535,14 @@ class Fields
     public static function dateSince($key = 'since'): Group
     {
         return Group::make()
+            ->statePath($key)
             ->columns(2)
             ->schema([
-                TextInput::make("{$key}.amount")
+                TextInput::make('amount')
                     ->numeric()
                     ->default(1)
                     ->required(),
-                Select::make("{$key}.unit")
+                Select::make('unit')
                     ->options([
                         'days' => __('export-scheduler::scheduler.days'),
                         'weeks' => __('export-scheduler::scheduler.weeks'),

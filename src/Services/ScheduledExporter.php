@@ -106,8 +106,8 @@ class ScheduledExporter
                             if ($relationMethod instanceof \Illuminate\Database\Eloquent\Relations\MorphTo) {
                                 $remainingPath = implode('.', array_slice($parts, 1));
                                 $types = $this->getMorphTypes();
-                                $query->{$condition === 'or' ? 'orWhereHasMorph' : 'whereHasMorph'}($firstRelation, $types, function ($morphQuery) use ($remainingPath, $column, $operator, $value) {
-                                    if ($remainingPath) {
+                                $query->{$condition === 'or' ? 'orWhereHasMorph' : 'whereHasMorph'}($firstRelation, $types, function ($morphQuery) use ($modelClass, $remainingPath, $column, $operator, $value) {
+                                    if ($remainingPath && method_exists($modelClass, $remainingPath)) {
                                         $morphQuery->whereHas($remainingPath, function ($subQuery) use ($column, $operator, $value) {
                                             if ($operator === 'since' && is_array($value)) {
                                                 $date = Carbon::now();

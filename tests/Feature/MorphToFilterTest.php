@@ -28,13 +28,14 @@ it('applies attribute filter on nested MorphTo relation', function () {
         'filters' => [
             'attributes' => [
                 [
-                    'column' => 'owner.primary_contact.full_name',
+                    'column' => 'owner.primary_contact.name',
                     'value' => 'John',
                     'operator' => 'like',
                     'condition' => 'and',
                 ],
             ],
         ],
+        'formats' => ["xlsx"]
     ]);
 
     $exporter = new ScheduledExporter($schedule);

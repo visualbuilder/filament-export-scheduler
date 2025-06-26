@@ -20,6 +20,7 @@ CREATE TABLE `export_schedules` (
   `schedule_month` tinyint unsigned DEFAULT NULL,
   `schedule_timezone` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'UTC',
   `schedule_start_month` tinyint unsigned DEFAULT NULL,
+  `filters` json DEFAULT NULL,
   `formats` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `date_range` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `owner_type` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,

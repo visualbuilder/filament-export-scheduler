@@ -31,6 +31,8 @@ return new class extends Migration
                 $table->string('date_range')->nullable(); //Relative date range to use for the query
                 $table->nullableMorphs('owner');
                 $table->json('cc')->nullable();
+                $table->boolean('dynamic_owner_enabled')->default(false);
+                $table->string('dynamic_owner_attribute', 191)->nullable();
                 $table->boolean('enabled')->default(1);
                 $table->timestamp('next_run_at')->nullable(); // Next time the export will be run
                 $table->timestamp('last_run_at')->nullable(); // Last time the export was attempted

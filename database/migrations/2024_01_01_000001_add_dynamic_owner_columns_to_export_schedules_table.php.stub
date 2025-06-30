@@ -1,0 +1,38 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('export_schedules', function (Blueprint $table) {
+            if (! Schema::hasColumn('export_schedules', 'dynamic_owner_enabled')) {
+                $table->boolean('dynamic_owner_enabled')->default(false);
+            }
+            if (! Schema::hasColumn('export_schedules', 'dynamic_owner_attribute')) {
+                $table->string('dynamic_owner_attribute', 191)->nullable();
+            }
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('export_schedules', function (Blueprint $table) {
+            if (Schema::hasColumn('export_schedules', 'dynamic_owner_enabled')) {
+                $table->dropColumn('dynamic_owner_enabled');
+            }
+            if (Schema::hasColumn('export_schedules', 'dynamic_owner_attribute')) {
+                $table->dropColumn('dynamic_owner_attribute');
+            }
+        });
+    }
+};

@@ -732,4 +732,49 @@ class Fields
             ->live()
             ->searchable($searchable);
     }
+
+    public static function automaticRecipients(): Section
+    {
+        return Section::make(__('export-scheduler::scheduler.automatic_recipients'))
+            ->columns()
+            ->schema([
+                Toggle::make('dynamic_owner_enabled')
+                    ->label(__('export-scheduler::scheduler.dynamic_owner_enabled'))
+                    ->reactive(),
+                Select::make('dynamic_owner_attribute')
+                    ->label(__('export-scheduler::scheduler.dynamic_owner_attribute'))
+                    ->visible(fn(Get $get) => $get('dynamic_owner_enabled'))
+                    ->options(function (Get $get) {
+                        $exporter = $get('exporter');
+                        if (! $exporter) {
+                            return [];
+                        }
+
+                        $userModels = collect(config('export-scheduler.user_models', []))
+                            ->map(fn ($m) => is_array($m) ? ($m['model'] ?? null) : $m)
+                            ->filter()
+                            ->all();
+
+                        $model = $exporter::getModel();
+                        $methods = collect((new \ReflectionClass($model))->getMethods(\ReflectionMethod::IS_PUBLIC))
+                            ->filter(fn($m) => $m->getNumberOfParameters() === 0);
+
+                        $options = [];
+                        foreach ($methods as $method) {
+                            $returnType = $method->getReturnType()?->getName();
+                            if (! $returnType || ! is_subclass_of($returnType, \Illuminate\Database\Eloquent\Relations\Relation::class)) {
+                                continue;
+                            }
+                            $relation = (new $model)->{$method->getName()}();
+                            $related = get_class($relation->getRelated());
+                            if (in_array($related, $userModels)) {
+                                $options[$method->getName()] = ucwords(preg_replace('/(?<!^)([A-Z])/', ' $1', $method->getName()));
+                            }
+                        }
+
+                        return $options;
+                    })
+                    ->native(false);
+            ]);
+    }
 }

@@ -745,8 +745,33 @@ class Fields
             ->filter(fn($m) => $m->getNumberOfParameters() === 0);
 
         foreach ($methods as $method) {
-            $returnType = $method->getReturnType()?->getName();
-            if (! $returnType || ! is_subclass_of($returnType, \Illuminate\Database\Eloquent\Relations\Relation::class)) {
+            $returnType = $method->getReturnType();
+            $returnNames = [];
+            if ($returnType instanceof \ReflectionNamedType) {
+                $returnNames[] = $returnType->getName();
+            } elseif ($returnType instanceof \ReflectionUnionType) {
+                foreach ($returnType->getTypes() as $type) {
+                    if ($type instanceof \ReflectionNamedType) {
+                        $returnNames[] = $type->getName();
+                    }
+                }
+            } elseif ($returnType instanceof \ReflectionIntersectionType) {
+                foreach ($returnType->getTypes() as $type) {
+                    if ($type instanceof \ReflectionNamedType) {
+                        $returnNames[] = $type->getName();
+                    }
+                }
+            }
+
+            $relationClass = null;
+            foreach ($returnNames as $name) {
+                if (class_exists($name) && is_subclass_of($name, \Illuminate\Database\Eloquent\Relations\Relation::class)) {
+                    $relationClass = $name;
+                    break;
+                }
+            }
+
+            if (! $relationClass) {
                 continue;
             }
 

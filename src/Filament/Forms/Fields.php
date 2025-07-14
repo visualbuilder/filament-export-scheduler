@@ -258,8 +258,7 @@ class Fields
                                         ->options(function (Get $get) use ($columns, $exporterClass) {
                                             $column = $get('column');
                                             $exporterModel = (new \ReflectionClass($exporterClass))->getStaticPropertyValue('model');
-                                            $casts = (new $exporterModel)->getCasts();
-                                            $type = $casts[$column] ?? null;
+                                            $type = Helper::extractCastType($column, $exporterModel);
 
                                             return match (true) {
                                                 // enum
@@ -293,8 +292,7 @@ class Fields
 
                                             $column = $get('column');
                                             $exporterModel = (new \ReflectionClass($exporterClass))->getStaticPropertyValue('model');
-                                            $casts = (new $exporterModel)->getCasts();
-                                            $type = $casts[$column] ?? null;
+                                            $type = Helper::extractCastType($column, $exporterModel);
                                             $key = 'value';
                                             $enumCast = Helper::extractEnumCast($column, $exporterModel);
 

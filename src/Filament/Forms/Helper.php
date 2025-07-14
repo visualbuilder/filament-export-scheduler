@@ -40,8 +40,38 @@ class Helper
 
     public static function isDateTimeCast($column, $type): bool
     {
-        return in_array($column, ['created_at', 'updated_at', 'deleted_at'])
-            || in_array($type, ['date', 'datetime', 'timestamp']);
+        $segments = explode('.', $column);
+        $lastSegment = array_pop($segments);
+
+        return str_ends_with($lastSegment, '_at')
+            || in_array($type, ['date', 'datetime', 'timestamp', 'immutable_date', 'immutable_datetime'])
+            || str_starts_with($type, 'date:')
+            || str_starts_with($type, 'datetime:')
+            || str_starts_with($type, 'timestamp:');
+    }
+
+    public static function extractCastType($path, $baseClass): ?string
+    {
+        $model = new $baseClass;
+        $segments = explode('.', $path);
+        $lastKey = array_pop($segments);
+
+        foreach ($segments as $segment) {
+            if (! method_exists($model, $segment)) {
+                return null; // invalid relation
+            }
+
+            $relation = $model->$segment();
+            if (! $relation instanceof Relation) {
+                return null; // not a valid eloquent relation
+            }
+
+            $model = $relation->getRelated();
+        }
+
+        $casts = $model->getCasts();
+
+        return $casts[$lastKey] ?? null;
     }
 
     public static function extractEnumCast($path, $baseClass): ?string

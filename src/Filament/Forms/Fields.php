@@ -372,6 +372,7 @@ class Fields
             ->hintIcon('heroicon-m-question-mark-circle', tooltip: __('export-scheduler::scheduler.exporter_hint'))
             ->hintColor('info')
             ->options(ExportScheduler::listExporters())
+            ->searchable()
             ->native(false)
             ->live()
             ->required()
@@ -462,6 +463,7 @@ class Fields
             ->options(DayOfWeek::class)
             ->native(false)
             ->nullable()
+            ->searchable()
             ->visible(fn(Get $get) => $get('schedule_frequency') === ScheduleFrequency::WEEKLY->value)
             ->required(fn(Get $get) => $get('schedule_frequency') === ScheduleFrequency::WEEKLY->value);
     }
@@ -477,6 +479,7 @@ class Fields
             ))
             ->native(false)
             ->nullable()
+            ->searchable()
             ->visible(fn(Get $get) => Helper::isDayOfMonthFieldRequired($get))
             ->required(fn(Get $get) => Helper::isDayOfMonthFieldRequired($get));
     }
@@ -489,6 +492,7 @@ class Fields
             ->options(Month::class)
             ->native(false)
             ->nullable()
+            ->searchable()
             ->visible(fn(Get $get) => $get('schedule_frequency') === ScheduleFrequency::YEARLY->value)
             ->required(fn(Get $get) => $get('schedule_frequency') === ScheduleFrequency::YEARLY->value);
     }
@@ -501,6 +505,7 @@ class Fields
             ->options(Month::class)
             ->native(false)
             ->nullable()
+            ->searchable()
             ->visible(fn(Get $get) => Helper::isStartDateRequired($get))
             ->required(fn(Get $get) => Helper::isStartDateRequired($get));
     }
@@ -533,6 +538,7 @@ class Fields
             ->hintColor('info')
             ->label(__('export-scheduler::scheduler.date_range'))
             ->options(DateRange::selectArray())
+            ->searchable()
             ->native(false);
     }
 
@@ -551,6 +557,7 @@ class Fields
                         'months' => __('export-scheduler::scheduler.months'),
                         'years' => __('export-scheduler::scheduler.years'),
                     ])
+                    ->searchable()
                     ->default('days')
                     ->native(false),
             ]);
@@ -824,6 +831,7 @@ class Fields
 
                         return self::collectUserRelationOptions($model, $userModels);
                     })
+                    ->searchable()
                     ->native(false)
             ]);
     }

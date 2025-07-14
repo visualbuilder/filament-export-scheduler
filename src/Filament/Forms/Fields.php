@@ -731,6 +731,76 @@ class Fields
             ->searchable($searchable);
     }
 
+    /**
+     * Detect if a column path contains a relation to one of the configured user models.
+     *
+     * @return string|null The relation path up to the user model or null when none found
+     */
+    protected static function detectUserRelationInColumn(string $model, string $columnPath, array $userModels): ?string
+    {
+        $segments = explode('.', $columnPath);
+        $modelClass = $model;
+        $relationParts = [];
+
+        foreach ($segments as $segment) {
+            if (! method_exists($modelClass, $segment)) {
+                break;
+            }
+
+            try {
+                $relation = (new $modelClass)->{$segment}();
+            } catch (\Throwable $e) {
+                break;
+            }
+
+            if (! $relation instanceof \Illuminate\Database\Eloquent\Relations\Relation) {
+                break;
+            }
+
+            $relationParts[] = $segment;
+            $modelClass = get_class($relation->getRelated());
+
+            if (in_array($modelClass, $userModels)) {
+                return implode('.', $relationParts);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Build a list of user relation options from the exporter's defined columns.
+     */
+    protected static function collectUserRelationOptions(string $exporter, array $userModels): array
+    {
+        if (! method_exists($exporter, 'getColumns')) {
+            return [];
+        }
+
+        $model = $exporter::getModel();
+        $options = [];
+
+        foreach ($exporter::getColumns() as $column) {
+            if (! method_exists($column, 'getName')) {
+                continue;
+            }
+
+            $path = self::detectUserRelationInColumn($model, $column->getName(), $userModels);
+
+            if (! $path) {
+                continue;
+            }
+
+            $segments = explode('.', $path);
+            $last = end($segments);
+            $label = ucwords(preg_replace('/(?<!^)([A-Z])/', ' $1', str_replace('_', ' ', $last)));
+
+            $options[$path] = $label;
+        }
+
+        return $options;
+    }
+
     public static function automaticRecipients(): Section
     {
         return Section::make(__('export-scheduler::scheduler.automatic_recipients'))
@@ -754,24 +824,7 @@ class Fields
                             ->filter()
                             ->all();
 
-                        $model = $exporter::getModel();
-                        $methods = collect((new \ReflectionClass($model))->getMethods(\ReflectionMethod::IS_PUBLIC))
-                            ->filter(fn($m) => $m->getNumberOfParameters() === 0);
-
-                        $options = [];
-                        foreach ($methods as $method) {
-                            $returnType = $method->getReturnType()?->getName();
-                            if (! $returnType || ! is_subclass_of($returnType, \Illuminate\Database\Eloquent\Relations\Relation::class)) {
-                                continue;
-                            }
-                            $relation = (new $model)->{$method->getName()}();
-                            $related = get_class($relation->getRelated());
-                            if (in_array($related, $userModels)) {
-                                $options[$method->getName()] = ucwords(preg_replace('/(?<!^)([A-Z])/', ' $1', $method->getName()));
-                            }
-                        }
-
-                        return $options;
+                        return self::collectUserRelationOptions($exporter, $userModels);
                     })
                     ->native(false)
             ]);

@@ -813,6 +813,8 @@ class Fields
         return Section::make(__('export-scheduler::scheduler.automatic_recipients'))
             ->columns()
             ->schema([
+                    Placeholder::make('Send Multiple Reports')
+                        ->content('Select a user relationship and the report will be run once for each user found in the data with just their records'),
                 Toggle::make('dynamic_owner_enabled')
                     ->inline(false)
                     ->label(__('export-scheduler::scheduler.dynamic_owner_enabled'))

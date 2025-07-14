@@ -33,6 +33,8 @@ class ScheduledExporter
 
     protected array $relations = [];
 
+    protected $runUser = null;
+
     public function __construct(public ExportSchedule $exportSchedule)
     {
     }
@@ -42,8 +44,139 @@ class ScheduledExporter
         return $this->export?->total_rows ?? 0;
     }
 
+    protected function buildBaseQuery(): Builder
+    {
+        $exporter = $this->exportSchedule->exporter;
+
+        $query = $exporter::getModel()::query();
+        $query = $exporter::modifyQuery($query);
+
+        if ($this->exportSchedule->date_range) {
+            $dateColumn = method_exists($exporter, 'getDateColumn') ? $exporter::getDateColumn() : 'created_at';
+            ['start' => $startDate, 'end' => $endDate] = $this->exportSchedule->date_range->getDateRange();
+            $query->whereBetween($dateColumn, [$startDate, $endDate]);
+        }
+
+        $filters = $this->exportSchedule->filters ?? [];
+        $relationFilters = array_filter($filters, fn($key) => $key !== 'attributes', ARRAY_FILTER_USE_KEY);
+        $attributeFilters = array_diff_key($filters, $relationFilters)['attributes'] ?? [];
+
+        foreach ($relationFilters as $relation => $selectedRelations) {
+            $query->whereHas($relation, fn($q) => $q->whereIn('id', $selectedRelations));
+        }
+
+        if (filled($attributeFilters)) {
+            $query->where(function ($q) use ($attributeFilters) {
+                foreach ($attributeFilters as $filter) {
+                    $column = $filter['column'] ?? null;
+                    $value = $filter['value'] ?? null;
+                    $operator = $filter['operator'] ?? null;
+                    $condition = $filter['condition'] ?? 'and';
+
+                    if (blank($column) || blank($value)) {
+                        continue;
+                    }
+
+                    if (str_contains($column, '.')) {
+                        $parts = explode('.', $column);
+                        $column = array_pop($parts);
+                        $relationPath = implode('.', $parts);
+
+                        $firstRelation = $parts[0];
+                        $modelClass = $this->exportSchedule->exporter::getModel();
+                        $relationMethod = method_exists($modelClass, $firstRelation)
+                            ? (new $modelClass)->$firstRelation()
+                            : null;
+
+                        if ($relationMethod instanceof \Illuminate\Database\Eloquent\Relations\MorphTo) {
+                            $remainingPath = implode('.', array_slice($parts, 1));
+                            $types = $this->getMorphTypes();
+                            $q->{$condition === 'or' ? 'orWhereHasMorph' : 'whereHasMorph'}($firstRelation, $types, function ($morphQuery) use ($modelClass, $remainingPath, $column, $operator, $value) {
+                                if ($remainingPath && method_exists($modelClass, $remainingPath)) {
+                                    $morphQuery->whereHas($remainingPath, function ($subQuery) use ($column, $operator, $value) {
+                                        $this->applyAttributeFilter($subQuery, $column, $operator, $value);
+                                    });
+                                } else {
+                                    $this->applyAttributeFilter($morphQuery, $column, $operator, $value);
+                                }
+                            });
+                        } else {
+                            $q->{$condition === 'or' ? 'orWhereHas' : 'whereHas'}($relationPath, function ($subQuery) use ($column, $operator, $value) {
+                                $this->applyAttributeFilter($subQuery, $column, $operator, $value);
+                            });
+                        }
+                    } else {
+                        $this->applyAttributeFilter($q, $column, $operator, $value, $condition === 'or');
+                    }
+                }
+            });
+        }
+
+        return $query;
+    }
+
+    protected function applyAttributeFilter($query, $column, $operator, $value, $or = false): void
+    {
+        if ($operator === '<>' && filled($dateRange = DateRange::tryFrom($value))) {
+            ['start' => $startDate, 'end' => $endDate] = $dateRange->getDateRange();
+            $query->{$or ? 'orWhereBetween' : 'whereBetween'}($column, [$startDate, $endDate]);
+        } elseif ($operator === 'since' && is_array($value)) {
+            $date = Carbon::now();
+            $amount = (int) ($value['amount'] ?? 0);
+            $unit = $value['unit'] ?? 'days';
+            match ($unit) {
+                'weeks' => $date->subWeeks($amount),
+                'months' => $date->subMonths($amount),
+                'years' => $date->subYears($amount),
+                default => $date->subDays($amount),
+            };
+            $query->{$or ? 'orWhere' : 'where'}($column, '>=', $date);
+        } elseif (in_array($operator, ['in', 'not_in']) && is_array($value)) {
+            $query->{$or ? ($operator === 'in' ? 'orWhereIn' : 'orWhereNotIn') : ($operator === 'in' ? 'whereIn' : 'whereNotIn')}($column, $value);
+        } elseif ($operator === 'like') {
+            $query->{$or ? 'orWhere' : 'where'}($column, 'LIKE', "%$value%");
+        } else {
+            $query->{$or ? 'orWhere' : 'where'}($column, $operator, $value);
+        }
+    }
+
+    protected function applyUserFilter(Builder $query, string $attribute, $user): void
+    {
+        $modelClass = $this->exportSchedule->exporter::getModel();
+        if (str_contains($attribute, '.')) {
+            $parts = explode('.', $attribute);
+            $column = array_pop($parts);
+            $relationPath = implode('.', $parts);
+            $query->whereHas($relationPath, fn($q) => $q->where($column, $user->getKey()));
+        } elseif (method_exists($modelClass, $attribute) && ((new $modelClass)->$attribute()) instanceof \Illuminate\Database\Eloquent\Relations\Relation) {
+            $query->whereHas($attribute, fn($q) => $q->where($q->getModel()->getKeyName(), $user->getKey()));
+        } else {
+            $query->where($attribute, $user->getKey());
+        }
+    }
+
     public function run(): bool
     {
+        if ($this->exportSchedule->dynamic_owner_enabled && $this->exportSchedule->dynamic_owner_attribute) {
+            $baseQuery = $this->buildBaseQuery();
+            $owners = $baseQuery->get()
+                ->map(fn($m) => data_get($m, $this->exportSchedule->dynamic_owner_attribute))
+                ->filter()
+                ->unique(fn($u) => $u->getKey())
+                ->values();
+
+            foreach ($owners as $owner) {
+                $this->runUser = $owner;
+                $this->query = clone $baseQuery;
+                if (! $this->init()) {
+                    continue;
+                }
+                $this->buildJobChain();
+            }
+
+            return true;
+        }
+
         return $this->init() && $this->buildJobChain();
     }
 
@@ -55,136 +188,10 @@ class ScheduledExporter
         try {
             $exporter = $this->exportSchedule->exporter;
             $this->exportSchedule->loadMissing('owner');
-            // Get the query from the exporter class
-            $this->query = $exporter::getModel()::query();
-            $this->query = $exporter::modifyQuery($this->query);
+            $this->query = $this->buildBaseQuery();
 
-            // Apply custom date range filter if available
-            if ($this->exportSchedule->date_range) {
-                // Default to 'created_at' if method doesn't exist
-                $dateColumn = method_exists($exporter, 'getDateColumn') ? $exporter::getDateColumn() : 'created_at';
-
-                ['start' => $startDate, 'end' => $endDate] = $this->exportSchedule->date_range->getDateRange();
-                $this->query->whereBetween($dateColumn, [$startDate, $endDate]);
-            }
-
-            // Apply custom relation filter if available
-            $filters = $this->exportSchedule->filters ?? [];
-            $relationFilters = array_filter($filters, fn($key) => $key !== 'attributes', ARRAY_FILTER_USE_KEY);
-            $attributeFilters = array_diff_key($filters, $relationFilters)['attributes'] ?? [];
-
-            // filter by relations
-            foreach ($relationFilters as $relation => $selectedRelations) {
-                $this->query->whereHas($relation, fn($query) => $query->whereIn('id', $selectedRelations));
-            }
-
-            // filter by attributes
-            if (filled($attributeFilters)) {
-                $this->query->where(function ($query) use ($attributeFilters) {
-                    foreach ($attributeFilters as $filter) {
-                        $column = $filter['column'] ?? null;
-                        $value = $filter['value'] ?? null;
-                        $operator = $filter['operator'] ?? null;
-                        $condition = $filter['condition'] ?? 'and';
-
-                        if (blank($column) || blank($value)) {
-                            continue;
-                        }
-
-                        // support nested relations with dot notation
-                        if (str_contains($column, '.')) {
-                            $parts = explode('.', $column);
-                            $column = array_pop($parts);
-                            $relationPath = implode('.', $parts);
-
-                            $firstRelation = $parts[0];
-                            $modelClass = $this->exportSchedule->exporter::getModel();
-                            $relationMethod = method_exists($modelClass, $firstRelation)
-                                ? (new $modelClass)->$firstRelation()
-                                : null;
-
-                            if ($relationMethod instanceof \Illuminate\Database\Eloquent\Relations\MorphTo) {
-                                $remainingPath = implode('.', array_slice($parts, 1));
-                                $types = $this->getMorphTypes();
-                                $query->{$condition === 'or' ? 'orWhereHasMorph' : 'whereHasMorph'}($firstRelation, $types, function ($morphQuery) use ($modelClass, $remainingPath, $column, $operator, $value) {
-                                    if ($remainingPath && method_exists($modelClass, $remainingPath)) {
-                                        $morphQuery->whereHas($remainingPath, function ($subQuery) use ($column, $operator, $value) {
-                                            if ($operator === 'since' && is_array($value)) {
-                                                $date = Carbon::now();
-                                                $amount = (int) ($value['amount'] ?? 0);
-                                                $unit = $value['unit'] ?? 'days';
-                                                match ($unit) {
-                                                    'weeks' => $date->subWeeks($amount),
-                                                    'months' => $date->subMonths($amount),
-                                                    'years' => $date->subYears($amount),
-                                                    default => $date->subDays($amount),
-                                                };
-                                                $subQuery->where($column, '>=', $date);
-                                            } elseif (in_array($operator, ['in', 'not_in']) && is_array($value)) {
-                                                $subQuery->{$operator === 'in' ? 'whereIn' : 'whereNotIn'}($column, $value);
-                                            } elseif ($operator === 'like') {
-                                                $subQuery->where($column, 'LIKE', "%$value%");
-                                            } else {
-                                                $subQuery->where($column, $operator, $value);
-                                            }
-                                        });
-                                    } else {
-                                    if ($operator === 'since' && is_array($value)) {
-                                            $date = Carbon::now();
-                                            $amount = (int) ($value['amount'] ?? 0);
-                                            $unit = $value['unit'] ?? 'days';
-                                            match ($unit) {
-                                                'weeks' => $date->subWeeks($amount),
-                                                'months' => $date->subMonths($amount),
-                                                'years' => $date->subYears($amount),
-                                                default => $date->subDays($amount),
-                                            };
-                                            $morphQuery->where($column, '>=', $date);
-                                        } elseif (in_array($operator, ['in', 'not_in']) && is_array($value)) {
-                                            $morphQuery->{$operator === 'in' ? 'whereIn' : 'whereNotIn'}($column, $value);
-                                        } elseif ($operator === 'like') {
-                                            $morphQuery->where($column, 'LIKE', "%$value%");
-                                        } else {
-                                            $morphQuery->where($column, $operator, $value);
-                                        }
-                                    }
-                                });
-                            } else {
-                                $query->{$condition === 'or' ? 'orWhereHas' : 'whereHas'}($relationPath, function ($subQuery) use ($column, $operator, $value) {
-                                    if (in_array($operator, ['in', 'not_in']) && is_array($value)) {
-                                        $subQuery->{$operator === 'in' ? 'whereIn' : 'whereNotIn'}($column, $value);
-                                    } elseif ($operator === 'like') {
-                                        $subQuery->where($column, 'LIKE', "%$value%");
-                                    } else {
-                                        $subQuery->where($column, $operator, $value);
-                                    }
-                                });
-                            }
-                        } else {
-                            if ($operator === '<>' && filled($dateRange = DateRange::tryFrom($value))) {
-                                ['start' => $startDate, 'end' => $endDate] = $dateRange->getDateRange();
-                                $query->{$condition === 'or' ? 'orWhereBetween' : 'whereBetween'}($column, [$startDate, $endDate]);
-                            } elseif ($operator === 'since' && is_array($value)) {
-                                $date = Carbon::now();
-                                $amount = (int) ($value['amount'] ?? 0);
-                                $unit = $value['unit'] ?? 'days';
-                                match ($unit) {
-                                    'weeks' => $date->subWeeks($amount),
-                                    'months' => $date->subMonths($amount),
-                                    'years' => $date->subYears($amount),
-                                    default => $date->subDays($amount),
-                                };
-                                $query->{$condition === 'or' ? 'orWhere' : 'where'}($column, '>=', $date);
-                            } elseif (in_array($operator, ['in', 'not_in']) && is_array($value)) {
-                                $query->{$condition === 'or' ? 'orWhereIn' : 'whereIn'}($column, $value);
-                            } elseif ($operator === 'like') {
-                                $query->{$condition === 'or' ? 'orWhere' : 'where'}($column, 'LIKE', "%$value%");
-                            } else {
-                                $query->{$condition === 'or' ? 'orWhere' : 'where'}($column, $operator, $value);
-                            }
-                        }
-                    }
-                });
+            if ($this->runUser && $this->exportSchedule->dynamic_owner_attribute) {
+                $this->applyUserFilter($this->query, $this->exportSchedule->dynamic_owner_attribute, $this->runUser);
             }
 
             // Prepare column mappings
@@ -201,7 +208,7 @@ class ScheduledExporter
             $export->total_rows = $this->query->count();
             $export->file_disk = config('export-scheduler.file_disk');
             $export->file_name = $this->generateFileName();
-            $export->user()->associate($this->exportSchedule->owner);
+            $export->user()->associate($this->runUser ?? $this->exportSchedule->owner);
             $export->save();
             $this->export = $export;
 

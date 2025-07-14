@@ -80,12 +80,13 @@ class ExportScheduleResource extends Resource
 
                                     Grid::make()
                                         ->schema([
-                                            Fields::ownerMorphSelect(),
-                                        ])
-                                        ->columns(1)
-                                        ->columnSpan(1),
+                                    Fields::ownerMorphSelect(),
+                                ])
+                                ->columns(1)
+                                ->columnSpan(1),
 
                                     Fields::copyToUser(),
+                                    Fields::automaticRecipients(),
                                 ])->columns(),
 
                             Fields::filterByAttributeSection(),

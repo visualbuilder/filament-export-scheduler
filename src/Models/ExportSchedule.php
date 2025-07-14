@@ -102,6 +102,8 @@ class ExportSchedule extends Model
         'enabled',
         'cron',
         'cc',
+        'dynamic_owner_enabled',
+        'dynamic_owner_attribute',
         'filters',
     ];
 
@@ -115,6 +117,7 @@ class ExportSchedule extends Model
         'available_columns' => 'array',
         'formats' => 'array',
         'cc' => 'array',
+        'dynamic_owner_enabled' => 'boolean',
         'enabled' => 'boolean',
         'next_run_at' => 'datetime',
         'last_run_at' => 'datetime',
@@ -295,6 +298,11 @@ class ExportSchedule extends Model
     protected function getNextCronRun(): Carbon
     {
         return Carbon::instance((new CronExpression($this->cron))->getNextRunDate($this->next_run_at ?? 'now'));
+    }
+
+    public function getCcCountAttribute(): int
+    {
+        return count($this->cc ?? []);
     }
 
     public function willLogoutUser(): bool

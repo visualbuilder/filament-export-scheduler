@@ -731,6 +731,47 @@ class Fields
             ->searchable($searchable);
     }
 
+    /**
+     * Recursively collect relation paths that end with a configured user model.
+     */
+    protected static function collectUserRelationOptions(string $model, array $userModels, int $depth = 3, string $prefix = '', array &$visited = []): array
+    {
+        if ($depth < 1) {
+            return [];
+        }
+
+        $options = [];
+        $methods = collect((new \ReflectionClass($model))->getMethods(\ReflectionMethod::IS_PUBLIC))
+            ->filter(fn($m) => $m->getNumberOfParameters() === 0);
+
+        foreach ($methods as $method) {
+            $returnType = $method->getReturnType()?->getName();
+            if (! $returnType || ! is_subclass_of($returnType, \Illuminate\Database\Eloquent\Relations\Relation::class)) {
+                continue;
+            }
+
+            $relationName = $method->getName();
+            $fullPath = $prefix ? $prefix.'.'.$relationName : $relationName;
+
+            if (isset($visited[$model][$relationName])) {
+                continue;
+            }
+            $visited[$model][$relationName] = true;
+
+            $relation = (new $model)->{$relationName}();
+            $related = get_class($relation->getRelated());
+
+            if (in_array($related, $userModels)) {
+                $label = ucwords(str_replace(['.', '_'], ' ', preg_replace('/(?<!^)([A-Z])/', ' $1', $fullPath)));
+                $options[$fullPath] = $label;
+            }
+
+            $options += self::collectUserRelationOptions($related, $userModels, $depth - 1, $fullPath, $visited);
+        }
+
+        return $options;
+    }
+
     public static function automaticRecipients(): Section
     {
         return Section::make(__('export-scheduler::scheduler.automatic_recipients'))
@@ -755,23 +796,8 @@ class Fields
                             ->all();
 
                         $model = $exporter::getModel();
-                        $methods = collect((new \ReflectionClass($model))->getMethods(\ReflectionMethod::IS_PUBLIC))
-                            ->filter(fn($m) => $m->getNumberOfParameters() === 0);
 
-                        $options = [];
-                        foreach ($methods as $method) {
-                            $returnType = $method->getReturnType()?->getName();
-                            if (! $returnType || ! is_subclass_of($returnType, \Illuminate\Database\Eloquent\Relations\Relation::class)) {
-                                continue;
-                            }
-                            $relation = (new $model)->{$method->getName()}();
-                            $related = get_class($relation->getRelated());
-                            if (in_array($related, $userModels)) {
-                                $options[$method->getName()] = ucwords(preg_replace('/(?<!^)([A-Z])/', ' $1', $method->getName()));
-                            }
-                        }
-
-                        return $options;
+                        return self::collectUserRelationOptions($model, $userModels);
                     })
                     ->native(false)
             ]);

@@ -737,8 +737,9 @@ class Fields
             ->columns()
             ->schema([
                 Toggle::make('dynamic_owner_enabled')
+                    ->inline(false)
                     ->label(__('export-scheduler::scheduler.dynamic_owner_enabled'))
-                    ->reactive(),
+                    ->live(),
                 Select::make('dynamic_owner_attribute')
                     ->label(__('export-scheduler::scheduler.dynamic_owner_attribute'))
                     ->visible(fn(Get $get) => $get('dynamic_owner_enabled'))
@@ -772,7 +773,7 @@ class Fields
 
                         return $options;
                     })
-                    ->native(false);
+                    ->native(false)
             ]);
     }
 }

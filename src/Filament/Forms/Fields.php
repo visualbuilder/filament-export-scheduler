@@ -739,66 +739,70 @@ class Fields
     }
 
     /**
-     * Recursively collect relation paths that end with a configured user model.
+     * Detect if a column path contains a relation to one of the configured user models.
+     *
+     * @return string|null The relation path up to the user model or null when none found
      */
-    protected static function collectUserRelationOptions(string $model, array $userModels, int $depth = 3, string $prefix = '', array &$visited = []): array
+    protected static function detectUserRelationInColumn(string $model, string $columnPath, array $userModels): ?string
     {
-        if ($depth < 1) {
+        $segments = explode('.', $columnPath);
+        $modelClass = $model;
+        $relationParts = [];
+
+        foreach ($segments as $segment) {
+            if (! method_exists($modelClass, $segment)) {
+                break;
+            }
+
+            try {
+                $relation = (new $modelClass)->{$segment}();
+            } catch (\Throwable $e) {
+                break;
+            }
+
+            if (! $relation instanceof \Illuminate\Database\Eloquent\Relations\Relation) {
+                break;
+            }
+
+            $relationParts[] = $segment;
+            $modelClass = get_class($relation->getRelated());
+
+            if (in_array($modelClass, $userModels)) {
+                return implode('.', $relationParts);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Build a list of user relation options from the exporter's defined columns.
+     */
+    protected static function collectUserRelationOptions(string $exporter, array $userModels): array
+    {
+        if (! method_exists($exporter, 'getColumns')) {
             return [];
         }
 
+        $model = $exporter::getModel();
         $options = [];
-        $methods = collect((new \ReflectionClass($model))->getMethods(\ReflectionMethod::IS_PUBLIC))
-            ->filter(fn($m) => $m->getNumberOfParameters() === 0);
 
-        foreach ($methods as $method) {
-            $returnType = $method->getReturnType();
-            $returnNames = [];
-            if ($returnType instanceof \ReflectionNamedType) {
-                $returnNames[] = $returnType->getName();
-            } elseif ($returnType instanceof \ReflectionUnionType) {
-                foreach ($returnType->getTypes() as $type) {
-                    if ($type instanceof \ReflectionNamedType) {
-                        $returnNames[] = $type->getName();
-                    }
-                }
-            } elseif ($returnType instanceof \ReflectionIntersectionType) {
-                foreach ($returnType->getTypes() as $type) {
-                    if ($type instanceof \ReflectionNamedType) {
-                        $returnNames[] = $type->getName();
-                    }
-                }
-            }
-
-            $relationClass = null;
-            foreach ($returnNames as $name) {
-                if (class_exists($name) && is_subclass_of($name, \Illuminate\Database\Eloquent\Relations\Relation::class)) {
-                    $relationClass = $name;
-                    break;
-                }
-            }
-
-            if (! $relationClass) {
+        foreach ($exporter::getColumns() as $column) {
+            if (! method_exists($column, 'getName')) {
                 continue;
             }
 
-            $relationName = $method->getName();
-            $fullPath = $prefix ? $prefix.'.'.$relationName : $relationName;
+            $path = self::detectUserRelationInColumn($model, $column->getName(), $userModels);
 
-            if (isset($visited[$model][$relationName])) {
+            if (! $path) {
                 continue;
             }
-            $visited[$model][$relationName] = true;
 
-            $relation = (new $model)->{$relationName}();
-            $related = get_class($relation->getRelated());
+            $segments = explode('.', $path);
+            $last = end($segments);
+            $label = ucwords(preg_replace('/(?<!^)([A-Z])/', ' $1', str_replace('_', ' ', $last)));
 
-            if (in_array($related, $userModels)) {
-                $label = ucwords(str_replace(['.', '_'], ' ', preg_replace('/(?<!^)([A-Z])/', ' $1', $fullPath)));
-                $options[$fullPath] = $label;
-            }
-
-            $options += self::collectUserRelationOptions($related, $userModels, $depth - 1, $fullPath, $visited);
+            $options[$path] = $label;
         }
 
         return $options;
@@ -821,15 +825,12 @@ class Fields
                         if (! $exporter) {
                             return [];
                         }
-
                         $userModels = collect(config('export-scheduler.user_models', []))
                             ->map(fn ($m) => is_array($m) ? ($m['model'] ?? null) : $m)
                             ->filter()
                             ->all();
 
-                        $model = $exporter::getModel();
-
-                        return self::collectUserRelationOptions($model, $userModels);
+                        return self::collectUserRelationOptions($exporter, $userModels);
                     })
                     ->searchable()
                     ->native(false)

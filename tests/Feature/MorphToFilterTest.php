@@ -1,12 +1,12 @@
 <?php
 
-use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
-use VisualBuilder\ExportScheduler\Models\ExportSchedule;
-use VisualBuilder\ExportScheduler\Services\ScheduledExporter;
-use VisualBuilder\ExportScheduler\Tests\Exporters\DocumentExporter;
-use VisualBuilder\ExportScheduler\Tests\Models\Contact;
-use VisualBuilder\ExportScheduler\Tests\Models\Document;
-use VisualBuilder\ExportScheduler\Tests\Models\Organisation;
+use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
+use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Services\ScheduledExporter;
+use Visualbuilder\ExportScheduler\Tests\Exporters\DocumentExporter;
+use Visualbuilder\ExportScheduler\Tests\Models\Contact;
+use Visualbuilder\ExportScheduler\Tests\Models\Document;
+use Visualbuilder\ExportScheduler\Tests\Models\Organisation;
 
 it('applies attribute filter on nested MorphTo relation', function () {
     $contact = Contact::create(['full_name' => 'John Doe']);

@@ -1,8 +1,8 @@
 <?php
 
-use VisualBuilder\ExportScheduler\Filament\Resources\ExportScheduleResource;
-use VisualBuilder\ExportScheduler\Mail\ExportReady;
-use VisualBuilder\ExportScheduler\Notifications\ScheduledExportCompleteNotification;
+use Visualbuilder\ExportScheduler\Filament\Resources\ExportScheduleResource;
+use Visualbuilder\ExportScheduler\Mail\ExportReady;
+use Visualbuilder\ExportScheduler\Notifications\ScheduledExportCompleteNotification;
 
 return [
 
@@ -51,7 +51,7 @@ return [
              * Change this to your own model maybe \App\Models\User::class
              *
              */
-            'model'           => \VisualBuilder\ExportScheduler\Tests\Models\User::class,
+            'model'           => \Visualbuilder\ExportScheduler\Tests\Models\User::class,
             'title_attribute' => 'email',
         ],
     ],

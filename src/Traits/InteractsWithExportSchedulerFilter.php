@@ -1,6 +1,6 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Traits;
+namespace Visualbuilder\ExportScheduler\Traits;
 
 trait InteractsWithExportSchedulerFilter
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Filament\Actions;
+namespace Visualbuilder\ExportScheduler\Filament\Actions;
 
 use Filament\Actions\Action;
 

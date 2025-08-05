@@ -2,7 +2,7 @@
     "name": "visualbuilder/filament-export-scheduler",
     "description": "Configure scheduled routines for filament exporters",
     "keywords": [
-        "VisualBuilder",
+        "Visualbuilder",
         "laravel",
         "filament-export-scheduler"
     ],
@@ -39,14 +39,14 @@
     },
     "autoload": {
         "psr-4": {
-            "VisualBuilder\\ExportScheduler\\": "src/",
-            "VisualBuilder\\ExportScheduler\\Database\\Factories\\": "database/factories/",
-            "VisualBuilder\\ExportScheduler\\Database\\Seeders\\": "database/seeders/"
+            "Visualbuilder\\ExportScheduler\\": "src/",
+            "Visualbuilder\\ExportScheduler\\Database\\Factories\\": "database/factories/",
+            "Visualbuilder\\ExportScheduler\\Database\\Seeders\\": "database/seeders/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "VisualBuilder\\ExportScheduler\\Tests\\": "tests/"
+            "Visualbuilder\\ExportScheduler\\Tests\\": "tests/"
         }
     },
     "scripts": {
@@ -66,10 +66,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "VisualBuilder\\ExportScheduler\\ExportSchedulerServiceProvider"
+                "Visualbuilder\\ExportScheduler\\ExportSchedulerServiceProvider"
             ],
             "aliases": {
-                "ExportScheduler": "VisualBuilder\\ExportScheduler\\Facades\\ExportScheduler"
+                "ExportScheduler": "Visualbuilder\\ExportScheduler\\Facades\\ExportScheduler"
             }
         }
     },

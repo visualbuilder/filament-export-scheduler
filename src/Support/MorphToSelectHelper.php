@@ -1,6 +1,6 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Support;
+namespace Visualbuilder\ExportScheduler\Support;
 
 use Filament\Forms\Components\MorphToSelect;
 

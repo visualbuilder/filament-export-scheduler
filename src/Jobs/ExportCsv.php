@@ -1,6 +1,6 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Jobs;
+namespace Visualbuilder\ExportScheduler\Jobs;
 
 use AnourValar\EloquentSerialize\Facades\EloquentSerializeFacade;
 use Illuminate\Contracts\Filesystem\Filesystem;

@@ -1,9 +1,9 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Filament\Resources\ExportScheduleResource\Pages;
+namespace Visualbuilder\ExportScheduler\Filament\Resources\ExportScheduleResource\Pages;
 
 use Filament\Resources\Pages\CreateRecord;
-use VisualBuilder\ExportScheduler\Filament\Resources\ExportScheduleResource;
+use Visualbuilder\ExportScheduler\Filament\Resources\ExportScheduleResource;
 
 class CreateExportSchedule extends CreateRecord
 {

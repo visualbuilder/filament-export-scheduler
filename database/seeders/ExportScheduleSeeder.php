@@ -1,13 +1,13 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Database\Seeders;
+namespace Visualbuilder\ExportScheduler\Database\Seeders;
 
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
-use VisualBuilder\ExportScheduler\Filament\Exporters\UserExporter;
-use VisualBuilder\ExportScheduler\Tests\Models\User;
+use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
+use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
+use Visualbuilder\ExportScheduler\Tests\Models\User;
 
 // Import the Invoice model
 

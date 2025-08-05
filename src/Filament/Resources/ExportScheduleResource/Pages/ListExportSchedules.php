@@ -1,10 +1,10 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Filament\Resources\ExportScheduleResource\Pages;
+namespace Visualbuilder\ExportScheduler\Filament\Resources\ExportScheduleResource\Pages;
 
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
-use VisualBuilder\ExportScheduler\Filament\Resources\ExportScheduleResource;
+use Visualbuilder\ExportScheduler\Filament\Resources\ExportScheduleResource;
 
 class ListExportSchedules extends ListRecords
 {

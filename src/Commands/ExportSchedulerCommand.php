@@ -1,12 +1,12 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Commands;
+namespace Visualbuilder\ExportScheduler\Commands;
 
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
-use VisualBuilder\ExportScheduler\Models\ExportSchedule;
-use VisualBuilder\ExportScheduler\Services\ScheduledExporter;
+use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Services\ScheduledExporter;
 
 class ExportSchedulerCommand extends Command
 {

@@ -1,9 +1,9 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Filament\Actions\Tables;
+namespace Visualbuilder\ExportScheduler\Filament\Actions\Tables;
 
 use Filament\Tables\Actions\Action;
-use VisualBuilder\ExportScheduler\Filament\Actions\RunExportTrait;
+use Visualbuilder\ExportScheduler\Filament\Actions\RunExportTrait;
 
 
 class RunExport extends Action

@@ -1,6 +1,6 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Jobs;
+namespace Visualbuilder\ExportScheduler\Jobs;
 
 use Filament\Actions\Exports\Models\Export;
 use Illuminate\Bus\Queueable;
@@ -9,7 +9,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use VisualBuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Models\ExportSchedule;
 
 class ScheduledExportCompletion implements ShouldQueue
 {

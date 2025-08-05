@@ -1,6 +1,6 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler;
+namespace Visualbuilder\ExportScheduler;
 
 use Filament\Actions\Exports\Models\Export;
 use Filament\Support\Assets\Asset;
@@ -8,7 +8,7 @@ use Illuminate\Filesystem\Filesystem;
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use VisualBuilder\ExportScheduler\Commands\ExportSchedulerCommand;
+use Visualbuilder\ExportScheduler\Commands\ExportSchedulerCommand;
 
 class ExportSchedulerServiceProvider extends PackageServiceProvider
 {

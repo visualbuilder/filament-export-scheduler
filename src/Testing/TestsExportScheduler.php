@@ -1,6 +1,6 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Testing;
+namespace Visualbuilder\ExportScheduler\Testing;
 
 use Livewire\Features\SupportTesting\Testable;
 

@@ -1,14 +1,14 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Database\Factories;
+namespace Visualbuilder\ExportScheduler\Database\Factories;
 
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use VisualBuilder\ExportScheduler\Enums\DateRange;
-use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
-use VisualBuilder\ExportScheduler\Filament\Exporters\UserExporter;
-use VisualBuilder\ExportScheduler\Models\ExportSchedule;
-use VisualBuilder\ExportScheduler\Tests\Models\User;
+use Visualbuilder\ExportScheduler\Enums\DateRange;
+use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
+use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
+use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Tests\Models\User;
 
 
 class ExportScheduleFactory extends Factory

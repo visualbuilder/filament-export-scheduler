@@ -1,11 +1,11 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Tests\Exporters;
+namespace Visualbuilder\ExportScheduler\Tests\Exporters;
 
 use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Exporter;
 use Filament\Actions\Exports\Models\Export;
-use VisualBuilder\ExportScheduler\Tests\Models\Document;
+use Visualbuilder\ExportScheduler\Tests\Models\Document;
 
 class DocumentExporter extends Exporter
 {

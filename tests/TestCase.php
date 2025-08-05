@@ -1,6 +1,6 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Tests;
+namespace Visualbuilder\ExportScheduler\Tests;
 
 use BladeUI\Heroicons\BladeHeroiconsServiceProvider;
 use BladeUI\Icons\BladeIconsServiceProvider;
@@ -15,9 +15,9 @@ use Filament\Widgets\WidgetsServiceProvider;
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 use RyanChandler\BladeCaptureDirective\BladeCaptureDirectiveServiceProvider;
-use VisualBuilder\ExportScheduler\ExportSchedulerServiceProvider;
-use VisualBuilder\ExportScheduler\Tests\Models\User;
-use VisualBuilder\ExportScheduler\Tests\Traits\CustomRefreshDatabase;
+use Visualbuilder\ExportScheduler\ExportSchedulerServiceProvider;
+use Visualbuilder\ExportScheduler\Tests\Models\User;
+use Visualbuilder\ExportScheduler\Tests\Traits\CustomRefreshDatabase;
 
 class TestCase extends Orchestra
 {

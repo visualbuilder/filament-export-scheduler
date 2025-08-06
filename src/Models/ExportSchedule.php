@@ -131,6 +131,13 @@ class ExportSchedule extends Model
         'filters' => 'array',
     ];
 
+    protected static function booted()
+    {
+        self::creating(function (ExportSchedule $exportSchedule) {
+            $exportSchedule->next_run_at = $exportSchedule->calculateNextRun();
+        });
+    }
+
     public function owner(): MorphTo
     {
         return $this->morphTo();

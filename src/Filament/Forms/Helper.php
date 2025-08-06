@@ -1,10 +1,10 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Filament\Forms;
+namespace Visualbuilder\ExportScheduler\Filament\Forms;
 
 use Filament\Forms\Get;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
+use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
 
 class Helper
 {

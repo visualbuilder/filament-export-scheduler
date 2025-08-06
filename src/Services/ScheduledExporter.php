@@ -1,6 +1,6 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Services;
+namespace Visualbuilder\ExportScheduler\Services;
 
 use AnourValar\EloquentSerialize\Facades\EloquentSerializeFacade;
 use Filament\Actions\Exports\Enums\ExportFormat;
@@ -14,10 +14,10 @@ use Illuminate\Foundation\Bus\PendingChain;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use VisualBuilder\ExportScheduler\Enums\DateRange;
-use VisualBuilder\ExportScheduler\Jobs\PrepareCsvExport;
-use VisualBuilder\ExportScheduler\Jobs\ScheduledExportCompletion;
-use VisualBuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Enums\DateRange;
+use Visualbuilder\ExportScheduler\Jobs\PrepareCsvExport;
+use Visualbuilder\ExportScheduler\Jobs\ScheduledExportCompletion;
+use Visualbuilder\ExportScheduler\Models\ExportSchedule;
 
 class ScheduledExporter
 {

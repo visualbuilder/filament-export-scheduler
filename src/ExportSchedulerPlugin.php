@@ -1,6 +1,6 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler;
+namespace Visualbuilder\ExportScheduler;
 
 use Closure;
 use Filament\Contracts\Plugin;

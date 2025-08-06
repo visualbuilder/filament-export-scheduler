@@ -1,6 +1,6 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Jobs;
+namespace Visualbuilder\ExportScheduler\Jobs;
 
 use Filament\Actions\Exports\Jobs\PrepareCsvExport as BasePrepareCsvExport;
 

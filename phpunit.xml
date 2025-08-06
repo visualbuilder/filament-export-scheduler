@@ -16,7 +16,7 @@
     backupStaticProperties="false"
 >
     <testsuites>
-        <testsuite name="VisualBuilder Test Suite">
+        <testsuite name="Visualbuilder Test Suite">
             <directory>tests</directory>
         </testsuite>
     </testsuites>

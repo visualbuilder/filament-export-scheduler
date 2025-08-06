@@ -1,6 +1,6 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler;
+namespace Visualbuilder\ExportScheduler;
 
 use Cron\CronExpression;
 use Illuminate\Support\Facades\File;

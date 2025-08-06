@@ -1,6 +1,6 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Enums;
+namespace Visualbuilder\ExportScheduler\Enums;
 
 trait EnumSubset
 {

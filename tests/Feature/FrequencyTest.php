@@ -3,12 +3,12 @@
 use Carbon\Carbon;
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Illuminate\Support\Facades\Notification;
-use VisualBuilder\ExportScheduler\Enums\DayOfWeek;
-use VisualBuilder\ExportScheduler\Enums\Month;
-use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
-use VisualBuilder\ExportScheduler\Filament\Exporters\UserExporter;
-use VisualBuilder\ExportScheduler\Models\ExportSchedule;
-use VisualBuilder\ExportScheduler\Notifications\ScheduledExportCompleteNotification;
+use Visualbuilder\ExportScheduler\Enums\DayOfWeek;
+use Visualbuilder\ExportScheduler\Enums\Month;
+use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
+use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
+use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Notifications\ScheduledExportCompleteNotification;
 
 beforeEach(function () {
     Notification::fake();

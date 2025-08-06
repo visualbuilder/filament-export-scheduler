@@ -1,13 +1,13 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Mail;
+namespace Visualbuilder\ExportScheduler\Mail;
 
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Actions\Exports\Models\Export;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
-use VisualBuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Models\ExportSchedule;
 
 class ExportReady extends Mailable
 {

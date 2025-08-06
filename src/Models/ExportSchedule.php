@@ -1,6 +1,6 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Models;
+namespace Visualbuilder\ExportScheduler\Models;
 
 use Carbon\Carbon;
 use Cron\CronExpression;
@@ -11,10 +11,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Collection;
-use VisualBuilder\ExportScheduler\Enums\DateRange;
-use VisualBuilder\ExportScheduler\Enums\DayOfWeek;
-use VisualBuilder\ExportScheduler\Enums\Month;
-use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
+use Visualbuilder\ExportScheduler\Enums\DateRange;
+use Visualbuilder\ExportScheduler\Enums\DayOfWeek;
+use Visualbuilder\ExportScheduler\Enums\Month;
+use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
 
 /**
  * App\Models\ExportSchedule

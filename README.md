@@ -223,7 +223,7 @@ Export::polymorphicUserRelationship();
 
 Add the plugin to your filament panel provider
 ```php
-use VisualBuilder\ExportScheduler\ExportSchedulerPlugin;
+use Visualbuilder\ExportScheduler\ExportSchedulerPlugin;
 
 public function panel(Panel $panel): Panel
     {

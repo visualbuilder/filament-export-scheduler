@@ -1,13 +1,13 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Filament\Actions;
+namespace Visualbuilder\ExportScheduler\Filament\Actions;
 
 use Filament\Notifications\Notification;
 use Filament\Support\Enums\Alignment;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Number;
-use VisualBuilder\ExportScheduler\Models\ExportSchedule;
-use VisualBuilder\ExportScheduler\Services\ScheduledExporter;
+use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Services\ScheduledExporter;
 
 trait RunExportTrait
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Filament\Forms;
+namespace Visualbuilder\ExportScheduler\Filament\Forms;
 
 use Closure;
 use Filament\Actions\Exports\Enums\ExportFormat;
@@ -21,13 +21,13 @@ use Filament\Forms\Set;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
-use VisualBuilder\ExportScheduler\Enums\DateRange;
-use VisualBuilder\ExportScheduler\Enums\DayOfWeek;
-use VisualBuilder\ExportScheduler\Enums\Month;
-use VisualBuilder\ExportScheduler\Enums\ScheduleFrequency;
-use VisualBuilder\ExportScheduler\Facades\ExportScheduler;
-use VisualBuilder\ExportScheduler\Models\ExportSchedule;
-use VisualBuilder\ExportScheduler\Traits\InteractsWithExportSchedulerFilter;
+use Visualbuilder\ExportScheduler\Enums\DateRange;
+use Visualbuilder\ExportScheduler\Enums\DayOfWeek;
+use Visualbuilder\ExportScheduler\Enums\Month;
+use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
+use Visualbuilder\ExportScheduler\Facades\ExportScheduler;
+use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Traits\InteractsWithExportSchedulerFilter;
 
 class Fields
 {

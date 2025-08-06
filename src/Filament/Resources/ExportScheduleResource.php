@@ -1,6 +1,6 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Filament\Resources;
+namespace Visualbuilder\ExportScheduler\Filament\Resources;
 
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
@@ -11,11 +11,11 @@ use Filament\Pages\SubNavigationPosition;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use VisualBuilder\ExportScheduler\ExportSchedulerPlugin;
-use VisualBuilder\ExportScheduler\Filament\Actions\Tables\RunExport;
-use VisualBuilder\ExportScheduler\Filament\Forms\Fields;
-use VisualBuilder\ExportScheduler\Filament\Resources\ExportScheduleResource\Pages;
-use VisualBuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\ExportSchedulerPlugin;
+use Visualbuilder\ExportScheduler\Filament\Actions\Tables\RunExport;
+use Visualbuilder\ExportScheduler\Filament\Forms\Fields;
+use Visualbuilder\ExportScheduler\Filament\Resources\ExportScheduleResource\Pages;
+use Visualbuilder\ExportScheduler\Models\ExportSchedule;
 
 class ExportScheduleResource extends Resource
 {

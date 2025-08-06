@@ -1,6 +1,6 @@
 <?php
 
-namespace VisualBuilder\ExportScheduler\Notifications;
+namespace Visualbuilder\ExportScheduler\Notifications;
 
 use Filament\Actions\Exports\Models\Export;
 use Illuminate\Bus\Queueable;
@@ -11,7 +11,7 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
-use VisualBuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Models\ExportSchedule;
 
 // implements ShouldQueue
 

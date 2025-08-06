@@ -1,7 +1,7 @@
 <?php
 
 
-namespace VisualBuilder\ExportScheduler\Tests\Traits;
+namespace Visualbuilder\ExportScheduler\Tests\Traits;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 

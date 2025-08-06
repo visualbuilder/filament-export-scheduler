@@ -134,7 +134,9 @@ class ExportSchedule extends Model
     protected static function booted()
     {
         self::creating(function (ExportSchedule $exportSchedule) {
-            $exportSchedule->next_run_at = $exportSchedule->calculateNextRun();
+            if (is_null($exportSchedule->next_run_at)) {
+                $exportSchedule->next_run_at = $exportSchedule->calculateNextRun();
+            }
         });
     }
 

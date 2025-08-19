@@ -174,7 +174,7 @@ return [
         'icon'         => 'heroicon-o-paper-airplane',
         'group'        => 'Reports',
         'cluster'      => false,
-        'position'     => \Filament\Pages\SubNavigationPosition::Top
+        'position'     => \Filament\Pages\Enums\SubNavigationPosition::Top
     ],
 
     /**

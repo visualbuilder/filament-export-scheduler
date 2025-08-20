@@ -2,7 +2,7 @@
 
 namespace Visualbuilder\ExportScheduler\Filament\Forms;
 
-use Filament\Forms\Get;
+use Filament\Schemas\Components\Utilities\Get;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
 

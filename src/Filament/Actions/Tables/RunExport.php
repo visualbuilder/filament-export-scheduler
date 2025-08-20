@@ -2,7 +2,8 @@
 
 namespace Visualbuilder\ExportScheduler\Filament\Actions\Tables;
 
-use Filament\Tables\Actions\Action;
+
+use Filament\Actions\Action;
 use Visualbuilder\ExportScheduler\Filament\Actions\RunExportTrait;
 
 

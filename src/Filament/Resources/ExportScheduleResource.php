@@ -1,26 +1,17 @@
 <?php
 
-namespace Filament\Forms {
-    if (! class_exists(Form::class) && class_exists(\Filament\Schemas\Schema::class)) {
-        class_alias(\Filament\Schemas\Schema::class, Form::class);
-    }
-}
-
-namespace Filament\Pages\Enums {
-    if (! class_exists(SubNavigationPosition::class) && class_exists(\Filament\Pages\SubNavigationPosition::class)) {
-        class_alias(\Filament\Pages\SubNavigationPosition::class, SubNavigationPosition::class);
-    }
-}
-
 namespace Visualbuilder\ExportScheduler\Filament\Resources {
 
-    use Filament\Forms\Components\Grid;
-    use Filament\Forms\Components\Section;
-    use Filament\Forms\Components\Tabs;
-    use Filament\Forms\Form;
-    use Filament\Forms\Get;
+    use Filament\Actions\BulkActionGroup;
+    use Filament\Actions\DeleteBulkAction;
+    use Filament\Actions\EditAction;
     use Filament\Pages\Enums\SubNavigationPosition;
     use Filament\Resources\Resource;
+    use Filament\Schemas\Components\Grid;
+    use Filament\Schemas\Components\Section;
+    use Filament\Schemas\Components\Tabs;
+    use Filament\Schemas\Components\Utilities\Get;
+    use Filament\Schemas\Schema;
     use Filament\Tables;
     use Filament\Tables\Table;
     use Visualbuilder\ExportScheduler\ExportSchedulerPlugin;
@@ -73,14 +64,15 @@ namespace Visualbuilder\ExportScheduler\Filament\Resources {
             return config('export-scheduler.navigation.position') ?? SubNavigationPosition::Top;
         }
 
-        public static function form(Form $form): Form
+        public static function form(Schema $schema): Schema
         {
-            return $form
+            return $schema
                 ->schema([
                     Tabs::make('tabs')->tabs([
                         Tabs\Tab::make('Exporter')
                             ->schema([
                                 Section::make()
+                                    ->columnSpanFull()
                                     ->schema([
                                         Grid::make()
                                             ->schema([
@@ -171,13 +163,13 @@ namespace Visualbuilder\ExportScheduler\Filament\Resources {
                     Tables\Columns\TextColumn::make('next_run_at')->label(__('export-scheduler::scheduler.next_run_at'))->date(),
                     Tables\Columns\ToggleColumn::make('enabled')->label(__('export-scheduler::scheduler.enabled')),
                 ])
-                ->actions([
-                    Tables\Actions\EditAction::make(),
+                ->recordActions([
+                    EditAction::make(),
                     RunExport::make('run'),
                 ])
-                ->bulkActions([
-                    Tables\Actions\BulkActionGroup::make([
-                        Tables\Actions\DeleteBulkAction::make(),
+                ->headerActions([
+                    BulkActionGroup::make([
+                        DeleteBulkAction::make(),
                     ]),
                 ]);
         }

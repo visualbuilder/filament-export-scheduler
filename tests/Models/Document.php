@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Document extends Model
 {
-    use HasFactory;
 
     protected $fillable = ['title', 'owner_type', 'owner_id'];
 

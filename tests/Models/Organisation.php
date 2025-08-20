@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Organisation extends Model
 {
-    use HasFactory;
 
     protected $fillable = ['name', 'primary_contact_id'];
 

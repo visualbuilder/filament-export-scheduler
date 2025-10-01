@@ -520,9 +520,10 @@ class Fields
     {
         return Select::make('schedule_timezone')
             ->label(__('export-scheduler::scheduler.schedule_timezone'))
-            ->options(timezone_identifiers_list())
+            ->options(fn () => array_combine(timezone_identifiers_list(), timezone_identifiers_list()))
             ->searchable()
             ->native(false)
+            ->required()
             ->default(config('app.timezone'));
     }
 
@@ -692,7 +693,7 @@ class Fields
                 ->content(fn (Get $get) => new HtmlString(__('export-scheduler::scheduler.cc_warning', ['owner_type' => class_basename($get('owner_type'))]))),
 
             Repeater::make('cc')
-                ->label('')
+                ->hiddenLabel()
                 ->addActionLabel(__('export-scheduler::scheduler.cc_add_label'))
                 ->simple(self::selectCopyToUser()),
         ];

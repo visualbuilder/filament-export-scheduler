@@ -138,6 +138,11 @@ class ExportSchedule extends Model
                 $exportSchedule->next_run_at = $exportSchedule->calculateNextRun();
             }
         });
+
+        self::updating(function (ExportSchedule $exportSchedule) {
+            $exportSchedule->next_run_at = null;
+            $exportSchedule->next_run_at = $exportSchedule->calculateNextRun();
+        });
     }
 
     public function owner(): MorphTo

@@ -438,7 +438,7 @@ class Fields
 
     public static function customCronExpression(): TextInput
     {
-        return TextInput::make('custom_cron_expression')
+        return TextInput::make('cron')
             ->label(__('export-scheduler::scheduler.custom_cron_expression'))
             ->visible(fn (Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))
             ->required(fn (Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))

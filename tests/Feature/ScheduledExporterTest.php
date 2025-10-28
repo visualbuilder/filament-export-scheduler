@@ -1,0 +1,417 @@
+<?php
+
+use Carbon\Carbon;
+use Filament\Actions\Exports\Enums\ExportFormat;
+use Filament\Actions\Exports\Models\Export;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Notification;
+use Visualbuilder\ExportScheduler\Enums\DateRange;
+use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
+use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
+use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Services\ScheduledExporter;
+use Visualbuilder\ExportScheduler\Tests\Models\User;
+
+beforeEach(function () {
+    Notification::fake();
+});
+
+function fakeUserData(array $overrides = []): array
+{
+    return array_merge([
+        'name' => fake()->name(),
+        'email' => fake()->unique()->safeEmail(),
+        'password' => bcrypt('password'),
+        'created_at' => now(),
+    ], $overrides);
+}
+
+function createFakeUsers(int $count = 1, array $overrides = []): array|null|User
+{
+    $users = [];
+
+    for ($i = 0; $i < $count; $i++) {
+        $users[] = User::create(fakeUserData($overrides));
+    }
+
+    return $count === 1 ? Arr::first($users) : $users;
+}
+
+it('applies date range filter to export query', function () {
+    Carbon::setTestNow('2024-06-15 12:00:00');
+
+    // Create users with different dates
+    createFakeUsers(overrides: ['created_at' => '2024-01-01']);
+    createFakeUsers(overrides: ['created_at' => '2024-06-10']);
+
+    $schedule = ExportSchedule::create([
+        'name' => 'User Export with Date Range',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => now()->toTimeString(),
+        'next_run_at' => now(),
+        'date_range' => DateRange::LAST_7_DAYS,
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+        'formats' => [ExportFormat::Csv],
+    ]);
+
+    $exporter = new ScheduledExporter($schedule);
+    $exporter->run();
+
+    // Only the recent user should be included (within last 7 days)
+    expect($exporter->getTotalRows())->toBe(1);
+});
+
+it('applies attribute filter with like operator', function () {
+    $users = createFakeUsers(2);
+
+    $schedule = ExportSchedule::create([
+        'name' => 'User Export with Like Filter',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => now()->toTimeString(),
+        'next_run_at' => now(),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+        'formats' => [ExportFormat::Csv],
+        'filters' => [
+            'attributes' => [
+                [
+                    'column' => 'name',
+                    'value' => $users[0]->name,
+                    'operator' => 'like',
+                    'condition' => 'and',
+                ],
+            ],
+        ],
+    ]);
+
+    $exporter = new ScheduledExporter($schedule);
+    $exporter->run();
+
+    expect($exporter->getTotalRows())->toBe(1);
+});
+
+it('applies attribute filter with in operator', function () {
+    $users = createFakeUsers(3);
+
+    $schedule = ExportSchedule::create([
+        'name' => 'User Export with In Filter',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => now()->toTimeString(),
+        'next_run_at' => now(),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+        'formats' => [ExportFormat::Csv],
+        'filters' => [
+            'attributes' => [
+                [
+                    'column' => 'id',
+                    'value' => [$users[0]->id, $users[1]->id],
+                    'operator' => 'in',
+                    'condition' => 'and',
+                ],
+            ],
+        ],
+    ]);
+
+    $exporter = new ScheduledExporter($schedule);
+    $exporter->run();
+
+    expect($exporter->getTotalRows())->toBe(2);
+});
+
+it('applies attribute filter with not_in operator', function () {
+    $users = createFakeUsers(3);
+
+    $schedule = ExportSchedule::create([
+        'name' => 'User Export with Not In Filter',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => now()->toTimeString(),
+        'next_run_at' => now(),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+        'formats' => [ExportFormat::Csv],
+        'filters' => [
+            'attributes' => [
+                [
+                    'column' => 'id',
+                    'value' => [$users[0]->id],
+                    'operator' => 'not_in',
+                    'condition' => 'and',
+                ],
+            ],
+        ],
+    ]);
+
+    $exporter = new ScheduledExporter($schedule);
+    $exporter->run();
+
+    // Should exclude user1, so only user2, user3, and auth user
+    expect($exporter->getTotalRows())->toBe(3);
+});
+
+it('applies attribute filter with since operator using array value', function () {
+    Carbon::setTestNow('2024-06-15 12:00:00');
+
+    createFakeUsers(3, ['created_at' => '2024-06-10']); // recent users
+    createFakeUsers(3, ['created_at' => '2024-01-01']); // past users
+
+    $schedule = ExportSchedule::create([
+        'name' => 'User Export with Since Filter',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => now()->toTimeString(),
+        'next_run_at' => now(),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+        'formats' => [ExportFormat::Csv],
+        'filters' => [
+            'attributes' => [
+                [
+                    'column' => 'created_at',
+                    'value' => ['amount' => 10, 'unit' => 'days'],
+                    'operator' => 'since',
+                    'condition' => 'and',
+                ],
+            ],
+        ],
+    ]);
+
+    $exporter = new ScheduledExporter($schedule);
+    $exporter->run();
+
+    // Only users created in the last 10 days + auth user (auth user is also recent)
+    expect($exporter->getTotalRows())->toBe(4);
+});
+
+it('applies attribute filter with date range operator', function () {
+    Carbon::setTestNow('2024-06-15 12:00:00');
+
+    // within range
+    createFakeUsers(3, ['created_at' => '2024-06-14']); // 1 day ago
+    createFakeUsers(3, ['created_at' => '2024-06-12']); // 3 days ago
+    createFakeUsers(3, ['created_at' => '2024-06-10']); // 5 days ago
+    createFakeUsers(3, ['created_at' => '2024-06-08']); // 7 days ago
+
+    // outside range
+    createFakeUsers(3);                                 // now
+    createFakeUsers(3, ['created_at' => '2024-06-07']); // 8 days ago
+    createFakeUsers(3, ['created_at' => '2024-06-05']); // 10 days ago
+
+    $schedule = ExportSchedule::create([
+        'name' => 'User Export with DateRange Filter',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => now()->toTimeString(),
+        'next_run_at' => now(),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+        'formats' => [ExportFormat::Csv],
+        'filters' => [
+            'attributes' => [
+                [
+                    'column' => 'created_at',
+                    'value' => DateRange::LAST_7_DAYS->value,
+                    'operator' => '<>',
+                    'condition' => 'and',
+                ],
+            ],
+        ],
+    ]);
+
+    $exporter = new ScheduledExporter($schedule);
+    $exporter->run();
+
+    expect($exporter->getTotalRows())->toBe(12);
+});
+
+it('applies multiple attribute filters with AND condition', function () {
+    $similarName = 'similarname';
+    $similarEmail = 'similaremail';
+    $similarCount = 5;
+
+    // similar users
+    for($i = 0; $i < $similarCount; $i++) {
+        createFakeUsers(overrides: [
+            'name' => $similarName.fake()->name(),
+            'email' => $similarEmail.fake()->unique()->safeEmail()
+        ]);
+    }
+
+    // unique users
+    createFakeUsers(3);
+
+    $schedule = ExportSchedule::create([
+        'name' => 'User Export with Multiple AND Filters',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => now()->toTimeString(),
+        'next_run_at' => now(),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+        'formats' => [ExportFormat::Csv],
+        'filters' => [
+            'attributes' => [
+                [
+                    'column' => 'name',
+                    'value' => $similarName,
+                    'operator' => 'like',
+                    'condition' => 'and',
+                ],
+                [
+                    'column' => 'email',
+                    'value' => $similarEmail,
+                    'operator' => 'like',
+                    'condition' => 'and',
+                ],
+            ],
+        ],
+    ]);
+
+    $exporter = new ScheduledExporter($schedule);
+    $exporter->run();
+
+    expect($exporter->getTotalRows())->toBe($similarCount);
+});
+
+it('applies attribute filters with OR condition', function () {
+    $user1 = fakeUserData();
+    $user2 = fakeUserData();
+
+    createFakeUsers(overrides: $user1);
+    createFakeUsers(overrides: $user2);
+    createFakeUsers();
+
+    $schedule = ExportSchedule::create([
+        'name' => 'User Export with OR Filters',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => now()->toTimeString(),
+        'next_run_at' => now(),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+        'formats' => [ExportFormat::Csv],
+        'filters' => [
+            'attributes' => [
+                [
+                    'column' => 'name',
+                    'value' => $user1['name'],
+                    'operator' => 'like',
+                    'condition' => 'and',
+                ],
+                [
+                    'column' => 'name',
+                    'value' => $user2['name'],
+                    'operator' => 'like',
+                    'condition' => 'or',
+                ],
+            ],
+        ],
+    ]);
+
+    $exporter = new ScheduledExporter($schedule);
+    $exporter->run();
+
+    // John Doe, Jane Smith, and auth user
+    expect($exporter->getTotalRows())->toBe(2);
+});
+
+it('skips filters with blank column or value', function () {
+    createFakeUsers(10);
+
+    $schedule = ExportSchedule::create([
+        'name' => 'User Export with Blank Filters',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => now()->toTimeString(),
+        'next_run_at' => now(),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+        'formats' => [ExportFormat::Csv],
+        'filters' => [
+            'attributes' => [
+                [
+                    'column' => 'name',
+                    'value' => '',
+                    'operator' => 'like',
+                    'condition' => 'and',
+                ],
+                [
+                    'column' => '',
+                    'value' => 'test',
+                    'operator' => 'like',
+                    'condition' => 'and',
+                ],
+            ],
+        ],
+    ]);
+
+    $exporter = new ScheduledExporter($schedule);
+    $exporter->run();
+
+    // Should include all users since filters are blank
+    expect($exporter->getTotalRows())->toBe(11); // + auth user
+});
+
+it('generates unique file names with timestamp', function () {
+    Carbon::setTestNow('2024-06-15 14:30:00');
+
+    $schedule = ExportSchedule::create([
+        'name' => 'Test Export Schedule',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => now()->toTimeString(),
+        'next_run_at' => now(),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+        'formats' => [ExportFormat::Csv],
+    ]);
+
+    $exporter = new ScheduledExporter($schedule);
+    $exporter->run();
+
+    expect(Export::latest()->first()->file_name)->toContain('test-export-schedule', '2024-06-15', '1430');
+});

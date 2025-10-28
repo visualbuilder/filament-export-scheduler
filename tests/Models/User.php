@@ -20,7 +20,7 @@ class User extends Authenticatable implements FilamentUser
 
     protected $guarded = [];
 
-    protected $fillable = ['name', 'email', 'password'];
+    protected $fillable = ['name', 'email', 'password', 'created_at'];
 
     protected $table = 'users';
 

@@ -140,8 +140,22 @@ class ExportSchedule extends Model
         });
 
         self::updating(function (ExportSchedule $exportSchedule) {
-            $exportSchedule->next_run_at = null;
-            $exportSchedule->next_run_at = $exportSchedule->calculateNextRun();
+            // Only recalculate next_run_at if schedule-related fields are changing
+            // Don't recalculate if only last_run_at or next_run_at are being updated
+            $scheduleFields = [
+                'schedule_frequency',
+                'schedule_time',
+                'schedule_day_of_week',
+                'schedule_day_of_month',
+                'schedule_month',
+                'schedule_timezone',
+                'cron',
+            ];
+
+            if ($exportSchedule->isDirty($scheduleFields)) {
+                $exportSchedule->next_run_at = null;
+                $exportSchedule->next_run_at = $exportSchedule->calculateNextRun();
+            }
         });
     }
 
@@ -288,7 +302,7 @@ class ExportSchedule extends Model
     protected function getNextYearlyRun(int $numOfTimesInAYear = 1): Carbon
     {
         $numOfMonthsInAYear = 12 / $numOfTimesInAYear;
-        $nextRunAt = $this->next_run_at ?? Carbon::parse($this->schedule_time)->setMonth($this->schedule_month)->setDay($this->schedule_day_of_month);
+        $nextRunAt = $this->next_run_at ?? Carbon::parse($this->schedule_time)->setMonth($this->schedule_month->value)->setDay($this->schedule_day_of_month);
 
         if ($nextRunAt->lessThanOrEqualTo(now())) {
             $next = $nextRunAt->copy()->addMonthsNoOverflow($numOfMonthsInAYear);

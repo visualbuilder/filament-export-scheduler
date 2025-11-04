@@ -257,7 +257,7 @@ class ExportSchedule extends Model
     protected function getNextDailyRun(): Carbon
     {
         $nextRunAt = $this->next_run_at ?? Carbon::parse($this->schedule_time);
-        if ($nextRunAt->lessThanOrEqualTo(now())) {
+        while ($nextRunAt->lessThanOrEqualTo(now())) {
             $nextRunAt->addDay();
         }
 
@@ -267,7 +267,7 @@ class ExportSchedule extends Model
     protected function getNextWeeklyRun(): Carbon
     {
         $nextRunAt = $this->next_run_at ?? Carbon::parse($this->schedule_time)->weekday($this->schedule_day_of_week->value);
-        if ($nextRunAt->lessThanOrEqualTo(now())) {
+        while ($nextRunAt->lessThanOrEqualTo(now())) {
             $nextRunAt->addWeek();
         }
 
@@ -277,7 +277,7 @@ class ExportSchedule extends Model
     protected function getNextMonthlyRun(): Carbon
     {
         $nextRunAt = $this->next_run_at ?? Carbon::parse($this->schedule_time)->setDay($this->schedule_day_of_month);
-        if ($nextRunAt->lessThanOrEqualTo(now())) {
+        while ($nextRunAt->lessThanOrEqualTo(now())) {
             $nextMonth = $nextRunAt->copy()->addMonthNoOverflow();
             $lastDayOfTheMonth = $nextMonth->copy()->endOfMonth()->day;
 
@@ -302,9 +302,9 @@ class ExportSchedule extends Model
     protected function getNextYearlyRun(int $numOfTimesInAYear = 1): Carbon
     {
         $numOfMonthsInAYear = 12 / $numOfTimesInAYear;
-        $nextRunAt = $this->next_run_at ?? Carbon::parse($this->schedule_time)->setMonth($this->schedule_month->value)->setDay($this->schedule_day_of_month);
+        $nextRunAt = $this->next_run_at ?? Carbon::parse($this->schedule_time)->setMonth($this->schedule_month?->value)->setDay($this->schedule_day_of_month);
 
-        if ($nextRunAt->lessThanOrEqualTo(now())) {
+        while ($nextRunAt->lessThanOrEqualTo(now())) {
             $next = $nextRunAt->copy()->addMonthsNoOverflow($numOfMonthsInAYear);
             $lastDayOfTheMonth = $next->copy()->endOfMonth()->day;
 

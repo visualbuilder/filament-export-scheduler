@@ -18,8 +18,16 @@ class ExportSchedulerCommand extends Command
     {
         ExportSchedule::query()
             ->enabled()
-            ->nextRunDue()
+            ->where(fn ($q) => $q
+                ->nextRunDue()
+                ->orWhereNull('next_run_at')
+            )
             ->each(function (ExportSchedule $exportSchedule) {
+                // For schedules with null next_run_at, check if it should run now
+                if (is_null($exportSchedule->next_run_at) && !$exportSchedule->shouldRunNow()) {
+                    return;
+                }
+
                 // Attempt to run the export
                 try {
                     (new ScheduledExporter($exportSchedule))->run();

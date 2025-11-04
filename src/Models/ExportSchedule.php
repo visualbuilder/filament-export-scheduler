@@ -328,6 +328,82 @@ class ExportSchedule extends Model
         return Carbon::instance((new CronExpression($this->cron))->getNextRunDate($this->next_run_at ?? 'now'));
     }
 
+    public function shouldRunNow(): bool
+    {
+        return match ($this->schedule_frequency) {
+            ScheduleFrequency::DAILY => $this->shouldRunDailyNow(),
+            ScheduleFrequency::WEEKLY => $this->shouldRunWeeklyNow(),
+            ScheduleFrequency::MONTHLY => $this->shouldRunMonthlyNow(),
+            ScheduleFrequency::QUARTERLY => $this->shouldRunYearlyNow(4),
+            ScheduleFrequency::HALF_YEARLY => $this->shouldRunYearlyNow(2),
+            ScheduleFrequency::YEARLY => $this->shouldRunYearlyNow(),
+            ScheduleFrequency::CRON => $this->shouldRunCronNow()
+        };
+    }
+
+    protected function shouldRunDailyNow(): bool
+    {
+        $scheduleTime = Carbon::today()->setTimeFromTimeString($this->schedule_time);
+        return now()->greaterThanOrEqualTo($scheduleTime);
+    }
+
+    protected function shouldRunWeeklyNow(): bool
+    {
+        $today = now();
+        $scheduleTime = Carbon::today()->setTimeFromTimeString($this->schedule_time);
+
+        // Check if today is the scheduled day of week and we've passed the scheduled time
+        return $today->dayOfWeek === $this->schedule_day_of_week->value
+            && $today->greaterThanOrEqualTo($scheduleTime);
+    }
+
+    protected function shouldRunMonthlyNow(): bool
+    {
+        $today = now();
+        $scheduleTime = Carbon::today()->setTimeFromTimeString($this->schedule_time);
+
+        // Check if today is the scheduled day of month and we've passed the scheduled time
+        return $today->day === $this->schedule_day_of_month
+            && $today->greaterThanOrEqualTo($scheduleTime);
+    }
+
+    protected function shouldRunYearlyNow(int $numOfTimesInAYear = 1): bool
+    {
+        $today = now();
+        $scheduleTime = Carbon::today()->setTimeFromTimeString($this->schedule_time);
+
+        // Check if today is the correct day and we've passed the scheduled time
+        if ($today->day !== $this->schedule_day_of_month || $today->lessThan($scheduleTime)) {
+            return false;
+        }
+
+        // Calculate the interval in months
+        $numOfMonthsInAYear = 12 / $numOfTimesInAYear;
+
+        // Check if current month is in the cycle
+        // Starting from schedule_month, runs every $numOfMonthsInAYear months
+        $monthDiff = ($today->month - $this->schedule_month?->value) % 12;
+        if ($monthDiff < 0) {
+            $monthDiff += 12;
+        }
+
+        return $monthDiff % $numOfMonthsInAYear === 0;
+    }
+
+    protected function shouldRunCronNow(): bool
+    {
+        // For cron with null next_run_at, check if we're past the next scheduled time
+        $cron = new CronExpression($this->cron);
+        $previousRun = Carbon::instance($cron->getPreviousRunDate('now'));
+
+        // If last_run_at exists and is after the previous cron time, don't run
+        if ($this->last_run_at && $this->last_run_at->greaterThanOrEqualTo($previousRun)) {
+            return false;
+        }
+
+        return true;
+    }
+
     public function getCcCountAttribute(): int
     {
         return count($this->cc ?? []);

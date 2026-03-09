@@ -25,6 +25,14 @@ return [
     ],
 
     'file_disk' => 'local',
+
+    /**
+     * Roles allowed to create SQL query reports.
+     * Uses Spatie Permission hasRole() check.
+     * Set to empty array to allow all users.
+     */
+    'sql_query_roles' => ['Developer'],
+
     /**
      * Admin Panel Navigation
      * See also Plugin options

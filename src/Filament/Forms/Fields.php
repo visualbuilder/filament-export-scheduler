@@ -42,15 +42,31 @@ class Fields
             ->maxLength(191);
     }
 
+    public static function canUseSqlQuery(): bool
+    {
+        $roles = config('export-scheduler.sql_query_roles', []);
+
+        if (empty($roles)) {
+            return true;
+        }
+
+        $user = auth()->user();
+
+        return $user && method_exists($user, 'hasRole') && $user->hasRole($roles);
+    }
+
     public static function reportType(): Select
     {
         return Select::make('report_type')
             ->label('Report Type')
-            ->options(ReportType::class)
+            ->options(fn () => self::canUseSqlQuery()
+                ? ReportType::class
+                : [ReportType::EXPORTER->value => ReportType::EXPORTER->getLabel()])
             ->default(ReportType::EXPORTER->value)
             ->required()
             ->native(false)
             ->live()
+            ->visible(fn (?ExportSchedule $record) => self::canUseSqlQuery() || $record?->isSqlQuery())
             ->afterStateUpdated(function (Set $set, $state) {
                 if ($state === ReportType::SQL_QUERY->value) {
                     $set('exporter', null);

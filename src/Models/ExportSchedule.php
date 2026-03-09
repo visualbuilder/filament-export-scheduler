@@ -142,6 +142,20 @@ class ExportSchedule extends Model
     protected static function booted()
     {
         self::saving(function (ExportSchedule $exportSchedule) {
+            // Prevent non-developers from saving SQL query reports
+            if ($exportSchedule->isDirty('report_type')
+                && $exportSchedule->report_type === ReportType::SQL_QUERY
+            ) {
+                $roles = config('export-scheduler.sql_query_roles', []);
+                $user = auth()->user();
+
+                if (! empty($roles) && $user && method_exists($user, 'hasRole') && ! $user->hasRole($roles)) {
+                    throw new \Illuminate\Auth\Access\AuthorizationException(
+                        'You do not have permission to create SQL query reports.'
+                    );
+                }
+            }
+
             if (is_null($exportSchedule->next_run_at)) {
                 $exportSchedule->next_run_at = $exportSchedule->calculateNextRun();
             }

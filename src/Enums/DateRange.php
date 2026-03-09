@@ -19,25 +19,16 @@ enum DateRange: string implements HasLabel
     case LAST_QUARTER = 'last_quarter';
     case THIS_YEAR = 'this_year';
     case LAST_YEAR = 'last_year';
+    case NEXT_7_DAYS = 'next_7_days';
+    case NEXT_30_DAYS = 'next_30_days';
+    case NEXT_60_DAYS = 'next_60_days';
+    case NEXT_90_DAYS = 'next_90_days';
 
     public function getLabel(): string
     {
-        return match ($this) {
-            self::TODAY        => __('export-scheduler::date_ranges.today'),
-            self::YESTERDAY    => __('export-scheduler::date_ranges.yesterday'),
-            self::LAST_7_DAYS  => __('export-scheduler::date_ranges.last_7_days'),
-            self::LAST_WEEK    => __('export-scheduler::date_ranges.last_week'),
-            self::LAST_30_DAYS => __('export-scheduler::date_ranges.last_30_days'),
-            self::LAST_MONTH   => __('export-scheduler::date_ranges.last_month'),
-            self::THIS_MONTH   => __('export-scheduler::date_ranges.this_month'),
-            self::LAST_QUARTER => __('export-scheduler::date_ranges.last_quarter'),
-            self::THIS_YEAR    => __('export-scheduler::date_ranges.this_year'),
-            self::LAST_YEAR    => __('export-scheduler::date_ranges.last_year'),
-            // Add more labels as needed
-        };
+        return __('export-scheduler::date_ranges.'.$this->value);
     }
 
-    // Optional: Method to get the start and end dates
     public function getDateRange(): array
     {
         $now = Carbon::now();
@@ -83,7 +74,38 @@ enum DateRange: string implements HasLabel
                 'start' => $now->copy()->subYear()->startOfYear(),
                 'end'   => $now->copy()->subYear()->endOfYear(),
             ],
-
+            self::NEXT_7_DAYS  => [
+                'start' => $now->copy()->startOfDay(),
+                'end'   => $now->copy()->addDays(6)->endOfDay(),
+            ],
+            self::NEXT_30_DAYS => [
+                'start' => $now->copy()->startOfDay(),
+                'end'   => $now->copy()->addDays(29)->endOfDay(),
+            ],
+            self::NEXT_60_DAYS => [
+                'start' => $now->copy()->startOfDay(),
+                'end'   => $now->copy()->addDays(59)->endOfDay(),
+            ],
+            self::NEXT_90_DAYS => [
+                'start' => $now->copy()->startOfDay(),
+                'end'   => $now->copy()->addDays(89)->endOfDay(),
+            ],
         };
+    }
+
+    public static function pastPresets(): array
+    {
+        return collect([
+            self::TODAY, self::YESTERDAY, self::LAST_7_DAYS, self::LAST_WEEK,
+            self::LAST_30_DAYS, self::LAST_MONTH, self::THIS_MONTH,
+            self::LAST_QUARTER, self::THIS_YEAR, self::LAST_YEAR,
+        ])->mapWithKeys(fn (self $case) => [$case->value => $case->getLabel()])->all();
+    }
+
+    public static function futurePresets(): array
+    {
+        return collect([
+            self::NEXT_7_DAYS, self::NEXT_30_DAYS, self::NEXT_60_DAYS, self::NEXT_90_DAYS,
+        ])->mapWithKeys(fn (self $case) => [$case->value => $case->getLabel()])->all();
     }
 }

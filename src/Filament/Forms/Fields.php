@@ -12,6 +12,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Group;
@@ -331,7 +332,14 @@ class Fields
                                                 ],
 
                                                 // date/datetime/timestamp
-                                                Helper::isDateTimeCast($column, $type) => ['<>' => 'is from', 'since' => 'since'],
+                                                Helper::isDateTimeCast($column, $type) => [
+                                                    '<>' => 'is from',
+                                                    'since' => 'since',
+                                                    'before' => 'before (next)',
+                                                    'is_in' => 'is in',
+                                                    'is_before' => 'is before',
+                                                    'is_after' => 'is after',
+                                                ],
 
                                                 // boolean
                                                 Helper::isBooleanCast($type) => [
@@ -374,9 +382,14 @@ class Fields
                                                     ),
 
                                                 // date/datetime/timestamp
-                                                Helper::isDateTimeCast($column, $type) => $operator === 'since'
-                                                    ? self::dateSince()
-                                                    : self::dateRange($key),
+                                                Helper::isDateTimeCast($column, $type) => match ($operator) {
+                                                    'since' => self::dateSince(),
+                                                    'before' => self::dateBefore(),
+                                                    '<>' => self::dateRange($key),
+                                                    'is_in' => self::futureDateRange($key),
+                                                    'is_before', 'is_after' => DatePicker::make($key),
+                                                    default => self::dateRange($key),
+                                                },
 
                                                 // boolean
                                                 Helper::isBooleanCast($type) => Toggle::make($key),
@@ -629,6 +642,39 @@ class Fields
                     ->default('days')
                     ->native(false),
             ]);
+    }
+
+    public static function dateBefore(): Group
+    {
+        return Group::make()
+            ->columns(2)
+            ->schema([
+                TextInput::make('amount')
+                    ->numeric()
+                    ->default(1),
+                Select::make('unit')
+                    ->options([
+                        'days' => __('export-scheduler::scheduler.days'),
+                        'weeks' => __('export-scheduler::scheduler.weeks'),
+                        'months' => __('export-scheduler::scheduler.months'),
+                        'years' => __('export-scheduler::scheduler.years'),
+                    ])
+                    ->searchable()
+                    ->default('days')
+                    ->native(false),
+            ]);
+    }
+
+    public static function futureDateRange($key = 'value'): Select
+    {
+        return Select::make($key)
+            ->placeholder(__('export-scheduler::scheduler.date_range_placeholder'))
+            ->hintIcon('heroicon-m-question-mark-circle', tooltip: __('export-scheduler::scheduler.date_range_tooltip'))
+            ->hintColor('info')
+            ->label(__('export-scheduler::scheduler.date_range'))
+            ->options(DateRange::futurePresets())
+            ->searchable()
+            ->native(false);
     }
 
     public static function formats(): Select

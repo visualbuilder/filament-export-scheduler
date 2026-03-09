@@ -105,21 +105,36 @@ it('handles date ranges in non-leap year February correctly', function () {
     expect($thisMonth['end']->day)->toBe(28); // 2023 is not a leap year
 });
 
-it('returns proper labels for all date ranges', function () {
-    $cases = [
-        DateRange::TODAY,
-        DateRange::YESTERDAY,
-        DateRange::LAST_7_DAYS,
-        DateRange::LAST_WEEK,
-        DateRange::LAST_30_DAYS,
-        DateRange::LAST_MONTH,
-        DateRange::THIS_MONTH,
-        DateRange::LAST_QUARTER,
-        DateRange::THIS_YEAR,
-        DateRange::LAST_YEAR,
-    ];
+it('calculates NEXT_7_DAYS date range correctly', function () {
+    $range = DateRange::NEXT_7_DAYS->getDateRange();
 
-    foreach ($cases as $dateRange) {
+    expect($range['start']->toDateTimeString())->toBe('2024-06-15 00:00:00');
+    expect($range['end']->toDateTimeString())->toBe('2024-06-21 23:59:59');
+});
+
+it('calculates NEXT_30_DAYS date range correctly', function () {
+    $range = DateRange::NEXT_30_DAYS->getDateRange();
+
+    expect($range['start']->toDateTimeString())->toBe('2024-06-15 00:00:00');
+    expect($range['end']->toDateTimeString())->toBe('2024-07-14 23:59:59');
+});
+
+it('calculates NEXT_60_DAYS date range correctly', function () {
+    $range = DateRange::NEXT_60_DAYS->getDateRange();
+
+    expect($range['start']->toDateTimeString())->toBe('2024-06-15 00:00:00');
+    expect($range['end']->toDateTimeString())->toBe('2024-08-13 23:59:59');
+});
+
+it('calculates NEXT_90_DAYS date range correctly', function () {
+    $range = DateRange::NEXT_90_DAYS->getDateRange();
+
+    expect($range['start']->toDateTimeString())->toBe('2024-06-15 00:00:00');
+    expect($range['end']->toDateTimeString())->toBe('2024-09-12 23:59:59');
+});
+
+it('returns proper labels for all date ranges', function () {
+    foreach (DateRange::cases() as $dateRange) {
         expect($dateRange->getLabel())
             ->toBeString()
             ->toEqual(__('export-scheduler::date_ranges.'.$dateRange->value));

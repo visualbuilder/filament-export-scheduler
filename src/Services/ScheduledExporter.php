@@ -119,7 +119,7 @@ class ScheduledExporter
 
     protected function applyAttributeFilter($query, $column, $operator, $value, $or = false): void
     {
-        if ($operator === '<>' && filled($dateRange = DateRange::tryFrom($value))) {
+        if (in_array($operator, ['<>', 'is_in']) && filled($dateRange = DateRange::tryFrom($value))) {
             ['start' => $startDate, 'end' => $endDate] = $dateRange->getDateRange();
             $query->{$or ? 'orWhereBetween' : 'whereBetween'}($column, [$startDate, $endDate]);
         } elseif ($operator === 'since' && is_array($value)) {
@@ -133,6 +133,21 @@ class ScheduledExporter
                 default => $date->subDays($amount),
             };
             $query->{$or ? 'orWhere' : 'where'}($column, '>=', $date);
+        } elseif ($operator === 'before' && is_array($value)) {
+            $date = Carbon::now();
+            $amount = (int) ($value['amount'] ?? 0);
+            $unit = $value['unit'] ?? 'days';
+            match ($unit) {
+                'weeks' => $date->addWeeks($amount),
+                'months' => $date->addMonths($amount),
+                'years' => $date->addYears($amount),
+                default => $date->addDays($amount),
+            };
+            $query->{$or ? 'orWhere' : 'where'}($column, '<=', $date);
+        } elseif ($operator === 'is_before') {
+            $query->{$or ? 'orWhere' : 'where'}($column, '<', $value);
+        } elseif ($operator === 'is_after') {
+            $query->{$or ? 'orWhere' : 'where'}($column, '>', $value);
         } elseif (in_array($operator, ['in', 'not_in']) && is_array($value)) {
             $query->{$or ? ($operator === 'in' ? 'orWhereIn' : 'orWhereNotIn') : ($operator === 'in' ? 'whereIn' : 'whereNotIn')}($column, $value);
         } elseif ($operator === 'like') {

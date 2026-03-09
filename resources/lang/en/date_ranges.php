@@ -10,5 +10,9 @@ return [
     'this_month'   => 'This Month',
     'last_quarter' => 'Last Quarter',
     'this_year'    => 'This Year',
-    'last_year'    => 'Last Year',
+    'last_year'     => 'Last Year',
+    'next_7_days'   => 'Next 7 Days',
+    'next_30_days'  => 'Next 30 Days',
+    'next_60_days'  => 'Next 60 Days',
+    'next_90_days'  => 'Next 90 Days',
 ];

@@ -10,7 +10,9 @@ DROP TABLE IF EXISTS `export_schedules`;
 CREATE TABLE `export_schedules` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `exporter` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `report_type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'exporter',
+  `sql_query` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `exporter` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `columns` json DEFAULT NULL,
   `schedule_frequency` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `schedule_time` time NOT NULL DEFAULT '00:00:00',
@@ -231,3 +233,4 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (4,'2024_11_22_2027
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (5,'2024_11_22_213725_create_imports_table',1);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (6,'2024_11_22_213726_create_exports_table',1);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (7,'2024_11_22_213727_create_failed_import_rows_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (8,'2024_01_01_000002_add_sql_query_columns_to_export_schedules_table',1);

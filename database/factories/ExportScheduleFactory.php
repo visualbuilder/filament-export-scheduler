@@ -5,6 +5,7 @@ namespace Visualbuilder\ExportScheduler\Database\Factories;
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Visualbuilder\ExportScheduler\Enums\DateRange;
+use Visualbuilder\ExportScheduler\Enums\ReportType;
 use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
 use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
 use Visualbuilder\ExportScheduler\Models\ExportSchedule;
@@ -27,6 +28,7 @@ class ExportScheduleFactory extends Factory
     {
         return [
             'name'                   => $this->faker->sentence(3),
+            'report_type'            => ReportType::EXPORTER,
             'exporter'               => UserExporter::class,
             'columns'                => json_encode([
                 [

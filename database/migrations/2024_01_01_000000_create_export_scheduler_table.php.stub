@@ -16,7 +16,7 @@ return new class extends Migration
             Schema::create('export_schedules', function (Blueprint $table) {
                 $table->increments('id');
                 $table->string('name', 191);
-                $table->string('exporter', 191); //The base Filament Exporter Class
+                $table->string('exporter', 191)->nullable(); //The base Filament Exporter Class (nullable for SQL query reports)
                 $table->json('columns')->nullable(); // An array of columns to override the Exporter class columns
                 $table->json('filters')->nullable(); // A key-value array of the selected relations and their respective values
                 $table->string('schedule_frequency');

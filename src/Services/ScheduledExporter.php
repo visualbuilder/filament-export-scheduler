@@ -12,9 +12,11 @@ use Illuminate\Bus\PendingBatch;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Bus\PendingChain;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Visualbuilder\ExportScheduler\Enums\DateRange;
+use Visualbuilder\ExportScheduler\Jobs\ExportSqlQuery;
 use Visualbuilder\ExportScheduler\Jobs\PrepareCsvExport;
 use Visualbuilder\ExportScheduler\Jobs\ScheduledExportCompletion;
 use Visualbuilder\ExportScheduler\Models\ExportSchedule;
@@ -157,6 +159,10 @@ class ScheduledExporter
 
     public function run(): bool
     {
+        if ($this->exportSchedule->isSqlQuery()) {
+            return $this->initSqlQuery() && $this->buildSqlQueryJobChain();
+        }
+
         if ($this->exportSchedule->dynamic_owner_enabled && $this->exportSchedule->dynamic_owner_attribute) {
             $baseQuery = $this->buildBaseQuery();
             $owners = $baseQuery->get()
@@ -244,6 +250,69 @@ class ScheduledExporter
         }
 
         return $types->unique()->all();
+    }
+
+    protected function initSqlQuery(): bool
+    {
+        try {
+            $this->exportSchedule->loadMissing('owner');
+
+            $errors = ExportSchedule::validateSqlQuery($this->exportSchedule->sql_query ?? '');
+            if (! empty($errors)) {
+                Log::error('SQL query validation failed', [
+                    'schedule_id' => $this->exportSchedule->id,
+                    'errors' => $errors,
+                ]);
+
+                return false;
+            }
+
+            // Count rows by wrapping in a subquery
+            $countSql = "SELECT COUNT(*) as total FROM ({$this->exportSchedule->sql_query}) as subquery";
+            $totalRows = DB::select($countSql)[0]->total ?? 0;
+
+            $export = new Export;
+            $export->exporter = 'sql_query';
+            $export->total_rows = $totalRows;
+            $export->file_disk = config('export-scheduler.file_disk');
+            $export->file_name = $this->generateFileName();
+            $export->user()->associate($this->exportSchedule->owner);
+            $export->save();
+            $this->export = $export;
+
+            return true;
+        } catch (\Exception $exception) {
+            Log::error($exception->getMessage());
+
+            return false;
+        }
+    }
+
+    public function buildSqlQueryJobChain(): bool
+    {
+        try {
+            $this->export->unsetRelation('user');
+
+            Bus::chain([
+                Bus::batch([
+                    new ExportSqlQuery(
+                        export: $this->export,
+                        sql: $this->exportSchedule->sql_query,
+                    ),
+                ])->allowFailures(),
+
+                new ScheduledExportCompletion(
+                    export: $this->export,
+                    exportSchedule: $this->exportSchedule,
+                ),
+            ])->dispatch();
+
+            return true;
+        } catch (\Exception $exception) {
+            Log::error($exception->getMessage());
+
+            return false;
+        }
     }
 
     public function buildJobChain(): bool

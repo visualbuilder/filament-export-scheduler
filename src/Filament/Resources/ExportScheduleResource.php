@@ -70,6 +70,7 @@ namespace Visualbuilder\ExportScheduler\Filament\Resources {
                 ->schema([
                     Tabs::make('tabs')->tabs([
                         Tabs\Tab::make('Exporter')
+                            ->label(fn (Get $get) => ($get('report_type') ?? 'exporter') === 'sql_query' ? 'SQL Query' : 'Exporter')
                             ->schema([
                                 Section::make()
                                     ->columnSpanFull()
@@ -77,13 +78,15 @@ namespace Visualbuilder\ExportScheduler\Filament\Resources {
                                         Grid::make()
                                             ->schema([
                                                 Fields::name(),
-                                                Fields::exporter(),
+                                                Fields::reportType(),
                                             ])
                                             ->columns(1)
                                             ->columnSpan(1),
 
                                         Grid::make()
                                             ->schema([
+                                                Fields::exporter(),
+                                                Fields::sqlQuery(),
                                                 Fields::ownerMorphSelect(),
                                             ])
                                             ->columns(1)
@@ -139,7 +142,7 @@ namespace Visualbuilder\ExportScheduler\Filament\Resources {
                                 Fields::columnsRepeater(),
                             ])
                             ->columns(4)
-                            ->visible(fn (Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->count() : false)
+                            ->visible(fn (Get $get) => ($get('report_type') ?? 'exporter') !== 'sql_query' && $get('exporter') && ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->count())
                             ->extraAttributes(['class' => 'column_picker']),
                     ])
                         ->contained(false)
@@ -155,6 +158,7 @@ namespace Visualbuilder\ExportScheduler\Filament\Resources {
                 ->columns([
                     Tables\Columns\TextColumn::make('id'),
                     Tables\Columns\TextColumn::make('name')->label(__('export-scheduler::scheduler.name')),
+                    Tables\Columns\TextColumn::make('report_type')->label('Type')->badge(),
                     Tables\Columns\TextColumn::make('schedule_frequency')->label(__('export-scheduler::scheduler.schedule_frequency'))->badge(),
                     Tables\Columns\TextColumn::make('date_range')->label(__('export-scheduler::scheduler.date_range'))->badge()->color('warning'),
                     Tables\Columns\TextColumn::make('owner.email')->label(__('export-scheduler::scheduler.recipient')),

@@ -21,9 +21,11 @@ use Filament\Schemas\Components\Utilities\Set;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
+use Filament\Forms\Components\Textarea;
 use Visualbuilder\ExportScheduler\Enums\DateRange;
 use Visualbuilder\ExportScheduler\Enums\DayOfWeek;
 use Visualbuilder\ExportScheduler\Enums\Month;
+use Visualbuilder\ExportScheduler\Enums\ReportType;
 use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
 use Visualbuilder\ExportScheduler\Facades\ExportScheduler;
 use Visualbuilder\ExportScheduler\Models\ExportSchedule;
@@ -40,12 +42,54 @@ class Fields
             ->maxLength(191);
     }
 
+    public static function reportType(): Select
+    {
+        return Select::make('report_type')
+            ->label('Report Type')
+            ->options(ReportType::class)
+            ->default(ReportType::EXPORTER->value)
+            ->required()
+            ->native(false)
+            ->live()
+            ->afterStateUpdated(function (Set $set, $state) {
+                if ($state === ReportType::SQL_QUERY->value) {
+                    $set('exporter', null);
+                    $set('columns', []);
+                    $set('available_columns', []);
+                } else {
+                    $set('sql_query', null);
+                }
+            });
+    }
+
+    public static function sqlQuery(): Textarea
+    {
+        return Textarea::make('sql_query')
+            ->label('SQL Query')
+            ->placeholder("SELECT column1, column2\nFROM table_name\nWHERE condition\nORDER BY column1")
+            ->rows(8)
+            ->required(fn (Get $get) => $get('report_type') === ReportType::SQL_QUERY->value)
+            ->visible(fn (Get $get) => $get('report_type') === ReportType::SQL_QUERY->value)
+            ->helperText('Enter a SELECT query only. INSERT, UPDATE, DELETE, DROP and other write operations are blocked.')
+            ->rules([
+                fn (): Closure => function (string $attribute, $value, Closure $fail) {
+                    if (blank($value)) {
+                        return;
+                    }
+                    $errors = ExportSchedule::validateSqlQuery($value);
+                    foreach ($errors as $error) {
+                        $fail($error);
+                    }
+                },
+            ]);
+    }
+
     public static function filterReportSection(): Section
     {
         return Section::make('Filter By Associated Records (optional)')
             ->columns()
             ->live()
-            ->visible(fn (Get $get) => $get('exporter'))
+            ->visible(fn (Get $get) => $get('exporter') && ($get('report_type') ?? ReportType::EXPORTER->value) !== ReportType::SQL_QUERY->value)
             ->schema([
                 // Section for choosing which relation types to filter by.
                 Section::make('Choose the Associated Record Type')
@@ -183,7 +227,7 @@ class Fields
     {
         return Section::make('Filter By Attributes (optional)')
             ->live()
-            ->visible(fn (Get $get) => $get('exporter'))
+            ->visible(fn (Get $get) => $get('exporter') && ($get('report_type') ?? ReportType::EXPORTER->value) !== ReportType::SQL_QUERY->value)
             ->schema(function (Get $get) {
                 $exporterClass = $get('exporter');
                 $columns = ExportSchedule::getDefaultColumnsForExporter($exporterClass ?? '')
@@ -381,7 +425,8 @@ class Fields
             ->searchable()
             ->native(false)
             ->live()
-            ->required()
+            ->visible(fn (Get $get) => ($get('report_type') ?? ReportType::EXPORTER->value) !== ReportType::SQL_QUERY->value)
+            ->required(fn (Get $get) => ($get('report_type') ?? ReportType::EXPORTER->value) !== ReportType::SQL_QUERY->value)
             ->afterStateUpdated(function (?ExportSchedule $record, $state, Set $set, $livewire) {
                 /** Clear any existing selected_relations & filter data */
                 if (array_key_exists('filters', $livewire->data)) {

@@ -14,6 +14,7 @@ use Illuminate\Support\Collection;
 use Visualbuilder\ExportScheduler\Enums\DateRange;
 use Visualbuilder\ExportScheduler\Enums\DayOfWeek;
 use Visualbuilder\ExportScheduler\Enums\Month;
+use Visualbuilder\ExportScheduler\Enums\ReportType;
 use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
 
 /**
@@ -84,6 +85,8 @@ class ExportSchedule extends Model
      */
     protected $fillable = [
         'name',
+        'report_type',
+        'sql_query',
         'columns',
         'exporter',
         'date_range',
@@ -127,8 +130,13 @@ class ExportSchedule extends Model
         'schedule_month' => Month::class,
         'schedule_start_month' => Month::class,
         'date_range' => DateRange::class,
+        'report_type' => ReportType::class,
         'schedule_frequency' => ScheduleFrequency::class,
         'filters' => 'array',
+    ];
+
+    protected $attributes = [
+        'report_type' => 'exporter',
     ];
 
     protected static function booted()
@@ -402,6 +410,45 @@ class ExportSchedule extends Model
         }
 
         return true;
+    }
+
+    public function isSqlQuery(): bool
+    {
+        return $this->report_type === ReportType::SQL_QUERY;
+    }
+
+    /**
+     * Validate that the SQL query is a safe SELECT statement.
+     */
+    public static function validateSqlQuery(string $sql): array
+    {
+        $errors = [];
+        $normalised = preg_replace('/\s+/', ' ', trim($sql));
+
+        if (! preg_match('/^\s*SELECT\b/i', $normalised)) {
+            $errors[] = 'Query must begin with SELECT.';
+        }
+
+        $dangerous = [
+            'INSERT', 'UPDATE', 'DELETE', 'DROP', 'ALTER', 'CREATE', 'TRUNCATE',
+            'REPLACE', 'RENAME', 'GRANT', 'REVOKE', 'EXEC', 'EXECUTE',
+            'INTO\s+OUTFILE', 'INTO\s+DUMPFILE', 'LOAD_FILE',
+        ];
+
+        foreach ($dangerous as $keyword) {
+            if (preg_match('/\b' . $keyword . '\b/i', $normalised)) {
+                $errors[] = "Prohibited keyword detected: " . str_replace('\\s+', ' ', $keyword);
+            }
+        }
+
+        // Block multiple statements
+        $withoutStrings = preg_replace("/'[^']*'/", '', $normalised);
+        $withoutStrings = preg_replace('/"[^"]*"/', '', $withoutStrings);
+        if (substr_count($withoutStrings, ';') > 1) {
+            $errors[] = 'Multiple statements are not allowed.';
+        }
+
+        return $errors;
     }
 
     public function getCcCountAttribute(): int

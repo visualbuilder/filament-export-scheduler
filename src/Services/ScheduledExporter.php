@@ -291,7 +291,16 @@ class ScheduledExporter
     public function buildSqlQueryJobChain(): bool
     {
         try {
+            $formats = $this->exportSchedule->formats;
+            $hasXlsx = in_array(ExportFormat::Xlsx, $formats);
+
             $this->export->unsetRelation('user');
+
+            $makeCreateXlsxFileJob = fn(): CreateXlsxFile => app(CreateXlsxFile::class, [
+                'export' => $this->export,
+                'columnMap' => [],
+                'options' => [],
+            ]);
 
             Bus::chain([
                 Bus::batch([
@@ -300,6 +309,9 @@ class ScheduledExporter
                         sql: $this->exportSchedule->sql_query,
                     ),
                 ])->allowFailures(),
+
+                // Conditional: CreateXlsxFile if XLSX format is requested
+                ...($hasXlsx ? [$makeCreateXlsxFileJob()] : []),
 
                 new ScheduledExportCompletion(
                     export: $this->export,

@@ -441,11 +441,11 @@ class ExportSchedule extends Model
             }
         }
 
-        // Block multiple statements
+        // Block any semicolons — they break subquery wrapping and could enable injection
         $withoutStrings = preg_replace("/'[^']*'/", '', $normalised);
         $withoutStrings = preg_replace('/"[^"]*"/', '', $withoutStrings);
-        if (substr_count($withoutStrings, ';') > 1) {
-            $errors[] = 'Multiple statements are not allowed.';
+        if (str_contains($withoutStrings, ';')) {
+            $errors[] = 'Semicolons are not allowed in the query.';
         }
 
         return $errors;

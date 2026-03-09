@@ -70,10 +70,16 @@ it('rejects DROP statements embedded in select', function () {
     expect(collect($errors)->contains(fn ($e) => str_contains($e, 'DROP')))->toBeTrue();
 });
 
-it('rejects queries with multiple statements', function () {
+it('rejects queries with semicolons', function () {
     $errors = ExportSchedule::validateSqlQuery('SELECT 1; SELECT 2;');
     expect($errors)->not->toBeEmpty();
-    expect(collect($errors)->contains(fn ($e) => str_contains($e, 'Multiple statements')))->toBeTrue();
+    expect(collect($errors)->contains(fn ($e) => str_contains($e, 'Semicolons')))->toBeTrue();
+});
+
+it('rejects a single trailing semicolon', function () {
+    $errors = ExportSchedule::validateSqlQuery('SELECT id FROM users;');
+    expect($errors)->not->toBeEmpty();
+    expect(collect($errors)->contains(fn ($e) => str_contains($e, 'Semicolons')))->toBeTrue();
 });
 
 it('rejects TRUNCATE in query', function () {

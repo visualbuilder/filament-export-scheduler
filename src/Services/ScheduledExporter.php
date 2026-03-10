@@ -346,7 +346,7 @@ class ScheduledExporter
     {
         try {
             $formats = $this->exportSchedule->formats;
-            $hasXlsx = in_array(ExportFormat::Xlsx, $formats);
+            $hasXlsx = $formats->contains(ExportFormat::Xlsx);
             $serializedQuery = EloquentSerializeFacade::serialize($this->query);
 
             $job = PrepareCsvExport::class;

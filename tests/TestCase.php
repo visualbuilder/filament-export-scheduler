@@ -14,7 +14,6 @@ use Filament\Tables\TablesServiceProvider;
 use Filament\Widgets\WidgetsServiceProvider;
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
-use RyanChandler\BladeCaptureDirective\BladeCaptureDirectiveServiceProvider;
 use Visualbuilder\ExportScheduler\ExportSchedulerServiceProvider;
 use Visualbuilder\ExportScheduler\Tests\Models\User;
 use Visualbuilder\ExportScheduler\Tests\Traits\CustomRefreshDatabase;
@@ -41,7 +40,6 @@ class TestCase extends Orchestra
     {
         return [
             ActionsServiceProvider::class,
-            BladeCaptureDirectiveServiceProvider::class,
             BladeHeroiconsServiceProvider::class,
             BladeIconsServiceProvider::class,
             FilamentServiceProvider::class,

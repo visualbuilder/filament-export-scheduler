@@ -14,6 +14,13 @@ use League\Csv\Writer;
 use SplTempFileObject;
 use Throwable;
 
+/**
+ * Export SQL Query Job
+ *
+ * Executes raw SQL SELECT queries and exports results to CSV format.
+ * Creates separate headers.csv and data CSV files for compatibility
+ * with Filament's export download system.
+ */
 class ExportSqlQuery implements ShouldQueue
 {
     use Batchable;
@@ -26,6 +33,17 @@ class ExportSqlQuery implements ShouldQueue
         protected string $sql,
     ) {}
 
+    /**
+     * Execute the SQL query and export results to CSV.
+     *
+     * Creates two files:
+     * - headers.csv: Column names for import validation
+     * - 0000000000000001.csv: Query results data
+     *
+     * Updates the export record with row counts and completion status.
+     *
+     * @throws \Exception If database query fails or file writing encounters errors
+     */
     public function handle(): void
     {
         $results = DB::select($this->sql);
@@ -45,7 +63,8 @@ class ExportSqlQuery implements ShouldQueue
             return;
         }
 
-        // Create separate headers CSV file
+        // Create separate headers.csv file for compatibility with import systems
+        // and to enable header validation independent of data rows
         $headers = array_keys((array) $results[0]);
         $headersCsv = Writer::createFromFileObject(new SplTempFileObject);
         $headersCsv->insertOne($headers);
@@ -60,6 +79,8 @@ class ExportSqlQuery implements ShouldQueue
         $processedRows = 0;
         $successfulRows = 0;
 
+        // Process each row individually, continuing even if conversion fails
+        // to maximize data export completeness. Errors are logged for audit.
         foreach ($results as $row) {
             try {
                 $csv->insertOne(array_values((array) $row));
@@ -72,6 +93,8 @@ class ExportSqlQuery implements ShouldQueue
 
         $filePath = $this->export->getFileDirectory() . DIRECTORY_SEPARATOR . '0000000000000001.csv';
 
+        // Lock export record and atomically write all files and updates
+        // to ensure consistency if job is retried or fails partway through
         DB::transaction(function () use ($csv, $filePath, $headersCsv, $headersPath, $processedRows, $successfulRows): void {
             $this->export::query()
                 ->whereKey($this->export->getKey())

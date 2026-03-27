@@ -282,7 +282,9 @@ class ScheduledExporter
                 return false;
             }
 
-            // Execute the query and count results in PHP to handle GROUP BY correctly
+            // Execute the query and count results in PHP to handle GROUP BY correctly.
+            // GROUP BY results cannot be accurately counted with SQL COUNT(*) wrapper
+            // since each grouped row is returned separately. PHP count() handles this correctly.
             $results = DB::select($this->exportSchedule->sql_query);
             $totalRows = count($results);
 

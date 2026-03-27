@@ -320,12 +320,10 @@ class ScheduledExporter
             ]);
 
             Bus::chain([
-                Bus::batch([
-                    new ExportSqlQuery(
-                        export: $this->export,
-                        sql: $this->exportSchedule->sql_query,
-                    ),
-                ])->allowFailures(),
+                new ExportSqlQuery(
+                    export: $this->export,
+                    sql: $this->exportSchedule->sql_query,
+                ),
 
                 // Conditional: CreateXlsxFile if XLSX format is requested
                 ...($hasXlsx ? [$makeCreateXlsxFileJob()] : []),

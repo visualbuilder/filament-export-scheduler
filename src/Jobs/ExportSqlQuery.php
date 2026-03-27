@@ -66,15 +66,11 @@ class ExportSqlQuery implements ShouldQueue
         // Create separate headers.csv file for compatibility with import systems
         // and to enable header validation independent of data rows
         $headers = array_keys((array) $results[0]);
-        $headersCsv = Writer::createFromFileObject(new SplTempFileObject);
+        $headersCsv = Writer::from(new SplTempFileObject);
         $headersCsv->insertOne($headers);
-        $headersPath = $this->export->getFileDirectory() . DIRECTORY_SEPARATOR . 'headers.csv';
 
         // Create data CSV file
-        $csv = Writer::createFromFileObject(new SplTempFileObject);
-
-        // Write header row from column names
-        $csv->insertOne($headers);
+        $dataCsv = Writer::from(new SplTempFileObject);
 
         $processedRows = 0;
         $successfulRows = 0;
@@ -83,7 +79,7 @@ class ExportSqlQuery implements ShouldQueue
         // to maximize data export completeness. Errors are logged for audit.
         foreach ($results as $row) {
             try {
-                $csv->insertOne(array_values((array) $row));
+                $dataCsv->insertOne(array_values((array) $row));
                 $successfulRows++;
             } catch (Throwable $exception) {
                 report($exception);
@@ -91,11 +87,18 @@ class ExportSqlQuery implements ShouldQueue
             $processedRows++;
         }
 
-        $filePath = $this->export->getFileDirectory() . DIRECTORY_SEPARATOR . '0000000000000001.csv';
+        $directory = $this->export->getFileDirectory() . DIRECTORY_SEPARATOR;
+        $disk = $this->export->getFileDisk();
+
+        // Write headers.csv file
+        $disk->put($directory . 'headers.csv', $headersCsv->toString(), Filesystem::VISIBILITY_PRIVATE);
+
+        // Write data CSV file
+        $this->export->getFileDisk()->put($directory . '0000000000000001.csv', $dataCsv->toString(), Filesystem::VISIBILITY_PRIVATE);
 
         // Lock export record and atomically write all files and updates
         // to ensure consistency if job is retried or fails partway through
-        DB::transaction(function () use ($csv, $filePath, $headersCsv, $headersPath, $processedRows, $successfulRows): void {
+        DB::transaction(function () use ($processedRows, $successfulRows): void {
             $this->export::query()
                 ->whereKey($this->export->getKey())
                 ->lockForUpdate()
@@ -104,12 +107,6 @@ class ExportSqlQuery implements ShouldQueue
                     'successful_rows' => $successfulRows,
                     'total_rows' => $processedRows,
                 ]);
-
-            // Write headers.csv file
-            $this->export->getFileDisk()->put($headersPath, $headersCsv->toString(), Filesystem::VISIBILITY_PRIVATE);
-
-            // Write data CSV file
-            $this->export->getFileDisk()->put($filePath, $csv->toString(), Filesystem::VISIBILITY_PRIVATE);
         });
     }
 }

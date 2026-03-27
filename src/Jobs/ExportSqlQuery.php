@@ -7,7 +7,6 @@ use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Database\Query\Expression;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
@@ -46,10 +45,17 @@ class ExportSqlQuery implements ShouldQueue
             return;
         }
 
+        // Create separate headers CSV file
+        $headers = array_keys((array) $results[0]);
+        $headersCsv = Writer::createFromFileObject(new SplTempFileObject);
+        $headersCsv->insertOne($headers);
+        $headersPath = $this->export->getFileDirectory() . DIRECTORY_SEPARATOR . 'headers.csv';
+
+        // Create data CSV file
         $csv = Writer::createFromFileObject(new SplTempFileObject);
 
         // Write header row from column names
-        $csv->insertOne(array_keys((array) $results[0]));
+        $csv->insertOne($headers);
 
         $processedRows = 0;
         $successfulRows = 0;
@@ -66,7 +72,7 @@ class ExportSqlQuery implements ShouldQueue
 
         $filePath = $this->export->getFileDirectory() . DIRECTORY_SEPARATOR . '0000000000000001.csv';
 
-        DB::transaction(function () use ($csv, $filePath, $processedRows, $successfulRows): void {
+        DB::transaction(function () use ($csv, $filePath, $headersCsv, $headersPath, $processedRows, $successfulRows): void {
             $this->export::query()
                 ->whereKey($this->export->getKey())
                 ->lockForUpdate()
@@ -76,6 +82,10 @@ class ExportSqlQuery implements ShouldQueue
                     'total_rows' => $processedRows,
                 ]);
 
+            // Write headers.csv file
+            $this->export->getFileDisk()->put($headersPath, $headersCsv->toString(), Filesystem::VISIBILITY_PRIVATE);
+
+            // Write data CSV file
             $this->export->getFileDisk()->put($filePath, $csv->toString(), Filesystem::VISIBILITY_PRIVATE);
         });
     }

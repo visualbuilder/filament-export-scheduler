@@ -1,10 +1,16 @@
 <?php
 
+use Filament\Actions\Exports\Models\Export;
+use Illuminate\Support\Facades\Notification;
 use Visualbuilder\ExportScheduler\Enums\ReportType;
 use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
 use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
+use Visualbuilder\ExportScheduler\Jobs\ExportSqlQuery;
+use Visualbuilder\ExportScheduler\Jobs\ScheduledExportCompletion;
 use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Notifications\ScheduledExportCompleteNotification;
 use Visualbuilder\ExportScheduler\Services\ScheduledExporter;
+use Visualbuilder\ExportScheduler\Tests\Models\Document;
 use Visualbuilder\ExportScheduler\Tests\Models\User;
 
 it('can create a sql query report schedule', function () {
@@ -140,7 +146,7 @@ it('rejects sql query export when validation fails', function () {
     $schedule = ExportSchedule::create([
         'name' => 'Bad SQL Report',
         'report_type' => ReportType::SQL_QUERY,
-        'sql_query' => "DELETE FROM users",
+        'sql_query' => 'DELETE FROM users',
         'schedule_frequency' => ScheduleFrequency::DAILY,
         'schedule_time' => '08:00',
         'schedule_timezone' => 'UTC',
@@ -154,4 +160,149 @@ it('rejects sql query export when validation fails', function () {
     $result = $exporter->run();
 
     expect($result)->toBeFalse();
+});
+
+it('correctly counts rows for complex query with GROUP BY', function () {
+    // Create test data
+    $user1 = User::create(['name' => 'User 1', 'email' => 'user1@test.com', 'password' => 'password']);
+    $user2 = User::create(['name' => 'User 2', 'email' => 'user2@test.com', 'password' => 'password']);
+
+    // Create documents for each user
+    Document::create([
+        'title' => 'Doc 1',
+        'content' => 'Test',
+        'owner_id' => $user1->id,
+        'owner_type' => get_class($user1),
+    ]);
+    Document::create([
+        'title' => 'Doc 2',
+        'content' => 'Test',
+        'owner_id' => $user2->id,
+        'owner_type' => get_class($user2),
+    ]);
+
+    // Create schedule with GROUP BY query
+    $schedule = ExportSchedule::create([
+        'name' => 'Grouped SQL Report',
+        'report_type' => ReportType::SQL_QUERY,
+        'sql_query' => 'SELECT owner_type, COUNT(*) as total FROM documents GROUP BY owner_type',
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => '08:00',
+        'schedule_timezone' => 'UTC',
+        'formats' => ['csv'],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+        'enabled' => true,
+    ]);
+
+    $exporter = new ScheduledExporter($schedule);
+    $result = $exporter->run();
+
+    expect($result)->toBeTrue();
+    // Should return 1 row (one owner_type group), not 0 or 2
+    expect($exporter->getTotalRows())->toBe(1);
+});
+
+it('creates headers.csv file for SQL query export', function () {
+    User::create(['name' => 'Test User', 'email' => 'test@test.com', 'password' => 'password']);
+
+    $schedule = ExportSchedule::create([
+        'name' => 'SQL Headers Test',
+        'report_type' => ReportType::SQL_QUERY,
+        'sql_query' => 'SELECT id, name, email FROM users',
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => '08:00',
+        'schedule_timezone' => 'UTC',
+        'formats' => ['csv'],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+        'enabled' => true,
+    ]);
+
+    $exporter = new ScheduledExporter($schedule);
+    $exporter->run();
+
+    // Process the export job synchronously
+    $export = Export::latest()->first();
+    $job = new ExportSqlQuery($export, $schedule->sql_query);
+    $job->handle();
+
+    // Verify headers.csv exists
+    $disk = $export->getFileDisk();
+    $headersPath = $export->getFileDirectory() . DIRECTORY_SEPARATOR . 'headers.csv';
+
+    expect($disk->exists($headersPath))->toBeTrue();
+
+    // Verify headers content
+    $headersContent = $disk->get($headersPath);
+    expect($headersContent)->toContain('id');
+    expect($headersContent)->toContain('name');
+    expect($headersContent)->toContain('email');
+});
+
+it('sends notification with download link after SQL export completes', function () {
+    Notification::fake();
+
+    User::create(['name' => 'Test User', 'email' => 'test@test.com', 'password' => 'password']);
+
+    $schedule = ExportSchedule::create([
+        'name' => 'SQL Notification Test',
+        'report_type' => ReportType::SQL_QUERY,
+        'sql_query' => 'SELECT id, name, email FROM users',
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => '08:00',
+        'schedule_timezone' => 'UTC',
+        'formats' => ['csv'],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+        'enabled' => true,
+    ]);
+
+    $exporter = new ScheduledExporter($schedule);
+    $exporter->run();
+
+    // Process the export job synchronously
+    $export = Export::latest()->first();
+    $exportJob = new ExportSqlQuery($export, $schedule->sql_query);
+    $exportJob->handle();
+
+    // Process the completion job
+    $completionJob = new ScheduledExportCompletion($export->fresh(), $schedule);
+    $completionJob->handle();
+
+    // Verify notification was sent
+    Notification::assertSentTo(
+        auth()->user(),
+        ScheduledExportCompleteNotification::class,
+        function ($notification) use ($export) {
+            return $notification->export->id === $export->id;
+        }
+    );
+});
+
+it('handles basic SELECT query correctly', function () {
+    // Create multiple users
+    User::create(['name' => 'Alice', 'email' => 'alice@test.com', 'password' => 'password']);
+    User::create(['name' => 'Bob', 'email' => 'bob@test.com', 'password' => 'password']);
+    User::create(['name' => 'Charlie', 'email' => 'charlie@test.com', 'password' => 'password']);
+
+    $schedule = ExportSchedule::create([
+        'name' => 'Basic SELECT Test',
+        'report_type' => ReportType::SQL_QUERY,
+        'sql_query' => "SELECT * FROM users WHERE created_at >= '" . now()->subDay()->toDateString() . "'",
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => '08:00',
+        'schedule_timezone' => 'UTC',
+        'formats' => ['csv'],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+        'enabled' => true,
+    ]);
+
+    $exporter = new ScheduledExporter($schedule);
+    $result = $exporter->run();
+
+    expect($result)->toBeTrue();
+    // Should count all users created (including the auth user)
+    expect($exporter->getTotalRows())->toBeGreaterThanOrEqual(3);
 });

@@ -3,13 +3,15 @@
 namespace Visualbuilder\ExportScheduler\Services;
 
 use AnourValar\EloquentSerialize\Facades\EloquentSerializeFacade;
+use Carbon\Carbon;
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Actions\Exports\Exporter;
 use Filament\Actions\Exports\Jobs\CreateXlsxFile;
 use Filament\Actions\Exports\Models\Export;
-use Carbon\Carbon;
 use Illuminate\Bus\PendingBatch;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Foundation\Bus\PendingChain;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
@@ -37,9 +39,7 @@ class ScheduledExporter
 
     protected $runUser = null;
 
-    public function __construct(public ExportSchedule $exportSchedule)
-    {
-    }
+    public function __construct(public ExportSchedule $exportSchedule) {}
 
     public function getTotalRows(): int
     {
@@ -60,11 +60,11 @@ class ScheduledExporter
         }
 
         $filters = $this->exportSchedule->filters ?? [];
-        $relationFilters = array_filter($filters, fn($key) => $key !== 'attributes', ARRAY_FILTER_USE_KEY);
+        $relationFilters = array_filter($filters, fn ($key) => $key !== 'attributes', ARRAY_FILTER_USE_KEY);
         $attributeFilters = array_diff_key($filters, $relationFilters)['attributes'] ?? [];
 
         foreach ($relationFilters as $relation => $selectedRelations) {
-            $query->whereHas($relation, fn($q) => $q->whereIn('id', $selectedRelations));
+            $query->whereHas($relation, fn ($q) => $q->whereIn('id', $selectedRelations));
         }
 
         if (filled($attributeFilters)) {
@@ -90,7 +90,7 @@ class ScheduledExporter
                             ? (new $modelClass)->$firstRelation()
                             : null;
 
-                        if ($relationMethod instanceof \Illuminate\Database\Eloquent\Relations\MorphTo) {
+                        if ($relationMethod instanceof MorphTo) {
                             $remainingPath = implode('.', array_slice($parts, 1));
                             $types = $this->getMorphTypes();
                             $q->{$condition === 'or' ? 'orWhereHasMorph' : 'whereHasMorph'}($firstRelation, $types, function ($morphQuery) use ($modelClass, $remainingPath, $column, $operator, $value) {
@@ -164,9 +164,9 @@ class ScheduledExporter
             $parts = explode('.', $attribute);
             $column = array_pop($parts);
             $relationPath = implode('.', $parts);
-            $query->whereHas($relationPath, fn($q) => $q->where($column, $user->getKey()));
-        } elseif (method_exists($modelClass, $attribute) && ((new $modelClass)->$attribute()) instanceof \Illuminate\Database\Eloquent\Relations\Relation) {
-            $query->whereHas($attribute, fn($q) => $q->where($q->getModel()->getKeyName(), $user->getKey()));
+            $query->whereHas($relationPath, fn ($q) => $q->where($column, $user->getKey()));
+        } elseif (method_exists($modelClass, $attribute) && ((new $modelClass)->$attribute()) instanceof Relation) {
+            $query->whereHas($attribute, fn ($q) => $q->where($q->getModel()->getKeyName(), $user->getKey()));
         } else {
             $query->where($attribute, $user->getKey());
         }
@@ -181,9 +181,9 @@ class ScheduledExporter
         if ($this->exportSchedule->dynamic_owner_enabled && $this->exportSchedule->dynamic_owner_attribute) {
             $baseQuery = $this->buildBaseQuery();
             $owners = $baseQuery->get()
-                ->map(fn($m) => data_get($m, $this->exportSchedule->dynamic_owner_attribute))
+                ->map(fn ($m) => data_get($m, $this->exportSchedule->dynamic_owner_attribute))
                 ->filter()
-                ->unique(fn($u) => $u->getKey())
+                ->unique(fn ($u) => $u->getKey())
                 ->values();
 
             foreach ($owners as $owner) {
@@ -282,9 +282,9 @@ class ScheduledExporter
                 return false;
             }
 
-            // Count rows by wrapping in a subquery
-            $countSql = "SELECT COUNT(*) as total FROM ({$this->exportSchedule->sql_query}) as subquery";
-            $totalRows = DB::select($countSql)[0]->total ?? 0;
+            // Execute the query and count results in PHP to handle GROUP BY correctly
+            $results = DB::select($this->exportSchedule->sql_query);
+            $totalRows = count($results);
 
             $export = new Export;
             $export->exporter = 'sql_query';
@@ -311,7 +311,7 @@ class ScheduledExporter
 
             $this->export->unsetRelation('user');
 
-            $makeCreateXlsxFileJob = fn(): CreateXlsxFile => app(CreateXlsxFile::class, [
+            $makeCreateXlsxFileJob = fn (): CreateXlsxFile => app(CreateXlsxFile::class, [
                 'export' => $this->export,
                 'columnMap' => [],
                 'options' => [],
@@ -358,10 +358,10 @@ class ScheduledExporter
             // in case it contains attributes that are not serializable, such as binary columns.
             $this->export->unsetRelation('user');
 
-            $makeCreateXlsxFileJob = fn(): CreateXlsxFile => app(CreateXlsxFile::class, [
+            $makeCreateXlsxFileJob = fn (): CreateXlsxFile => app(CreateXlsxFile::class, [
                 'export' => $this->export,
                 'columnMap' => $this->columnMap,
-                'options' => $this->options
+                'options' => $this->options,
             ]);
 
             Bus::chain([// 1. Batch Job: Processes the export data (CSV).
@@ -372,12 +372,12 @@ class ScheduledExporter
                         'columnMap' => $this->columnMap,
                         'options' => $this->options,
                         'chunkSize' => 100,
-                        'records' => null
-                    ])
+                        'records' => null,
+                    ]),
                 ])
-                    ->when(filled($jobQueue), fn(PendingBatch $batch) => $batch->onQueue($jobQueue))
-                    ->when(filled($jobConnection), fn(PendingBatch $batch) => $batch->onConnection($jobConnection))
-                    ->when(filled($jobBatchName), fn(PendingBatch $batch) => $batch->name($jobBatchName))
+                    ->when(filled($jobQueue), fn (PendingBatch $batch) => $batch->onQueue($jobQueue))
+                    ->when(filled($jobConnection), fn (PendingBatch $batch) => $batch->onConnection($jobConnection))
+                    ->when(filled($jobBatchName), fn (PendingBatch $batch) => $batch->name($jobBatchName))
                     ->allowFailures(),
 
                 // 2. Conditional Job: CreateXlsxFile if XLSX format is requested.
@@ -387,10 +387,10 @@ class ScheduledExporter
                 new ScheduledExportCompletion(
                     export: $this->export,
                     exportSchedule: $this->exportSchedule
-                )
+                ),
             ])
-                ->when(filled($jobQueue), fn(PendingChain $chain) => $chain->onQueue($jobQueue))
-                ->when(filled($jobConnection), fn(PendingChain $chain) => $chain->onConnection($jobConnection))
+                ->when(filled($jobQueue), fn (PendingChain $chain) => $chain->onQueue($jobQueue))
+                ->when(filled($jobConnection), fn (PendingChain $chain) => $chain->onConnection($jobConnection))
                 ->dispatch();
 
             return true;

@@ -30,11 +30,15 @@ class TestCase extends Orchestra
             User::create([
                 'email' => 'admin@domain.com',
                 'name' => 'Admin',
-                'password' => 'password'
+                'password' => 'password',
             ])
         );
     }
 
+    protected function defineDatabaseMigrations()
+    {
+        $this->loadMigrationsFrom(__DIR__ . '/database/migrations');
+    }
 
     protected function getPackageProviders($app)
     {

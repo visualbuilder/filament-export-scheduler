@@ -4,9 +4,11 @@ namespace Visualbuilder\ExportScheduler\Models;
 
 use Carbon\Carbon;
 use Cron\CronExpression;
+use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Models\Export;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\AsEnumCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -110,34 +112,37 @@ class ExportSchedule extends Model
         'filters',
     ];
 
-    /**
-     * The attributes that should be cast to native types.
-     *
-     * @var array
-     */
-    protected $casts = [
-        'columns' => 'array',
-        'available_columns' => 'array',
-        'formats' => 'array',
-        'cc' => 'array',
-        'dynamic_owner_enabled' => 'boolean',
-        'enabled' => 'boolean',
-        'next_run_at' => 'datetime',
-        'last_run_at' => 'datetime',
-        'last_successful_run_at' => 'datetime',
-        'schedule_day_of_week' => DayOfWeek::class,
-        'schedule_day_of_month' => 'integer',
-        'schedule_month' => Month::class,
-        'schedule_start_month' => Month::class,
-        'date_range' => DateRange::class,
-        'report_type' => ReportType::class,
-        'schedule_frequency' => ScheduleFrequency::class,
-        'filters' => 'array',
-    ];
-
     protected $attributes = [
         'report_type' => 'exporter',
     ];
+
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @return array
+     */
+    public function casts()
+    {
+        return [
+            'columns' => 'array',
+            'available_columns' => 'array',
+            'formats' => AsEnumCollection::of(ExportFormat::class),
+            'cc' => 'array',
+            'dynamic_owner_enabled' => 'boolean',
+            'enabled' => 'boolean',
+            'next_run_at' => 'datetime',
+            'last_run_at' => 'datetime',
+            'last_successful_run_at' => 'datetime',
+            'schedule_day_of_week' => DayOfWeek::class,
+            'schedule_day_of_month' => 'integer',
+            'schedule_month' => Month::class,
+            'schedule_start_month' => Month::class,
+            'date_range' => DateRange::class,
+            'report_type' => ReportType::class,
+            'schedule_frequency' => ScheduleFrequency::class,
+            'filters' => 'array',
+        ];
+    }
 
     protected static function booted()
     {

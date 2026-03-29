@@ -685,6 +685,7 @@ class Fields
                 'csv' => __('CSV'),
                 'xlsx' => __('XLSX'),
             ])
+            ->enum(ExportFormat::class)
             ->default([ExportFormat::Xlsx])
             ->native(false)
             ->multiple()

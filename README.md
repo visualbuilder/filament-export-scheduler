@@ -7,11 +7,18 @@
 
 Email automated exports on a defined schedule - keep the management happy with timely reporting and minimise effort.
 
-![Export Schedules pack shot](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/social-card.jpg)
+## Version Compatibility
+
+| Package Version | Filament | Laravel | PHP |
+|-----------------|----------|---------|-----|
+| 5.x | 5.x | 11.x, 12.x | 8.2+ |
+| 4.x | 4.x | 11.x | 8.2+ |
+
+![Export Schedules pack shot](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/5.x/media/social-card.jpg)
 
 ## Empower users to create their own reports
 
-![List Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/reports-index.png)
+![List Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/5.x/media/reports-index.png)
 
 ## Any Filament Exporter can be used as the starting point
 
@@ -19,7 +26,7 @@ Email automated exports on a defined schedule - keep the management happy with t
 - Send Exports to other users
 - To ensure data security only system users can receive reports
 
-![Setup Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/edit-export.png)
+![Setup Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/5.x/media/edit-export.png)
 
 ## Filter By Available Attributes
 Exclude attributes with the ```excludeFilterableAttributes``` method available in the ```InteractWithExportScheduler``` trait.
@@ -47,7 +54,7 @@ This is useful for excluding attributes not present in the database or computed 
   - yearly
 - Or use a custom Cron for non standard schedules
 
-![Setup Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/cron.png)
+![Setup Schedules](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/5.x/media/cron.png)
 
 ## Customise query data range
 
@@ -72,7 +79,7 @@ You can also specify a custom period using **since X days/weeks/months/years ago
 - Maybe will add ability to add user definable columns
 - All Column Formatting options set in the exporter
 
-![Edit Columns](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/edit-columns.png)
+![Edit Columns](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/5.x/media/edit-columns.png)
 
 ## Attractive HTML Email templates
 
@@ -80,7 +87,7 @@ You can also specify a custom period using **since X days/weeks/months/years ago
  - Or works well with [Visual Builder Email Templates](https://github.com/visualbuilder/email-templates "Other Free Package")  - if you want user editable emails
  - Custom Report Builder and Templates coming soon 
 
-![Email](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/3.x/media/vb-email.png)
+![Email](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/5.x/media/vb-email.png)
 
 
 ## Installation
@@ -88,7 +95,11 @@ You can also specify a custom period using **since X days/weeks/months/years ago
 You can install the package via composer:
 
 ```bash
-composer require visualbuilder/filament-export-scheduler
+# For Filament 5.x
+composer require visualbuilder/filament-export-scheduler:^5.0
+
+# For Filament 4.x
+composer require visualbuilder/filament-export-scheduler:^4.0
 ```
 
 Copy views and migrations, run the migration
@@ -108,15 +119,14 @@ php artisan db:seed --class=ExportScheduleSeeder
 
 To enable automatic sending you must add the console command to your scheduler.
 
-### 1. Modify the Scheduler
+### 1. Register the Scheduled Command
 
-Open `app\Console\Kernel.php`:
+In `routes/console.php` (Laravel 11+):
 
 ```php
-protected function schedule(Schedule $schedule)
-{
-    $schedule->command('export:run')->everyMinute();
-}
+use Illuminate\Support\Facades\Schedule;
+
+Schedule::command('export:run')->everyMinute();
 ```
 
 ### 2. Check servers cron
@@ -205,7 +215,7 @@ php artisan notifications:table
 php artisan vendor:publish --tag=filament-actions-migrations
 ```
 
-Check the docs at: https://filamentphp.com/docs/3.x/actions/prebuilt-actions/export
+Check the docs at: https://filamentphp.com/docs/actions/prebuilt-actions/export
 
 #### Polymorphism - Using different user classes
 This package uses this by default, please ensure your exports migration has this line:-

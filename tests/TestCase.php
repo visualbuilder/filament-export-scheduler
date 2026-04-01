@@ -17,6 +17,9 @@ use Orchestra\Testbench\TestCase as Orchestra;
 use Visualbuilder\ExportScheduler\ExportSchedulerServiceProvider;
 use Visualbuilder\ExportScheduler\Tests\Models\User;
 use Visualbuilder\ExportScheduler\Tests\Traits\CustomRefreshDatabase;
+use Livewire\Mechanisms\DataStore;
+use Illuminate\Support\ViewErrorBag;
+use Illuminate\Support\Facades\View;
 
 class TestCase extends Orchestra
 {
@@ -33,6 +36,10 @@ class TestCase extends Orchestra
                 'password' => 'password',
             ])
         );
+
+        View::share('errors', new ViewErrorBag);
+        $dataStore = app(DataStore::class);
+        app()->instance(DataStore::class, $dataStore);
     }
 
     protected function defineDatabaseMigrations()

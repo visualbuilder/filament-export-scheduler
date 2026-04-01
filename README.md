@@ -12,7 +12,7 @@ Email automated exports on a defined schedule - keep the management happy with t
 | Package Version | Filament | Laravel | PHP |
 |-----------------|----------|---------|-----|
 | 5.x | 5.x | 11.x, 12.x | 8.2+ |
-| 4.x | 4.x | 11.x | 8.2+ |
+| 4.x | 4.x | 10.x, 11.x | 8.2+ |
 
 ![Export Schedules pack shot](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/5.x/media/social-card.jpg)
 

@@ -40,6 +40,9 @@ class TestCase extends Orchestra
         View::share('errors', new ViewErrorBag);
         $dataStore = app(DataStore::class);
         app()->instance(DataStore::class, $dataStore);
+
+        // Ensure Bus::batch() uses the same SQLite in-memory connection
+        config(['queue.batching.database' => config('database.default')]);
     }
 
     protected function defineDatabaseMigrations()

@@ -73,6 +73,14 @@ This is useful for excluding attributes not present in the database or computed 
 
 You can also specify a custom period using **since X days/weeks/months/years ago** for even more flexibility.
 
+## Control when to send reports
+
+- Choose whether to send reports when no data is found
+  - Always send (default) - Reports are sent even with no rows
+  - Only send when there are results - Skips sending if the query returns no data
+- Prevents users from receiving empty reports
+- The export files are still created and available in the system
+
 ## Users can choose which columns to include
 
 - Currently all columns must be defined in the exporter

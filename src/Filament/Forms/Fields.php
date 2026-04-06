@@ -8,6 +8,7 @@ use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\MorphToSelect;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -784,6 +785,23 @@ class Fields
         return Toggle::make('enabled')
             ->inline(false)
             ->label(__('export-scheduler::scheduler.enabled'));
+    }
+
+    public static function sendEmptyReport(): Radio
+    {
+        return Radio::make('send_empty_report')
+            ->label(__('export-scheduler::scheduler.send_empty_report'))
+            ->inline()
+            ->default(true)
+            ->required()
+            ->options([
+                true => __('export-scheduler::scheduler.send_empty_report_true_label'),
+                false => __('export-scheduler::scheduler.send_empty_report_false_label'),
+            ])
+            ->descriptions([
+                true => __('export-scheduler::scheduler.send_empty_report_true_description'),
+                false => __('export-scheduler::scheduler.send_empty_report_false_description'),
+            ]);
     }
 
     public static function copyToUser(): Fieldset

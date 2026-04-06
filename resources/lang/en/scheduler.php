@@ -49,6 +49,11 @@ return [
     'run_export'             => 'Run the Export',
     'notification_title'     => ':name started',
 
+    'send_empty_report'                   => 'Send empty report',
+    'send_empty_report_true_label'        => 'Always send the report (Default)',
+    'send_empty_report_false_label'       => 'Only send when there are results',
+    'send_empty_report_true_description'  => 'The report will be sent even if it contains no data rows.',
+    'send_empty_report_false_description' => 'The report will not be sent if no data rows are returned.',
 
     // Additional translations for days of the week
     'monday'                 => 'Monday',

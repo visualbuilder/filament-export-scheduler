@@ -125,6 +125,11 @@ namespace Visualbuilder\ExportScheduler\Filament\Resources {
                                         ]),
                                 ]),
 
+                            Section::make('When to Send')
+                                ->schema([
+                                    Fields::sendEmptyReport()
+                                ]),
+
                             Section::make('Query Date Range')
                                 ->schema([
                                     Fields::dateRange(),

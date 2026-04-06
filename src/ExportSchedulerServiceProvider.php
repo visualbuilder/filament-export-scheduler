@@ -77,6 +77,7 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
             'create_export_scheduler_table',
             'add_dynamic_owner_columns_to_export_schedules_table',
             'add_sql_query_columns_to_export_schedules_table',
+            'add_send_empty_report_to_export_schedules_table',
         ];
     }
 

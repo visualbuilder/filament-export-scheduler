@@ -25,6 +25,7 @@ use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
  * @property string $exporter
  * @property array $columns
  * @property bool $enabled
+ * @property bool $send_empty_report
  * @property ScheduleFrequency $schedule_frequency
  * @property string $schedule_time
  * @property string|null $cron
@@ -72,6 +73,7 @@ use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
  * @method static Builder|ExportSchedule whereScheduleMonth($value)
  * @method static Builder|ExportSchedule whereScheduleTime($value)
  * @method static Builder|ExportSchedule whereScheduleTimezone($value)
+ * @method static Builder|ExportSchedule whereSendEmptyReport($value)
  * @method static Builder|ExportSchedule whereUpdatedAt($value)
  */
 class ExportSchedule extends Model
@@ -103,6 +105,7 @@ class ExportSchedule extends Model
         'last_run_at',
         'last_successful_run_at',
         'enabled',
+        'send_empty_report',
         'cron',
         'cc',
         'dynamic_owner_enabled',
@@ -122,6 +125,7 @@ class ExportSchedule extends Model
         'cc' => 'array',
         'dynamic_owner_enabled' => 'boolean',
         'enabled' => 'boolean',
+        'send_empty_report' => 'boolean',
         'next_run_at' => 'datetime',
         'last_run_at' => 'datetime',
         'last_successful_run_at' => 'datetime',

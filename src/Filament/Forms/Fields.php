@@ -794,10 +794,10 @@ class Fields
             ->inline()
             ->default(true)
             ->required()
-            ->options([
-                true => __('export-scheduler::scheduler.send_empty_report_true_label'),
-                false => __('export-scheduler::scheduler.send_empty_report_false_label'),
-            ])
+            ->boolean(
+                trueLabel: __('export-scheduler::scheduler.send_empty_report_true_label'),
+                falseLabel: __('export-scheduler::scheduler.send_empty_report_false_label'),
+            )
             ->descriptions([
                 true => __('export-scheduler::scheduler.send_empty_report_true_description'),
                 false => __('export-scheduler::scheduler.send_empty_report_false_description'),

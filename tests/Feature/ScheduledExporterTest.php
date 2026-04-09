@@ -415,3 +415,123 @@ it('generates unique file names with timestamp', function () {
 
     expect(Export::latest()->first()->file_name)->toContain('test-export-schedule', '2024-06-15', '1430');
 });
+
+it('sends email notification when report has results and send_empty_report is true', function () {
+    createFakeUsers(5);
+
+    $schedule = ExportSchedule::create([
+        'name' => 'User Export with Results',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => now()->toTimeString(),
+        'next_run_at' => now(),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+        'formats' => [ExportFormat::Csv],
+        'send_empty_report' => true,
+    ]);
+
+    $exporter = new ScheduledExporter($schedule);
+    $exporter->run();
+
+    expect($exporter->getTotalRows())->toBeGreaterThan(0);
+});
+
+it('sends email notification when report has results and send_empty_report is false', function () {
+    createFakeUsers(5);
+
+    $schedule = ExportSchedule::create([
+        'name' => 'User Export with Results',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => now()->toTimeString(),
+        'next_run_at' => now(),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+        'formats' => [ExportFormat::Csv],
+        'send_empty_report' => false,
+    ]);
+
+    $exporter = new ScheduledExporter($schedule);
+    $exporter->run();
+
+    expect($exporter->getTotalRows())->toBeGreaterThan(0);
+});
+
+it('sends email notification when report is empty and send_empty_report is true', function () {
+    // Don't create any users, so the report will be empty (only auth user if seeded)
+
+    $schedule = ExportSchedule::create([
+        'name' => 'Empty User Export - Should Send',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => now()->toTimeString(),
+        'next_run_at' => now(),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+        'formats' => [ExportFormat::Csv],
+        'send_empty_report' => true,
+        'filters' => [
+            'attributes' => [
+                [
+                    'column' => 'id',
+                    'value' => [99999],
+                    'operator' => 'in',
+                    'condition' => 'and',
+                ],
+            ],
+        ],
+    ]);
+
+    $exporter = new ScheduledExporter($schedule);
+    $exporter->run();
+
+    expect($exporter->getTotalRows())->toBe(0);
+});
+
+it('skips email notification when report is empty and send_empty_report is false', function () {
+    // Don't create any users, so the report will be empty
+
+    $schedule = ExportSchedule::create([
+        'name' => 'Empty User Export - Should Skip',
+        'exporter' => UserExporter::class,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => now()->toTimeString(),
+        'next_run_at' => now(),
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+        'formats' => [ExportFormat::Csv],
+        'send_empty_report' => false,
+        'filters' => [
+            'attributes' => [
+                [
+                    'column' => 'id',
+                    'value' => [99999],
+                    'operator' => 'in',
+                    'condition' => 'and',
+                ],
+            ],
+        ],
+    ]);
+
+    $exporter = new ScheduledExporter($schedule);
+    $exporter->run();
+
+    expect($exporter->getTotalRows())->toBe(0);
+});

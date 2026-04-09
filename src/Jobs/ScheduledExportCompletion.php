@@ -36,6 +36,16 @@ class ScheduledExportCompletion implements ShouldQueue
         // Mark the export as completed
         $this->export->touch('completed_at');
 
+        // Skip sending email if report is empty and send_empty_report is false
+        if ($this->export->total_rows === 0 && $this->exportSchedule->send_empty_report === false) {
+            Log::info('Skipping email notification for empty report', [
+                'export_id' => $this->export->id,
+                'schedule_id' => $this->exportSchedule->id,
+                'schedule_name' => $this->exportSchedule->name,
+            ]);
+            return;
+        }
+
         $notificationClass = config('export-scheduler.notification');
 
         // Check if the user object exists and uses the Notifiable trait

@@ -786,6 +786,15 @@ class Fields
             ->label(__('export-scheduler::scheduler.enabled'));
     }
 
+    public static function sendEmptyReportToggle(): Toggle
+    {
+        return Toggle::make('send_empty_report')
+            ->inline(false)
+            ->label('Send report if no results')
+            ->helperText('When disabled, emails will not be sent if the report contains zero rows')
+            ->default(true);
+    }
+
     public static function copyToUser(): Fieldset
     {
         return Fieldset::make(__('export-scheduler::scheduler.cc'))

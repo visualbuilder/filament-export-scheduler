@@ -1,0 +1,28 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('export_schedules', function (Blueprint $table) {
+            if (! Schema::hasColumn('export_schedules', 'send_empty_report')) {
+                $table->boolean('send_empty_report')
+                    ->default(true)
+                    ->after('enabled');
+            }
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('export_schedules', function (Blueprint $table) {
+            if (Schema::hasColumn('export_schedules', 'send_empty_report')) {
+                $table->dropColumn('send_empty_report');
+            }
+        });
+    }
+};

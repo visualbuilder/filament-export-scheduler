@@ -108,6 +108,8 @@ namespace Visualbuilder\ExportScheduler\Filament\Resources {
                                         Fields::enableToggle(),
                                     ])->columns(),
 
+                                    Fields::sendEmptyReportToggle(),
+
                                     Grid::make()->schema([
                                         Fields::customCronExpression(),
                                         Fields::cronHint(),

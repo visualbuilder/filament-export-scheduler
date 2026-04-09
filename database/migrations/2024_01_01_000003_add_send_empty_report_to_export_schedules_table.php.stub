@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::table('export_schedules', function (Blueprint $table) {
             if (! Schema::hasColumn('export_schedules', 'send_empty_report')) {
                 $table->boolean('send_empty_report')
-                    ->default(true)
+                    ->default(false)
                     ->after('enabled');
             }
         });

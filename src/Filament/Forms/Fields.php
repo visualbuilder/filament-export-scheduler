@@ -792,7 +792,7 @@ class Fields
             ->inline(false)
             ->label('Send report if no results')
             ->helperText('When disabled, emails will not be sent if the report contains zero rows')
-            ->default(true);
+            ->default(false);
     }
 
     public static function copyToUser(): Fieldset

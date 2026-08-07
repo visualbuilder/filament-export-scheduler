@@ -46,6 +46,11 @@ class ScheduledExporter
         return $this->export?->total_rows ?? 0;
     }
 
+    public function getQuery(): Builder
+    {
+        return $this->buildBaseQuery();
+    }
+
     protected function buildBaseQuery(): Builder
     {
         $exporter = $this->exportSchedule->exporter;

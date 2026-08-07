@@ -49,6 +49,11 @@ return [
     'run_export'             => 'Run the Export',
     'notification_title'     => ':name started',
 
+    'preview'                    => 'Preview',
+    'preview_row'                => 'row',
+    'preview_empty_heading'      => 'No rows to show',
+    'preview_empty_description'  => 'This report would not include any rows if it ran now.',
+
     'send_empty_report'                   => 'Send empty report',
     'send_empty_report_true_label'        => 'Always send the report (Default)',
     'send_empty_report_false_label'       => 'Only send when there are results',

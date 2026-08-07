@@ -5,6 +5,7 @@ namespace Visualbuilder\ExportScheduler\Filament\Resources {
     use Filament\Actions\BulkActionGroup;
     use Filament\Actions\DeleteBulkAction;
     use Filament\Actions\EditAction;
+    use Filament\Actions\ViewAction;
     use Filament\Pages\Enums\SubNavigationPosition;
     use Filament\Resources\Resource;
     use Filament\Schemas\Components\Grid;
@@ -173,6 +174,7 @@ namespace Visualbuilder\ExportScheduler\Filament\Resources {
                     Tables\Columns\ToggleColumn::make('enabled')->label(__('export-scheduler::scheduler.enabled')),
                 ])
                 ->recordActions([
+                    ViewAction::make(),
                     EditAction::make(),
                     RunExport::make('run'),
                 ])
@@ -188,6 +190,7 @@ namespace Visualbuilder\ExportScheduler\Filament\Resources {
             return [
                 'index' => Pages\ListExportSchedules::route('/'),
                 'create' => Pages\CreateExportSchedule::route('/create'),
+                'view' => Pages\ViewExportSchedule::route('/{record}/view'),
                 'edit' => Pages\EditExportSchedule::route('/{record}/edit'),
             ];
         }

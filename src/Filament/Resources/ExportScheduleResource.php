@@ -16,6 +16,7 @@ namespace Visualbuilder\ExportScheduler\Filament\Resources {
     use Filament\Tables;
     use Filament\Tables\Table;
     use Visualbuilder\ExportScheduler\ExportSchedulerPlugin;
+    use Visualbuilder\ExportScheduler\Filament\Actions\Tables\DownloadExport;
     use Visualbuilder\ExportScheduler\Filament\Actions\Tables\RunExport;
     use Visualbuilder\ExportScheduler\Filament\Forms\Fields;
     use Visualbuilder\ExportScheduler\Filament\Resources\ExportScheduleResource\Pages;
@@ -128,7 +129,7 @@ namespace Visualbuilder\ExportScheduler\Filament\Resources {
 
                             Section::make('When to Send')
                                 ->schema([
-                                    Fields::sendEmptyReport()
+                                    Fields::sendEmptyReport(),
                                 ]),
 
                             Section::make('Query Date Range')
@@ -176,6 +177,7 @@ namespace Visualbuilder\ExportScheduler\Filament\Resources {
                 ->recordActions([
                     ViewAction::make(),
                     EditAction::make(),
+                    DownloadExport::make('download'),
                     RunExport::make('run'),
                 ])
                 ->headerActions([

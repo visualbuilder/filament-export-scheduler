@@ -53,6 +53,17 @@ return [
     'preview_row'                => 'row',
     'preview_empty_heading'      => 'No rows to show',
     'preview_empty_description'  => 'This report would not include any rows if it ran now.',
+    'search_placeholder'         => 'Search all fields',
+    'viewer_truncated'           => 'Showing the first :count rows. Download the report to see all of the results.',
+
+    'download'                   => 'Download',
+    'download_modal_heading'     => 'Download report',
+    'download_format'            => 'Select file format',
+    'download_started_title'     => 'Preparing :name',
+    'download_started_body'      => 'Your report is being prepared in the background. You will be notified with a download link when it is ready.',
+    'download_ready_body'        => 'Your report is ready to download.',
+    'download_failed_title'      => 'Report could not be run',
+    'download_failed_body'       => 'The report could not be prepared. Check the application logs for details.',
 
     'send_empty_report'                   => 'Send empty report',
     'send_empty_report_true_label'        => 'Always send the report (Default)',

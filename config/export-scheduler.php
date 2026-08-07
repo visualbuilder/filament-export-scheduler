@@ -27,6 +27,13 @@ return [
     'file_disk' => 'local',
 
     /**
+     * The report viewer loads the whole result set so it can search and sort across every
+     * page, including columns that are not database columns. Set a number here to cap how
+     * many rows are loaded on very large reports. Null loads all of them.
+     */
+    'viewer_max_rows' => null,
+
+    /**
      * Roles allowed to create SQL query reports.
      * Uses Spatie Permission hasRole() check.
      * Set to empty array to allow all users.

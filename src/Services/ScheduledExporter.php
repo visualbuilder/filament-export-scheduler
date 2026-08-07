@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Visualbuilder\ExportScheduler\Enums\DateRange;
+use Visualbuilder\ExportScheduler\Jobs\CreateSqlQueryXlsxFile;
 use Visualbuilder\ExportScheduler\Jobs\ExportSqlQuery;
 use Visualbuilder\ExportScheduler\Jobs\PrepareCsvExport;
 use Visualbuilder\ExportScheduler\Jobs\ScheduledExportCompletion;
@@ -39,11 +40,83 @@ class ScheduledExporter
 
     protected $runUser = null;
 
+    /**
+     * Set when the export is run on demand for someone other than the schedule owner,
+     * e.g. the download action on the report viewer.
+     */
+    protected $recipient = null;
+
+    /**
+     * Overrides the schedule's own formats for a single run.
+     *
+     * @var array<ExportFormat|string>|null
+     */
+    protected ?array $formats = null;
+
     public function __construct(public ExportSchedule $exportSchedule) {}
 
     public function getTotalRows(): int
     {
         return $this->export?->total_rows ?? 0;
+    }
+
+    public function getExport(): ?Export
+    {
+        return $this->export;
+    }
+
+    /**
+     * Run the export for this user instead of the schedule owner, and notify only them.
+     *
+     * The download route checks the export belongs to the user requesting it, so an
+     * on demand download has to be owned by whoever asked for it.
+     */
+    public function forUser($user): static
+    {
+        $this->recipient = $user;
+
+        return $this;
+    }
+
+    /**
+     * @param  array<ExportFormat|string>  $formats
+     */
+    public function withFormats(array $formats): static
+    {
+        $this->formats = $formats;
+
+        return $this;
+    }
+
+    public function isAdHoc(): bool
+    {
+        return $this->recipient !== null;
+    }
+
+    /**
+     * The formats for this run, as plain string values.
+     *
+     * @return array<string>
+     */
+    protected function getFormats(): array
+    {
+        return collect($this->formats ?? $this->exportSchedule->formats ?? [])
+            ->map(fn ($format) => $format instanceof ExportFormat ? $format->value : (string) $format)
+            ->all();
+    }
+
+    /**
+     * The formats cast comes back from the database as strings but may be set as enums,
+     * so both have to be compared by value.
+     */
+    protected function wantsFormat(ExportFormat $format): bool
+    {
+        return in_array($format->value, $this->getFormats(), strict: true);
+    }
+
+    protected function getExportUser()
+    {
+        return $this->recipient ?? $this->runUser ?? $this->exportSchedule->owner;
     }
 
     public function getQuery(): Builder
@@ -234,7 +307,7 @@ class ScheduledExporter
             $export->total_rows = $this->query->count();
             $export->file_disk = config('export-scheduler.file_disk');
             $export->file_name = $this->generateFileName();
-            $export->user()->associate($this->runUser ?? $this->exportSchedule->owner);
+            $export->user()->associate($this->getExportUser());
             $export->save();
             $this->export = $export;
 
@@ -298,7 +371,7 @@ class ScheduledExporter
             $export->total_rows = $totalRows;
             $export->file_disk = config('export-scheduler.file_disk');
             $export->file_name = $this->generateFileName();
-            $export->user()->associate($this->exportSchedule->owner);
+            $export->user()->associate($this->getExportUser());
             $export->save();
             $this->export = $export;
 
@@ -313,15 +386,12 @@ class ScheduledExporter
     public function buildSqlQueryJobChain(): bool
     {
         try {
-            $formats = $this->exportSchedule->formats;
-            $hasXlsx = in_array(ExportFormat::Xlsx, $formats);
+            $hasXlsx = $this->wantsFormat(ExportFormat::Xlsx);
 
             $this->export->unsetRelation('user');
 
-            $makeCreateXlsxFileJob = fn (): CreateXlsxFile => app(CreateXlsxFile::class, [
+            $makeCreateXlsxFileJob = fn (): CreateSqlQueryXlsxFile => app(CreateSqlQueryXlsxFile::class, [
                 'export' => $this->export,
-                'columnMap' => [],
-                'options' => [],
             ]);
 
             Bus::chain([
@@ -336,6 +406,7 @@ class ScheduledExporter
                 new ScheduledExportCompletion(
                     export: $this->export,
                     exportSchedule: $this->exportSchedule,
+                    isAdHoc: $this->isAdHoc(),
                 ),
             ])->dispatch();
 
@@ -350,8 +421,7 @@ class ScheduledExporter
     public function buildJobChain(): bool
     {
         try {
-            $formats = $this->exportSchedule->formats;
-            $hasXlsx = in_array(ExportFormat::Xlsx, $formats);
+            $hasXlsx = $this->wantsFormat(ExportFormat::Xlsx);
             $serializedQuery = EloquentSerializeFacade::serialize($this->query);
 
             $job = PrepareCsvExport::class;
@@ -391,7 +461,8 @@ class ScheduledExporter
                 // 3. ScheduledExportCompletion Job: Marks export as complete after all files are ready.
                 new ScheduledExportCompletion(
                     export: $this->export,
-                    exportSchedule: $this->exportSchedule
+                    exportSchedule: $this->exportSchedule,
+                    isAdHoc: $this->isAdHoc(),
                 ),
             ])
                 ->when(filled($jobQueue), fn (PendingChain $chain) => $chain->onQueue($jobQueue))

@@ -15,6 +15,7 @@ class ExportReady extends Mailable
     use SerializesModels;
 
     public $name;
+
     public $url;
 
     /**
@@ -24,20 +25,34 @@ class ExportReady extends Mailable
      */
     public function __construct(public $notifiable, public Export $export, public ExportSchedule $exportSchedule)
     {
-        $hasXlsx = in_array(ExportFormat::Xlsx, $exportSchedule->formats);
-        $this->url = route('filament.exports.download', ['export' => $export, 'format' => $hasXlsx ? ExportFormat::Xlsx : ExportFormat::Csv]);
+        $this->url = route('filament.exports.download', ['export' => $export, 'format' => $this->resolveFormat()]);
+    }
+
+    /**
+     * Link to the spreadsheet when one was actually written, otherwise the CSV.
+     *
+     * The schedule's formats cannot be trusted here, as an export may be run on demand
+     * for a single format.
+     */
+    protected function resolveFormat(): ExportFormat
+    {
+        $xlsxPath = $this->export->getFileDirectory() . DIRECTORY_SEPARATOR . $this->export->file_name . '.xlsx';
+
+        return $this->export->getFileDisk()->exists($xlsxPath)
+            ? ExportFormat::Xlsx
+            : ExportFormat::Csv;
     }
 
     public function build()
     {
         return $this->subject("Download your {$this->exportSchedule->name}")
-            ->to($this->exportSchedule->owner->email)
+            ->to($this->notifiable->email ?? $this->exportSchedule->owner->email)
             ->view('export-scheduler::emails.export-ready')
             ->with([
-                'user'           => $this->notifiable,
-                'url'            => $this->url,
-                'export'         => $this->export,
-                'exportSchedule' => $this->exportSchedule
+                'user' => $this->notifiable,
+                'url' => $this->url,
+                'export' => $this->export,
+                'exportSchedule' => $this->exportSchedule,
             ]);
     }
 }

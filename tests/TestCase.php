@@ -9,17 +9,18 @@ use Filament\FilamentServiceProvider;
 use Filament\Forms\FormsServiceProvider;
 use Filament\Infolists\InfolistsServiceProvider;
 use Filament\Notifications\NotificationsServiceProvider;
+use Filament\Schemas\SchemasServiceProvider;
 use Filament\Support\SupportServiceProvider;
 use Filament\Tables\TablesServiceProvider;
 use Filament\Widgets\WidgetsServiceProvider;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\ViewErrorBag;
 use Livewire\LivewireServiceProvider;
+use Livewire\Mechanisms\DataStore;
 use Orchestra\Testbench\TestCase as Orchestra;
 use Visualbuilder\ExportScheduler\ExportSchedulerServiceProvider;
 use Visualbuilder\ExportScheduler\Tests\Models\User;
 use Visualbuilder\ExportScheduler\Tests\Traits\CustomRefreshDatabase;
-use Livewire\Mechanisms\DataStore;
-use Illuminate\Support\ViewErrorBag;
-use Illuminate\Support\Facades\View;
 
 class TestCase extends Orchestra
 {
@@ -61,6 +62,7 @@ class TestCase extends Orchestra
             InfolistsServiceProvider::class,
             LivewireServiceProvider::class,
             NotificationsServiceProvider::class,
+            SchemasServiceProvider::class,
             SupportServiceProvider::class,
             TablesServiceProvider::class,
             WidgetsServiceProvider::class,

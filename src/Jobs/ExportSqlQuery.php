@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use League\Csv\Writer;
 use SplTempFileObject;
 use Throwable;
+use Visualbuilder\ExportScheduler\Support\SqlQueryResult;
 
 /**
  * Export SQL Query Job
@@ -46,28 +47,16 @@ class ExportSqlQuery implements ShouldQueue
      */
     public function handle(): void
     {
-        $results = DB::select($this->sql);
-
-        if (empty($results)) {
-            DB::transaction(function (): void {
-                $this->export::query()
-                    ->whereKey($this->export->getKey())
-                    ->lockForUpdate()
-                    ->update([
-                        'processed_rows' => 0,
-                        'successful_rows' => 0,
-                        'total_rows' => 0,
-                    ]);
-            });
-
-            return;
-        }
+        $result = SqlQueryResult::run($this->sql);
 
         // Create separate headers.csv file for compatibility with import systems
-        // and to enable header validation independent of data rows
-        $headers = array_keys((array) $results[0]);
+        // and to enable header validation independent of data rows. This is written even
+        // when the query matched nothing, so an empty report is still downloadable.
         $headersCsv = Writer::from(new SplTempFileObject);
-        $headersCsv->insertOne($headers);
+
+        if ($result->columns !== []) {
+            $headersCsv->insertOne($result->columns);
+        }
 
         // Create data CSV file
         $dataCsv = Writer::from(new SplTempFileObject);
@@ -77,9 +66,9 @@ class ExportSqlQuery implements ShouldQueue
 
         // Process each row individually, continuing even if conversion fails
         // to maximize data export completeness. Errors are logged for audit.
-        foreach ($results as $row) {
+        foreach ($result->rows as $row) {
             try {
-                $dataCsv->insertOne(array_values((array) $row));
+                $dataCsv->insertOne(array_values($row));
                 $successfulRows++;
             } catch (Throwable $exception) {
                 report($exception);

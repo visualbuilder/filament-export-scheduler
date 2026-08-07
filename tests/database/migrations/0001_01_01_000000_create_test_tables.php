@@ -112,6 +112,7 @@ return new class extends Migration
             $table->unsignedBigInteger('owner_id')->nullable();
             $table->json('cc')->nullable();
             $table->boolean('enabled')->default(true);
+            $table->boolean('send_empty_report')->default(true);
             $table->boolean('dynamic_owner_enabled')->default(false);
             $table->string('dynamic_owner_attribute')->nullable();
             $table->timestamp('next_run_at')->nullable();

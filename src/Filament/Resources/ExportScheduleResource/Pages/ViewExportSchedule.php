@@ -3,26 +3,39 @@
 namespace Visualbuilder\ExportScheduler\Filament\Resources\ExportScheduleResource\Pages;
 
 use Filament\Actions\EditAction;
+use Filament\Actions\Exports\Exporter;
+use Filament\Actions\Exports\Models\Export;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use Filament\Resources\Pages\Page;
 use Filament\Schemas\Components\EmbeddedTable;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator as Paginator;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Visualbuilder\ExportScheduler\Filament\Actions\DownloadExport;
 use Visualbuilder\ExportScheduler\Filament\Actions\RunExport;
 use Visualbuilder\ExportScheduler\Filament\Resources\ExportScheduleResource;
 use Visualbuilder\ExportScheduler\Models\ExportSchedule;
 use Visualbuilder\ExportScheduler\Services\ScheduledExporter;
+use Visualbuilder\ExportScheduler\Support\SqlQueryResult;
 
 /**
- * Previews the rows a schedule would export, without running the export.
+ * Shows the live results of a saved report, without running the export.
+ *
+ * Searching and sorting are done in PHP over the whole result set rather than in the
+ * database. A report's columns are not necessarily database columns: exporter reports
+ * can name morph relations, relationship aggregates and accessors, and SQL query reports
+ * return whatever expressions and aliases the author wrote. None of those can be safely
+ * pushed into an ORDER BY or WHERE, so the rows are materialised and filtered here,
+ * which also means the search matches exactly what is displayed.
  */
 class ViewExportSchedule extends Page implements HasTable
 {
@@ -31,10 +44,21 @@ class ViewExportSchedule extends Page implements HasTable
 
     protected static string $resource = ExportScheduleResource::class;
 
+    protected Width | string | null $maxContentWidth = Width::Full;
+
     /**
-     * Cached first row of an SQL query report, used to derive the columns.
+     * The whole report, each row keyed by column name with its display value.
      */
-    protected object | false | null $sqlQuerySampleRow = false;
+    protected ?Collection $resultRows = null;
+
+    /**
+     * Column name => label, in report order.
+     *
+     * @var array<string, string>|null
+     */
+    protected ?array $resultColumns = null;
+
+    protected bool $isTruncated = false;
 
     public function mount(int | string $record): void
     {
@@ -55,6 +79,7 @@ class ViewExportSchedule extends Page implements HasTable
     {
         return [
             EditAction::make(),
+            DownloadExport::make('download'),
             RunExport::make('run export'),
         ];
     }
@@ -68,59 +93,42 @@ class ViewExportSchedule extends Page implements HasTable
 
     public function table(Table $table): Table
     {
-        $table = $table
-            ->striped()
-            ->paginated([10, 25, 50, 100])
-            ->defaultPaginationPageOption(25)
-            ->emptyStateHeading(__('export-scheduler::scheduler.preview_empty_heading'))
-            ->emptyStateDescription(__('export-scheduler::scheduler.preview_empty_description'));
-
-        /** @var ExportSchedule $schedule */
-        $schedule = $this->getRecord();
-
-        if ($schedule->isSqlQuery()) {
-            return $table
-                ->modelLabel(__('export-scheduler::scheduler.preview_row'))
-                ->columns($this->getSqlQueryColumns())
-                ->records(fn (int $page, int $recordsPerPage): LengthAwarePaginator => $this->getSqlQueryRecords($page, $recordsPerPage));
-        }
-
-        if (! $this->hasUsableExporter()) {
-            return $table
-                ->modelLabel(__('export-scheduler::scheduler.preview_row'))
-                ->columns([])
-                ->records(fn (int $page, int $recordsPerPage): LengthAwarePaginator => $this->makeEmptyPaginator($page, $recordsPerPage));
-        }
+        // Resolve the rows up front so the truncation notice is known before the table is built.
+        $this->getResultRows();
 
         return $table
-            ->columns($this->getExporterColumns())
-            ->query(fn (): Builder => (new ScheduledExporter($schedule))->getQuery());
-    }
-
-    protected function hasUsableExporter(): bool
-    {
-        $exporter = $this->getRecord()->exporter;
-
-        return filled($exporter) && class_exists($exporter) && method_exists($exporter, 'getModel');
+            ->striped()
+            ->searchable()
+            ->searchPlaceholder(__('export-scheduler::scheduler.search_placeholder'))
+            ->paginated([25, 50, 100, 200])
+            ->defaultPaginationPageOption(50)
+            ->modelLabel(__('export-scheduler::scheduler.preview_row'))
+            ->description($this->isTruncated
+                ? __('export-scheduler::scheduler.viewer_truncated', ['count' => $this->getMaxRows()])
+                : null)
+            ->emptyStateHeading(__('export-scheduler::scheduler.preview_empty_heading'))
+            ->emptyStateDescription(__('export-scheduler::scheduler.preview_empty_description'))
+            ->columns($this->getReportColumns())
+            ->records(fn (int $page, int $recordsPerPage, ?string $search, ?string $sortColumn, ?string $sortDirection): LengthAwarePaginator => $this->paginateRows(
+                search: $search,
+                sortColumn: $sortColumn,
+                sortDirection: $sortDirection,
+                page: $page,
+                recordsPerPage: $recordsPerPage,
+            ));
     }
 
     /**
-     * The columns selected on the schedule, falling back to everything the exporter offers.
-     *
      * @return array<TextColumn>
      */
-    protected function getExporterColumns(): array
+    protected function getReportColumns(): array
     {
-        $columns = collect($this->getRecord()->columns ?? []);
-
-        if ($columns->isEmpty()) {
-            $columns = ExportSchedule::getDefaultColumnsForExporter($this->getRecord()->exporter);
-        }
-
-        return $columns
-            ->filter(fn ($column): bool => filled($column['name'] ?? null))
-            ->map(fn (array $column): TextColumn => TextColumn::make($column['name'])
-                ->label($column['label'] ?? $column['name'])
+        return collect($this->getResultColumns())
+            ->map(fn (string $label, string $name): TextColumn => TextColumn::make($name)
+                ->label($label)
+                // Names can be relation paths or arbitrary SQL aliases, so read the row's
+                // literal key rather than letting a dot be treated as a nested path.
+                ->state(fn (array $record) => $record[$name] ?? null)
                 ->sortable()
                 ->wrap())
             ->values()
@@ -128,89 +136,195 @@ class ViewExportSchedule extends Page implements HasTable
     }
 
     /**
-     * @return array<TextColumn>
+     * Filter, order and page the report in PHP.
      */
-    protected function getSqlQueryColumns(): array
+    protected function paginateRows(?string $search, ?string $sortColumn, ?string $sortDirection, int $page, int $recordsPerPage): LengthAwarePaginator
     {
-        $row = $this->getSqlQuerySampleRow();
+        $rows = $this->getResultRows();
 
-        if (! $row) {
-            return [];
+        if (filled($search)) {
+            $search = Str::lower($search);
+
+            $rows = $rows->filter(fn (array $row): bool => collect($row)
+                ->contains(fn ($value): bool => str_contains(Str::lower((string) $value), $search)));
         }
 
-        return collect(array_keys((array) $row))
-            ->map(fn (string $column): TextColumn => TextColumn::make($column)
-                ->label(str($column)->replace('_', ' ')->headline())
-                ->sortable()
-                ->wrap())
-            ->all();
-    }
-
-    protected function getSqlQuerySampleRow(): ?object
-    {
-        if ($this->sqlQuerySampleRow !== false) {
-            return $this->sqlQuerySampleRow;
+        if (filled($sortColumn) && array_key_exists($sortColumn, $this->getResultColumns())) {
+            $rows = $rows->sortBy(
+                callback: fn (array $row) => $row[$sortColumn] ?? null,
+                options: SORT_NATURAL | SORT_FLAG_CASE,
+                descending: $sortDirection === 'desc',
+            );
         }
 
-        return $this->sqlQuerySampleRow = $this->hasRunnableSqlQuery()
-            ? $this->getSqlQuerySubquery()->limit(1)->first()
-            : null;
-    }
+        $total = $rows->count();
 
-    protected function getSqlQueryRecords(int $page, int $recordsPerPage): LengthAwarePaginator
-    {
-        if (! $this->hasRunnableSqlQuery()) {
-            return $this->makeEmptyPaginator($page, $recordsPerPage);
-        }
-
-        $query = $this->getSqlQuerySubquery();
-
-        // Apply sorting from the table's sort column/direction, but only if the column exists in the results
-        if ($sortColumn = $this->getTableSortColumn()) {
-            $resultColumns = $this->getSqlQueryResultColumns();
-            if (in_array($sortColumn, $resultColumns)) {
-                $direction = $this->getTableSortDirection() === 'asc' ? 'asc' : 'desc';
-                $query->orderBy($sortColumn, $direction);
-            }
-        }
-
-        $paginator = $query->paginate(perPage: $recordsPerPage, page: $page);
-
-        // Table columns read plain arrays when a table has no Eloquent query behind it.
-        return $paginator->setCollection(
-            $paginator->getCollection()->map(fn (object $row): array => (array) $row)
+        return new Paginator(
+            items: $rows->forPage($page, $recordsPerPage)->all(),
+            total: $total,
+            perPage: $recordsPerPage,
+            currentPage: $page,
         );
     }
 
     /**
-     * Get the list of column names that exist in the SQL query result set.
-     *
-     * @return array<string>
+     * Every row of the report, formatted for display.
      */
-    protected function getSqlQueryResultColumns(): array
+    protected function getResultRows(): Collection
     {
-        $row = $this->getSqlQuerySampleRow();
+        if ($this->resultRows !== null) {
+            return $this->resultRows;
+        }
 
-        return $row ? array_keys((array) $row) : [];
+        $rows = $this->getRecord()->isSqlQuery()
+            ? $this->getSqlQueryRows()
+            : $this->getExporterRows();
+
+        $maxRows = $this->getMaxRows();
+
+        if ($maxRows && $rows->count() > $maxRows) {
+            $this->isTruncated = true;
+            $rows = $rows->take($maxRows);
+        }
+
+        return $this->resultRows = $rows;
     }
 
     /**
-     * Wrap the report query so it can be paginated without loading every row.
+     * @return array<string, string>
      */
-    protected function getSqlQuerySubquery(): QueryBuilder
+    protected function getResultColumns(): array
     {
-        return DB::table(DB::raw('(' . $this->getRecord()->sql_query . ') as export_schedule_report'));
+        if ($this->resultColumns !== null) {
+            return $this->resultColumns;
+        }
+
+        // SQL query columns are only known once the query has run.
+        $this->getResultRows();
+
+        return $this->resultColumns ?? [];
     }
 
-    protected function hasRunnableSqlQuery(): bool
+    protected function getMaxRows(): ?int
+    {
+        $maxRows = config('export-scheduler.viewer_max_rows');
+
+        return $maxRows ? (int) $maxRows : null;
+    }
+
+    /**
+     * Rows for an exporter report, formatted through the exporter's own columns so the
+     * viewer, the download and the scheduled export all show the same values.
+     */
+    protected function getExporterRows(): Collection
+    {
+        /** @var ExportSchedule $schedule */
+        $schedule = $this->getRecord();
+        $exporterClass = $schedule->exporter;
+
+        if (blank($exporterClass) || ! class_exists($exporterClass) || ! method_exists($exporterClass, 'getModel')) {
+            $this->resultColumns = [];
+
+            return collect();
+        }
+
+        $columns = collect($schedule->columns ?? [])
+            ->filter(fn ($column): bool => filled($column['name'] ?? null));
+
+        if ($columns->isEmpty()) {
+            $columns = ExportSchedule::getDefaultColumnsForExporter($exporterClass);
+        }
+
+        // A saved column the exporter no longer defines cannot be formatted, so drop it.
+        $definedColumns = ExportSchedule::getDefaultColumnsForExporter($exporterClass)
+            ->pluck('name')
+            ->all();
+
+        $columnMap = $columns
+            ->filter(fn (array $column): bool => in_array($column['name'], $definedColumns, strict: true))
+            ->mapWithKeys(fn (array $column): array => [$column['name'] => $column['label'] ?? $column['name']])
+            ->all();
+
+        $this->resultColumns = $columnMap;
+
+        if ($columnMap === []) {
+            return collect();
+        }
+
+        try {
+            $exporter = $this->makeExporter($exporterClass, $columnMap);
+            $query = (new ScheduledExporter($schedule))->getQuery();
+
+            foreach ($exporter->getCachedColumns() as $column) {
+                $column->applyRelationshipAggregates($query);
+                $column->applyEagerLoading($query);
+            }
+
+            $names = array_keys($columnMap);
+
+            return $query->cursor()
+                ->mapWithKeys(fn (Model $record): array => [
+                    $record->getKey() => array_combine($names, $exporter($record)),
+                ])
+                ->collect();
+        } catch (\Exception $exception) {
+            Log::error($exception->getMessage());
+
+            return collect();
+        }
+    }
+
+    /**
+     * The exporter needs an Export to be constructed, but viewing a report must never
+     * create one, so it is left unsaved.
+     */
+    protected function makeExporter(string $exporterClass, array $columnMap): Exporter
+    {
+        $export = new Export;
+        $export->exporter = $exporterClass;
+
+        return $export->getExporter(columnMap: $columnMap, options: []);
+    }
+
+    /**
+     * Rows for a SQL query report. Columns are whatever the query selected.
+     */
+    protected function getSqlQueryRows(): Collection
     {
         $sql = $this->getRecord()->sql_query;
 
-        return filled($sql) && empty(ExportSchedule::validateSqlQuery($sql));
+        if (blank($sql) || ! empty(ExportSchedule::validateSqlQuery($sql))) {
+            $this->resultColumns = [];
+
+            return collect();
+        }
+
+        try {
+            $result = SqlQueryResult::run($sql);
+        } catch (\Exception $exception) {
+            Log::error($exception->getMessage());
+            $this->resultColumns = [];
+
+            return collect();
+        }
+
+        $this->resultColumns = collect($result->columns)
+            ->mapWithKeys(fn (string $column): array => [$column => $this->labelSqlQueryColumn($column)])
+            ->all();
+
+        return collect($result->rows);
     }
 
-    protected function makeEmptyPaginator(int $page, int $recordsPerPage): LengthAwarePaginator
+    /**
+     * Tidy up a plain snake_case column name, but leave anything the query author aliased
+     * deliberately exactly as they wrote it.
+     */
+    protected function labelSqlQueryColumn(string $column): string
     {
-        return new Paginator([], 0, $recordsPerPage, $page);
+        if (! preg_match('/^[a-z][a-z0-9_]*$/', $column)) {
+            return $column;
+        }
+
+        return (string) str($column)->replace('_', ' ')->headline();
     }
 }

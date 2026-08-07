@@ -89,6 +89,29 @@ You can also specify a custom period using **since X days/weeks/months/years ago
 
 ![Edit Columns](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/5.x/media/edit-columns.png)
 
+## View report results in the admin panel
+
+Opening a saved report shows its live results without running the export or emailing anyone.
+
+- Full width table, 50 rows per page by default
+- Click any column header to sort
+- One search box matches every field in the results, across all pages
+- A **Download** button runs the report through the normal export pipeline and returns the file to whoever asked for it, in either format
+
+Filtering is not offered in the viewer, because filters are part of the report definition - change them on the report itself.
+
+Searching and sorting are done in PHP rather than in the database, so that they work on columns
+that are not database columns: morph relations, relationship aggregates, accessors, and whatever
+expressions a SQL query report happens to select. The whole result set is therefore loaded when the
+page is opened. On very large reports set `viewer_max_rows` in the config to cap how many rows the
+viewer will load - the export itself is never capped.
+
+## File formats
+
+Reports can be produced as CSV, XLSX, or both, chosen per report on the Schedule tab. CSV is always
+written first; XLSX is built from it. The download action on the report viewer and the report list
+asks which format you want for that one download, regardless of what the schedule is set to.
+
 ## Attractive HTML Email templates
 
  - Default HTML email template included

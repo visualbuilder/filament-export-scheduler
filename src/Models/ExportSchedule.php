@@ -370,6 +370,7 @@ class ExportSchedule extends Model
     protected function shouldRunDailyNow(): bool
     {
         $scheduleTime = Carbon::today()->setTimeFromTimeString($this->schedule_time);
+
         return now()->greaterThanOrEqualTo($scheduleTime);
     }
 
@@ -455,7 +456,7 @@ class ExportSchedule extends Model
 
         foreach ($dangerous as $keyword) {
             if (preg_match('/\b' . $keyword . '\b/i', $normalised)) {
-                $errors[] = "Prohibited keyword detected: " . str_replace('\\s+', ' ', $keyword);
+                $errors[] = 'Prohibited keyword detected: ' . str_replace('\\s+', ' ', $keyword);
             }
         }
 
@@ -482,16 +483,25 @@ class ExportSchedule extends Model
     public function isCurrentUserOwner(): bool
     {
         return auth()->user()
+            && $this->owner
             && auth()->id() == $this->owner->id
             && get_class(auth()->user()) === get_class($this->owner);
     }
 
     public function isSyncQueue(): bool
     {
+        if (config('queue.default') === 'sync') {
+            return true;
+        }
+
+        // SQL query reports have no exporter class to ask for a queue.
+        if (! class_exists((string) $this->exporter)) {
+            return false;
+        }
+
         $export = new Export;
         $export->exporter = $this->exporter;
-        $exporter = $export->getExporter([], []);
 
-        return $exporter->getJobQueue() === 'sync' || (config('queue.default') === 'sync');
+        return $export->getExporter([], [])->getJobQueue() === 'sync';
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace Visualbuilder\ExportScheduler\Filament\Resources\ExportScheduleResource\Pages;
+namespace Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\Pages;
 
 use Filament\Actions\EditAction;
 use Filament\Actions\Exports\Exporter;
@@ -21,9 +21,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Visualbuilder\ExportScheduler\Filament\Actions\DownloadExport;
-use Visualbuilder\ExportScheduler\Filament\Actions\RunExport;
-use Visualbuilder\ExportScheduler\Filament\Resources\ExportScheduleResource;
-use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource;
+use Visualbuilder\ExportScheduler\Models\CustomReport;
 use Visualbuilder\ExportScheduler\Services\ScheduledExporter;
 use Visualbuilder\ExportScheduler\Support\SqlQueryResult;
 
@@ -37,12 +36,21 @@ use Visualbuilder\ExportScheduler\Support\SqlQueryResult;
  * pushed into an ORDER BY or WHERE, so the rows are materialised and filtered here,
  * which also means the search matches exactly what is displayed.
  */
-class ViewExportSchedule extends Page implements HasTable
+class ViewCustomReport extends Page implements HasTable
 {
     use InteractsWithRecord;
     use InteractsWithTable;
 
-    protected static string $resource = ExportScheduleResource::class;
+    protected static string $resource = CustomReportResource::class;
+
+    /**
+     * Page sizes offered in the viewer, before the viewer_max_rows cap is applied.
+     *
+     * @var array<int>
+     */
+    protected const PAGE_SIZES = [25, 50, 100, 200];
+
+    protected const DEFAULT_PAGE_SIZE = 50;
 
     protected Width | string | null $maxContentWidth = Width::Full;
 
@@ -75,12 +83,17 @@ class ViewExportSchedule extends Page implements HasTable
         return __('export-scheduler::scheduler.preview');
     }
 
+    /**
+     * Someone the report is shared with sees the results and can pull their own
+     * copy, but cannot change it. Running is a schedule-level action — a report
+     * may have several, each with a different recipient.
+     */
     protected function getHeaderActions(): array
     {
         return [
-            EditAction::make(),
             DownloadExport::make('download'),
-            RunExport::make('run export'),
+            EditAction::make()
+                ->visible(fn (): bool => $this->getRecord()->isOwnedBy(auth()->user())),
         ];
     }
 
@@ -100,8 +113,8 @@ class ViewExportSchedule extends Page implements HasTable
             ->striped()
             ->searchable()
             ->searchPlaceholder(__('export-scheduler::scheduler.search_placeholder'))
-            ->paginated([25, 50, 100, 200])
-            ->defaultPaginationPageOption(50)
+            ->paginated($this->getPaginationOptions())
+            ->defaultPaginationPageOption($this->getDefaultPaginationOption())
             ->modelLabel(__('export-scheduler::scheduler.preview_row'))
             ->description($this->isTruncated
                 ? __('export-scheduler::scheduler.viewer_truncated', ['count' => $this->getMaxRows()])
@@ -182,6 +195,8 @@ class ViewExportSchedule extends Page implements HasTable
 
         $maxRows = $this->getMaxRows();
 
+        // The fetchers ask for one row beyond the cap, purely so an over-run can be
+        // detected here without a second counting query. That extra row is never shown.
         if ($maxRows && $rows->count() > $maxRows) {
             $this->isTruncated = true;
             $rows = $rows->take($maxRows);
@@ -213,14 +228,49 @@ class ViewExportSchedule extends Page implements HasTable
     }
 
     /**
+     * Page sizes, never offering more rows per page than the viewer will load.
+     *
+     * Choosing 200 when the cap is 50 would promise three pages of rows that were
+     * never fetched.
+     *
+     * @return array<int>
+     */
+    protected function getPaginationOptions(): array
+    {
+        $maxRows = $this->getMaxRows();
+
+        if (! $maxRows) {
+            return static::PAGE_SIZES;
+        }
+
+        $options = array_values(array_filter(
+            static::PAGE_SIZES,
+            fn (int $size): bool => $size <= $maxRows,
+        ));
+
+        // A cap below the smallest offered size would leave nothing to choose from,
+        // so fall back to the cap itself as the only option.
+        return $options ?: [$maxRows];
+    }
+
+    protected function getDefaultPaginationOption(): int
+    {
+        $options = $this->getPaginationOptions();
+
+        return in_array(static::DEFAULT_PAGE_SIZE, $options, strict: true)
+            ? static::DEFAULT_PAGE_SIZE
+            : max($options);
+    }
+
+    /**
      * Rows for an exporter report, formatted through the exporter's own columns so the
      * viewer, the download and the scheduled export all show the same values.
      */
     protected function getExporterRows(): Collection
     {
-        /** @var ExportSchedule $schedule */
-        $schedule = $this->getRecord();
-        $exporterClass = $schedule->exporter;
+        /** @var CustomReport $report */
+        $report = $this->getRecord();
+        $exporterClass = $report->exporter;
 
         if (blank($exporterClass) || ! class_exists($exporterClass) || ! method_exists($exporterClass, 'getModel')) {
             $this->resultColumns = [];
@@ -228,15 +278,15 @@ class ViewExportSchedule extends Page implements HasTable
             return collect();
         }
 
-        $columns = collect($schedule->columns ?? [])
+        $columns = collect($report->columns ?? [])
             ->filter(fn ($column): bool => filled($column['name'] ?? null));
 
         if ($columns->isEmpty()) {
-            $columns = ExportSchedule::getDefaultColumnsForExporter($exporterClass);
+            $columns = CustomReport::getDefaultColumnsForExporter($exporterClass);
         }
 
         // A saved column the exporter no longer defines cannot be formatted, so drop it.
-        $definedColumns = ExportSchedule::getDefaultColumnsForExporter($exporterClass)
+        $definedColumns = CustomReport::getDefaultColumnsForExporter($exporterClass)
             ->pluck('name')
             ->all();
 
@@ -253,11 +303,21 @@ class ViewExportSchedule extends Page implements HasTable
 
         try {
             $exporter = $this->makeExporter($exporterClass, $columnMap);
-            $query = (new ScheduledExporter($schedule))->getQuery();
+
+            // A fresh builder each call, so capping it here cannot affect the real
+            // export — ScheduledExporter::run() builds its own and stays uncapped.
+            $query = (new ScheduledExporter($report))->getQuery();
 
             foreach ($exporter->getCachedColumns() as $column) {
                 $column->applyRelationshipAggregates($query);
                 $column->applyEagerLoading($query);
+            }
+
+            // Every row returned here gets formatted through the exporter, which is
+            // what makes a large report time out. One past the cap so getResultRows()
+            // can tell it over-ran without a second counting query.
+            if ($maxRows = $this->getMaxRows()) {
+                $query->limit($maxRows + 1);
             }
 
             $names = array_keys($columnMap);
@@ -293,14 +353,16 @@ class ViewExportSchedule extends Page implements HasTable
     {
         $sql = $this->getRecord()->sql_query;
 
-        if (blank($sql) || ! empty(ExportSchedule::validateSqlQuery($sql))) {
+        if (blank($sql) || ! empty(CustomReport::validateSqlQuery($sql))) {
             $this->resultColumns = [];
 
             return collect();
         }
 
         try {
-            $result = SqlQueryResult::run($sql);
+            // One past the cap, so getResultRows() can tell it over-ran.
+            $maxRows = $this->getMaxRows();
+            $result = SqlQueryResult::run($sql, $maxRows ? $maxRows + 1 : null);
         } catch (\Exception $exception) {
             Log::error($exception->getMessage());
             $this->resultColumns = [];

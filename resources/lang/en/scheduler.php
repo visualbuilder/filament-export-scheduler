@@ -49,6 +49,46 @@ return [
     'run_export'             => 'Run the Export',
     'notification_title'     => ':name started',
 
+    /*
+     * Reports
+     */
+    'report'                        => 'Report',
+    'schedules'                     => 'Schedules',
+    'report_defaults'               => 'Query Date Range and File Format',
+    'report_defaults_description'   => 'The defaults for this report. Each schedule may override them.',
+
+    /*
+     * Sharing and visibility
+     */
+    'sharing'                            => 'Sharing',
+    'sharing_description'                => 'Sharing grants viewing and downloading only. Editing, deleting, running and scheduling stay with you.',
+    'visibility'                         => 'Visibility',
+    'visibility_owner'                   => 'Only me',
+    'visibility_owner_description'       => 'Nobody else can see this report.',
+    'visibility_user_type'               => 'Specific user type',
+    'visibility_user_type_description'   => 'Every user from the specified user type you can view and download it.',
+    'visibility_named_users'             => 'Specific people',
+    'visibility_named_users_description' => 'Only users from the specified user type can view and download it.',
+    'visible_to_type'                    => 'User type',
+    'visible_to_ids'                     => 'People who can view this report',
+    'visible_to_ids_placeholder'         => 'Search for a user',
+
+    /*
+     * Schedules
+     */
+    'new_schedule'                    => 'New schedule',
+    'view_report'                     => 'View Report',
+    'schedule_action'                 => 'Schedule',
+    'recipient_type'                  => 'Send to',
+    'when_to_run'                     => 'When to Run',
+    'when_to_send'                    => 'When to Send',
+    'schedule_overrides'              => 'Overrides',
+    'schedule_overrides_description'  => 'Leave these empty to use the report\'s own date range and formats.',
+    'inherits_from_report'            => 'Empty means inherit from the report.',
+    'no_reports_yet'                  => 'You have no reports yet. Build one under Custom Reports first.',
+    'no_schedules'                    => 'No schedules yet',
+    'no_schedules_description'        => 'This report is not emailed to anyone. Add a schedule to have it delivered.',
+
     'preview'                    => 'Preview',
     'preview_row'                => 'row',
     'preview_empty_heading'      => 'No rows to show',

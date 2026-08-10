@@ -5,7 +5,7 @@ namespace Visualbuilder\ExportScheduler\Commands;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
-use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Models\ScheduledReport;
 use Visualbuilder\ExportScheduler\Services\ScheduledExporter;
 
 class ExportSchedulerCommand extends Command
@@ -16,33 +16,38 @@ class ExportSchedulerCommand extends Command
 
     public function handle(): int
     {
-        ExportSchedule::query()
+        ScheduledReport::query()
+            ->with('report')
             ->enabled()
             ->where(fn ($q) => $q
                 ->nextRunDue()
                 ->orWhereNull('next_run_at')
             )
-            ->each(function (ExportSchedule $exportSchedule) {
+            ->each(function (ScheduledReport $schedule) {
+                if (!$schedule->report) {
+                    Log::warning('Scheduled report has no linked custom report', ['schedule_id' => $schedule->id]);
+                    return;
+                }
+
                 // For schedules with null next_run_at, check if it should run now
-                if (is_null($exportSchedule->next_run_at) && !$exportSchedule->shouldRunNow()) {
+                if (is_null($schedule->next_run_at) && !$schedule->shouldRunNow()) {
                     return;
                 }
 
                 // Attempt to run the export
                 try {
-                    (new ScheduledExporter($exportSchedule))->run();
-                    $exportSchedule->update([
-                        'next_run_at' => $exportSchedule->calculateNextRun(),
+                    (new ScheduledExporter($schedule->report, $schedule))->run();
+                    $schedule->update([
                         'last_run_at' => now(),
                         'last_successful_run_at' => now(),
                     ]);
                 } catch (Exception $e) {
-                    $exportSchedule->update([
+                    $schedule->update([
                         'last_run_at' => now(),
                     ]);
 
                     Log::error('Export failed', [
-                        'schedule_id' => $exportSchedule->id,
+                        'schedule_id' => $schedule->id,
                         'error' => $e->getMessage(),
                     ]);
                 }

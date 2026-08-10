@@ -1,15 +1,22 @@
 <?php
 
-use Visualbuilder\ExportScheduler\Filament\Resources\ExportScheduleResource;
+use Filament\Pages\Enums\SubNavigationPosition;
+use Filament\Support\Enums\Width;
+use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource;
+use Visualbuilder\ExportScheduler\Filament\Resources\ScheduledReportResource;
 use Visualbuilder\ExportScheduler\Mail\ExportReady;
 use Visualbuilder\ExportScheduler\Notifications\ScheduledExportCompleteNotification;
+use Visualbuilder\ExportScheduler\Support\ReportUserResolver;
 
 return [
 
     /**
-     * Which Schedule Definition Resource to Load if you want to extend put your own resource here
+     * Filament resources to register
      */
-    'resources' => [ExportScheduleResource::class],
+    'resources' => [
+        CustomReportResource::class,
+        ScheduledReportResource::class,
+    ],
 
     /**
      * The success Notification and Mailable to use
@@ -41,34 +48,75 @@ return [
     'sql_query_roles' => ['Developer'],
 
     /**
-     * Admin Panel Navigation
-     * See also Plugin options
+     * Admin Panel Navigation - separate config for reports and schedules
      */
     'navigation' => [
-        'enabled' => true,
-        'sort' => 100,
-        'label' => 'Scheduled Report',
-        'plural_label' => 'Scheduled Reports',
-        'icon' => 'heroicon-o-paper-airplane',
-        'group' => 'Reports',
-        'cluster' => false,
-        'position' => class_exists(\Filament\Pages\Enums\SubNavigationPosition::class)
-            ? \Filament\Pages\Enums\SubNavigationPosition::Top
-            : \Filament\Pages\SubNavigationPosition::Top,
+        'reports' => [
+            'enabled' => true,
+            'sort' => 100,
+            'label' => 'Custom Report',
+            'plural_label' => 'Custom Reports',
+            'icon' => 'heroicon-o-document-chart-bar',
+            'group' => 'Reports',
+            'cluster' => false,
+            'position' => SubNavigationPosition::Top,
+        ],
+        'schedules' => [
+            'enabled' => true,
+            'sort' => 101,
+            'label' => 'Report Schedule',
+            'plural_label' => 'Report Schedules',
+            'icon' => 'heroicon-o-paper-airplane',
+            'group' => 'Reports',
+            'cluster' => false,
+            'position' => SubNavigationPosition::Top,
+
+            /**
+             * Width of the create, edit and delete modals in the schedules
+             * relation manager. The schedule form is wide — frequency, recipient,
+             * cc and overrides — so it needs more room than a Filament default.
+             */
+            'modal_width' => Width::FiveExtraLarge,
+        ],
     ],
 
     /**
-     * Which authenticatable models should be allowed to receive exports
-     * What you set here will define what appears on the user dropdown list
+     * How the package reads a user's id, display label and email address.
+     *
+     * Bind your own implementation of ResolvesReportUsers here if the per-model
+     * attributes below are not enough — e.g. "Surname, Forename (Dept)", or an
+     * address that depends on a per-user preference.
+     */
+    'user_resolver' => ReportUserResolver::class,
+
+    /**
+     * Automatic Recipients — reruns a report once per user found in the data and
+     * sends each of them only their own rows.
+     *
+     * Hidden from the schedule form by default. Schedules that already have it
+     * enabled keep fanning out regardless of this flag; it only governs whether
+     * the fields can be reached in the UI.
+     */
+    'dynamic_recipients' => false,
+
+    /**
+     * Which authenticatable models may receive exports, and be given visibility
+     * of a report.
+     *
+     * Only `model` is required. `title_attribute` and `email_attribute` each
+     * default to 'email' independently — email_attribute deliberately does not
+     * inherit title_attribute, so a model labelled by a name is never mailed at
+     * that name. Both are read with data_get(), so 'contact.email' works.
      */
     'user_models' => [
-
         [
             /**
-             * Change this to your own model maybe \App\Models\User::class
+             * Change this to your own model, maybe \App\Models\User::class
              */
             'model' => \Visualbuilder\ExportScheduler\Tests\Models\User::class,
             'title_attribute' => 'email',
+            // 'email_attribute' => 'email',
+            // 'model_label' => 'Users',
         ],
     ],
 

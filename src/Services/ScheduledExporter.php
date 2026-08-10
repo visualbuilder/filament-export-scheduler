@@ -22,7 +22,8 @@ use Visualbuilder\ExportScheduler\Jobs\CreateSqlQueryXlsxFile;
 use Visualbuilder\ExportScheduler\Jobs\ExportSqlQuery;
 use Visualbuilder\ExportScheduler\Jobs\PrepareCsvExport;
 use Visualbuilder\ExportScheduler\Jobs\ScheduledExportCompletion;
-use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Models\CustomReport;
+use Visualbuilder\ExportScheduler\Models\ScheduledReport;
 
 class ScheduledExporter
 {
@@ -53,7 +54,14 @@ class ScheduledExporter
      */
     protected ?array $formats = null;
 
-    public function __construct(public ExportSchedule $exportSchedule) {}
+    /**
+     * @param  CustomReport  $report  what to export
+     * @param  ScheduledReport|null  $schedule  when and to whom, or null for an ad hoc run
+     */
+    public function __construct(
+        public CustomReport $report,
+        public ?ScheduledReport $schedule = null,
+    ) {}
 
     public function getTotalRows(): int
     {
@@ -100,7 +108,8 @@ class ScheduledExporter
      */
     protected function getFormats(): array
     {
-        return collect($this->formats ?? $this->exportSchedule->formats ?? [])
+        $formats = $this->formats ?? $this->schedule?->resolved_formats ?? $this->report->formats ?? [];
+        return collect($formats)
             ->map(fn ($format) => $format instanceof ExportFormat ? $format->value : (string) $format)
             ->all();
     }
@@ -116,7 +125,7 @@ class ScheduledExporter
 
     protected function getExportUser()
     {
-        return $this->recipient ?? $this->runUser ?? $this->exportSchedule->owner;
+        return $this->recipient ?? $this->runUser ?? $this->schedule?->recipient ?? $this->report->owner;
     }
 
     public function getQuery(): Builder
@@ -126,18 +135,19 @@ class ScheduledExporter
 
     protected function buildBaseQuery(): Builder
     {
-        $exporter = $this->exportSchedule->exporter;
+        $exporter = $this->report->exporter;
 
         $query = $exporter::getModel()::query();
         $query = $exporter::modifyQuery($query);
 
-        if ($this->exportSchedule->date_range) {
+        $dateRange = $this->schedule?->resolved_date_range ?? $this->report->date_range;
+        if ($dateRange) {
             $dateColumn = method_exists($exporter, 'getDateColumn') ? $exporter::getDateColumn() : 'created_at';
-            ['start' => $startDate, 'end' => $endDate] = $this->exportSchedule->date_range->getDateRange();
+            ['start' => $startDate, 'end' => $endDate] = $dateRange->getDateRange();
             $query->whereBetween($dateColumn, [$startDate, $endDate]);
         }
 
-        $filters = $this->exportSchedule->filters ?? [];
+        $filters = $this->report->filters ?? [];
         $relationFilters = array_filter($filters, fn ($key) => $key !== 'attributes', ARRAY_FILTER_USE_KEY);
         $attributeFilters = array_diff_key($filters, $relationFilters)['attributes'] ?? [];
 
@@ -163,7 +173,7 @@ class ScheduledExporter
                         $relationPath = implode('.', $parts);
 
                         $firstRelation = $parts[0];
-                        $modelClass = $this->exportSchedule->exporter::getModel();
+                        $modelClass = $this->report->exporter::getModel();
                         $relationMethod = method_exists($modelClass, $firstRelation)
                             ? (new $modelClass)->$firstRelation()
                             : null;
@@ -237,7 +247,7 @@ class ScheduledExporter
 
     protected function applyUserFilter(Builder $query, string $attribute, $user): void
     {
-        $modelClass = $this->exportSchedule->exporter::getModel();
+        $modelClass = $this->report->exporter::getModel();
         if (str_contains($attribute, '.')) {
             $parts = explode('.', $attribute);
             $column = array_pop($parts);
@@ -252,14 +262,14 @@ class ScheduledExporter
 
     public function run(): bool
     {
-        if ($this->exportSchedule->isSqlQuery()) {
+        if ($this->report->isSqlQuery()) {
             return $this->initSqlQuery() && $this->buildSqlQueryJobChain();
         }
 
-        if ($this->exportSchedule->dynamic_owner_enabled && $this->exportSchedule->dynamic_owner_attribute) {
+        if ($this->schedule?->dynamic_owner_enabled && $this->schedule?->dynamic_owner_attribute) {
             $baseQuery = $this->buildBaseQuery();
             $owners = $baseQuery->get()
-                ->map(fn ($m) => data_get($m, $this->exportSchedule->dynamic_owner_attribute))
+                ->map(fn ($m) => data_get($m, $this->schedule->dynamic_owner_attribute))
                 ->filter()
                 ->unique(fn ($u) => $u->getKey())
                 ->values();
@@ -285,17 +295,17 @@ class ScheduledExporter
     protected function init(): bool
     {
         try {
-            $exporter = $this->exportSchedule->exporter;
-            $this->exportSchedule->loadMissing('owner');
+            $exporter = $this->report->exporter;
+            $this->report->loadMissing('owner');
             $this->query = $this->buildBaseQuery();
 
-            if ($this->runUser && $this->exportSchedule->dynamic_owner_attribute) {
-                $this->applyUserFilter($this->query, $this->exportSchedule->dynamic_owner_attribute, $this->runUser);
+            if ($this->runUser && $this->schedule?->dynamic_owner_attribute) {
+                $this->applyUserFilter($this->query, $this->schedule->dynamic_owner_attribute, $this->runUser);
             }
 
             // Prepare column mappings
             $this->columnMap = [];
-            foreach ($this->exportSchedule->columns as $column) {
+            foreach ($this->report->columns as $column) {
                 $this->columnMap[$column['name']] = $column['label'] ?? $column['name'];
             }
 
@@ -326,7 +336,7 @@ class ScheduledExporter
 
     protected function generateFileName(): string
     {
-        return Str::slug($this->exportSchedule->name . '_' . now()->format('Y-m-d_Hi'));
+        return Str::slug($this->report->name . '_' . now()->format('Y-m-d_Hi'));
     }
 
     protected function getMorphTypes(): array
@@ -338,8 +348,8 @@ class ScheduledExporter
             ->filter()
             ->values();
 
-        if ($this->exportSchedule->owner_type) {
-            $types->push($this->exportSchedule->owner_type);
+        if ($this->report->owner_type) {
+            $types->push($this->report->owner_type);
         }
 
         return $types->unique()->all();
@@ -348,22 +358,23 @@ class ScheduledExporter
     protected function initSqlQuery(): bool
     {
         try {
-            $this->exportSchedule->loadMissing('owner');
+            $this->report->loadMissing('owner');
 
-            $errors = ExportSchedule::validateSqlQuery($this->exportSchedule->sql_query ?? '');
-            if (! empty($errors)) {
+            $errors = [];
+            if (!empty(CustomReport::validateSqlQuery($this->report->sql_query))) {
+                $errors[] = 'User does not have permission to create SQL queries';
+            }
+
+            if (!empty($errors)) {
                 Log::error('SQL query validation failed', [
-                    'schedule_id' => $this->exportSchedule->id,
+                    'report_id' => $this->report->id,
                     'errors' => $errors,
                 ]);
 
                 return false;
             }
 
-            // Execute the query and count results in PHP to handle GROUP BY correctly.
-            // GROUP BY results cannot be accurately counted with SQL COUNT(*) wrapper
-            // since each grouped row is returned separately. PHP count() handles this correctly.
-            $results = DB::select($this->exportSchedule->sql_query);
+            $results = DB::select($this->report->sql_query);
             $totalRows = count($results);
 
             $export = new Export;
@@ -397,15 +408,15 @@ class ScheduledExporter
             Bus::chain([
                 new ExportSqlQuery(
                     export: $this->export,
-                    sql: $this->exportSchedule->sql_query,
+                    sql: $this->report->sql_query,
                 ),
 
-                // Conditional: CreateXlsxFile if XLSX format is requested
                 ...($hasXlsx ? [$makeCreateXlsxFileJob()] : []),
 
                 new ScheduledExportCompletion(
                     export: $this->export,
-                    exportSchedule: $this->exportSchedule,
+                    report: $this->report,
+                    schedule: $this->schedule,
                     isAdHoc: $this->isAdHoc(),
                 ),
             ])->dispatch();
@@ -461,7 +472,8 @@ class ScheduledExporter
                 // 3. ScheduledExportCompletion Job: Marks export as complete after all files are ready.
                 new ScheduledExportCompletion(
                     export: $this->export,
-                    exportSchedule: $this->exportSchedule,
+                    report: $this->report,
+                    schedule: $this->schedule,
                     isAdHoc: $this->isAdHoc(),
                 ),
             ])

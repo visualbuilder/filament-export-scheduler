@@ -11,7 +11,8 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
-use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Models\CustomReport;
+use Visualbuilder\ExportScheduler\Models\ScheduledReport;
 
 // implements ShouldQueue
 
@@ -23,9 +24,11 @@ class ScheduledExportCompleteNotification extends Notification
     /**
      * Create a new notification instance.
      */
-    public function __construct(public Export $export, public ExportSchedule $exportSchedule)
-    {
-
+    public function __construct(
+        public Export $export,
+        public CustomReport $report,
+        public ?ScheduledReport $schedule = null,
+    ) {
     }
 
     /**
@@ -43,7 +46,7 @@ class ScheduledExportCompleteNotification extends Notification
             throw new InvalidArgumentException("The configured mailable class [{$mailableClass}] does not exist.");
         }
 
-        return new $mailableClass($notifiable, $this->export, $this->exportSchedule);
+        return new $mailableClass($this->export, $this->report, $this->schedule);
     }
 
     /**

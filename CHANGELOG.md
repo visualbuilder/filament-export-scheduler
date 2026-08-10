@@ -2,6 +2,43 @@
 
 All notable changes to `filament-export-scheduler` will be documented in this file.
 
+## 6.0.0 - 2026-08-10
+
+### Added
+- **Breaking Change**: Split `ExportSchedule` into `CustomReport` (definition) and `ScheduledReport` (delivery layer)
+- Report visibility and sharing: Owner, User Type, or Named Users with view-only access
+- `ResolvesReportUsers` contract for flexible user identity resolution with fallback chain: `HasExportReportIdentity` → config attributes with dot-notation → fallback label
+- `ReportVisibility` enum for three-mode visibility control
+- Automatic migration of existing `export_schedules` to new `custom_reports` + `scheduled_reports` tables with zero data loss
+- `ScheduledReport` model with inheritance pattern for `date_range` and `formats` (report defaults, schedule overrides)
+- `CustomReportResource` and `ScheduledReportResource` replacing monolithic `ExportScheduleResource`
+- `SchedulesRelationManager` for inline schedule management on report edit page
+- `dynamic_recipients` config flag to hide Automatic Recipients UI while preserving existing behavior
+
+### Changed
+- `ScheduledExporter` constructor now takes `(CustomReport, ?ScheduledReport)` instead of `ExportSchedule`
+- `ScheduledExportCompletion` constructor updated to match
+- `ScheduledExportCompleteNotification` and `ExportReady` mail signature updated
+- Email template variables now reference `$report` and `$schedule` separately
+- User resolution throughout the package now uses container-bound `ResolvesReportUsers`
+- Navigation split into "Custom Reports" and "Report Schedules" with separate config blocks
+
+### Removed
+- `ExportSchedule` model (replaced by `CustomReport` + `ScheduledReport`)
+- `ExportScheduleResource` (replaced by `CustomReportResource` + `ScheduledReportResource`)
+- Database table `export_schedules` (migrated to `custom_reports` + `scheduled_reports`)
+
+### Fixed
+- CC recipients whose type changes now have their list cleared automatically to prevent id mismatches
+- Visibility lists cleared when visibility mode or type changes, preventing stale ids from being checked
+- Form fields clear visibly as the user changes types, mirroring model-level guards
+- UUID and non-numeric user keys no longer silently dropped in cc fan-out
+
+### Migration
+- See `UPGRADE.md` for a detailed migration guide
+- Run `php artisan vendor:publish --tag=export-scheduler-migrations` to publish migrations, then `php artisan migrate`
+- No data loss; all existing schedules continue running after upgrade
+
 ## 5.2.0 - 2026-08-07
 
 ### Added

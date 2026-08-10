@@ -30,7 +30,7 @@ use Visualbuilder\ExportScheduler\Enums\Month;
 use Visualbuilder\ExportScheduler\Enums\ReportType;
 use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
 use Visualbuilder\ExportScheduler\Facades\ExportScheduler;
-use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Models\CustomReport;
 use Visualbuilder\ExportScheduler\Traits\InteractsWithExportSchedulerFilter;
 
 class Fields
@@ -68,7 +68,7 @@ class Fields
             ->required()
             ->native(false)
             ->live()
-            ->visible(fn (?ExportSchedule $record) => self::canUseSqlQuery() || $record?->isSqlQuery())
+            ->visible(fn (?CustomReport $record) => self::canUseSqlQuery() || $record?->isSqlQuery())
             ->afterStateUpdated(function (Set $set, $state) {
                 if ($state === ReportType::SQL_QUERY->value) {
                     $set('exporter', null);
@@ -94,7 +94,7 @@ class Fields
                     if (blank($value)) {
                         return;
                     }
-                    $errors = ExportSchedule::validateSqlQuery($value);
+                    $errors = CustomReport::validateSqlQuery($value);
                     foreach ($errors as $error) {
                         $fail($error);
                     }
@@ -119,7 +119,7 @@ class Fields
                             ->live()
                             ->preload()
                             ->formatStateUsing(
-                                fn (?ExportSchedule $record) => collect($record?->filters ?? [])
+                                fn (?CustomReport $record) => collect($record?->filters ?? [])
                                     ->keys()
                                     ->reject(fn ($key) => $key === 'attributes')
                                     ->values()
@@ -248,7 +248,7 @@ class Fields
             ->visible(fn (Get $get) => $get('exporter') && ($get('report_type') ?? ReportType::EXPORTER->value) !== ReportType::SQL_QUERY->value)
             ->schema(function (Get $get) {
                 $exporterClass = $get('exporter');
-                $columns = ExportSchedule::getDefaultColumnsForExporter($exporterClass ?? '')
+                $columns = CustomReport::getDefaultColumnsForExporter($exporterClass ?? '')
                     ->reject(function ($column) use ($exporterClass) {
                         $excludedMethod = 'excludeFilterableAttributes';
                         $columnName = $column['name'] ?? null;
@@ -457,7 +457,7 @@ class Fields
             ->live()
             ->visible(fn (Get $get) => ($get('report_type') ?? ReportType::EXPORTER->value) !== ReportType::SQL_QUERY->value)
             ->required(fn (Get $get) => ($get('report_type') ?? ReportType::EXPORTER->value) !== ReportType::SQL_QUERY->value)
-            ->afterStateUpdated(function (?ExportSchedule $record, $state, Set $set, $livewire) {
+            ->afterStateUpdated(function (?CustomReport $record, $state, Set $set, $livewire) {
                 /** Clear any existing selected_relations & filter data */
                 if (array_key_exists('filters', $livewire->data)) {
                     $livewire->data['filters'] = [];
@@ -465,7 +465,7 @@ class Fields
                 }
 
                 /** Update the column definitions when changing exporter */
-                $defaultColumns = ExportSchedule::getDefaultColumnsForExporter($state ?? '');
+                $defaultColumns = CustomReport::getDefaultColumnsForExporter($state ?? '');
 
                 $set('columns', $defaultColumns->toArray() ?? []);
                 $set('available_columns', []);
@@ -705,8 +705,8 @@ class Fields
                     ->label('Remove')
                     ->button(),
             )
-            ->afterStateUpdated(function (?ExportSchedule $record, $state, Get $get, Set $set) {
-                $allColumns = ExportSchedule::getDefaultColumnsForExporter($get('exporter') ?? '');
+            ->afterStateUpdated(function (?CustomReport $record, $state, Get $get, Set $set) {
+                $allColumns = CustomReport::getDefaultColumnsForExporter($get('exporter') ?? '');
                 $currentColumnNames = collect($state)->pluck('name')->all();
                 $newAvailableColumns = $allColumns->reject(function ($column) use ($currentColumnNames) {
                     return in_array($column['name'], $currentColumnNames);
@@ -716,8 +716,8 @@ class Fields
             })
             ->live()
             ->itemLabel(fn (array $state): ?string => $state['label'] ?? null)
-            ->maxItems(fn (Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->count() : 0)
-            ->default(fn (Get $get) => ExportSchedule::getDefaultColumnsForExporter($get('exporter') ?? '')->toArray())
+            ->maxItems(fn (Get $get) => $get('exporter') ? CustomReport::getDefaultColumnsForExporter($get('exporter'))->count() : 0)
+            ->default(fn (Get $get) => CustomReport::getDefaultColumnsForExporter($get('exporter') ?? '')->toArray())
             ->schema([
                 Hidden::make('name'),
                 TextInput::make('label')->hiddenLabel(),
@@ -745,7 +745,7 @@ class Fields
                     ->button()
                     ->after(function ($state, Get $get, Set $set) {
                         // Fetch all default columns as a collection using the static method
-                        $allColumns = ExportSchedule::getDefaultColumnsForExporter($get('exporter') ?? '');
+                        $allColumns = CustomReport::getDefaultColumnsForExporter($get('exporter') ?? '');
                         $currentSelectedColumns = $get('columns'); // Current selected columns
                         $currentAvailableColumns = $state;         // Current available columns from state
                         $combinedCurrentColumns = collect($currentSelectedColumns)
@@ -767,10 +767,10 @@ class Fields
                     });
             })
             ->itemLabel(fn (array $state): ?string => $state['label'] ?? null)
-            ->maxItems(fn (Get $get) => $get('exporter') ? ExportSchedule::getDefaultColumnsForExporter($get('exporter'))->count() : 0)
+            ->maxItems(fn (Get $get) => $get('exporter') ? CustomReport::getDefaultColumnsForExporter($get('exporter'))->count() : 0)
             ->addable(false)
             ->formatStateUsing(function (Get $get) {
-                $allColumns = ExportSchedule::getDefaultColumnsForExporter($get('exporter') ?? '');
+                $allColumns = CustomReport::getDefaultColumnsForExporter($get('exporter') ?? '');
                 $currentColumnNames = collect($get('columns'))->pluck('name')->all();
                 $availableColumns = $allColumns->reject(function ($column) use ($currentColumnNames) {
                     return in_array($column['name'], $currentColumnNames);

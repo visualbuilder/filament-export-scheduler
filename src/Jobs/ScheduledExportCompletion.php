@@ -9,7 +9,9 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Contracts\ResolvesReportUsers;
+use Visualbuilder\ExportScheduler\Models\CustomReport;
+use Visualbuilder\ExportScheduler\Models\ScheduledReport;
 
 class ScheduledExportCompletion implements ShouldQueue
 {
@@ -25,7 +27,8 @@ class ScheduledExportCompletion implements ShouldQueue
      */
     public function __construct(
         protected Export $export,
-        protected ExportSchedule $exportSchedule,
+        protected CustomReport $report,
+        protected ?ScheduledReport $schedule = null,
         protected bool $isAdHoc = false,
     ) {}
 
@@ -34,12 +37,11 @@ class ScheduledExportCompletion implements ShouldQueue
      */
     public function handle()
     {
-
-        // Mark the export as completed
         $this->export->touch('completed_at');
 
         // Skip notification if export is empty and send_empty_report is false
-        if (! $this->isAdHoc && $this->export->total_rows === 0 && ! $this->exportSchedule->send_empty_report) {
+        $sendEmptyReport = $this->schedule?->send_empty_report ?? true;
+        if (! $this->isAdHoc && $this->export->total_rows === 0 && ! $sendEmptyReport) {
             return;
         }
 
@@ -47,41 +49,66 @@ class ScheduledExportCompletion implements ShouldQueue
 
         // Check if the user object exists and uses the Notifiable trait
         if ($this->export->user && in_array(Notifiable::class, class_uses_recursive($this->export->user))) {
-
             if (class_exists($notificationClass)) {
                 // The user can be notified
-                $this->export->user->notify(new $notificationClass($this->export, $this->exportSchedule));
+                $this->export->user->notify(new $notificationClass($this->export, $this->report, $this->schedule));
 
-                // Clone the Export for each copied user, unless this was a one off download
-                if (! $this->isAdHoc && $this->exportSchedule->cc && is_array($this->exportSchedule->cc) && count($this->exportSchedule->cc)) {
-                    foreach ($this->exportSchedule->cc as $userId) {
-                        if (! is_numeric($userId)) {
+                // Clone the Export for each cc'd user, unless this was an ad-hoc download
+                if (! $this->isAdHoc && $this->schedule && $this->schedule->cc && is_array($this->schedule->cc) && count($this->schedule->cc)) {
+                    $resolver = app(ResolvesReportUsers::class);
+
+                    foreach ($this->schedule->cc as $userId) {
+                        if (! filled($userId)) {
                             continue;
                         }
-                        $copiedExport = $this->export->replicate(['user_id', 'url']);
-                        $copiedExport->user_id = $userId;
-                        $copiedExport->save();
-                        $copiedExport->load('user');
-                        if ($copiedExport->user) {
-                            $copiedExport->user->notify(new $notificationClass($copiedExport, $this->exportSchedule));
+
+                        $ccUser = $resolver->find($this->schedule->recipient_type, $userId);
+                        if (! $ccUser) {
+                            continue;
                         }
 
+                        $copiedExport = $this->export->replicate(['user_id', 'url']);
+                        $copiedExport->user_type = $this->schedule->recipient_type;
+                        $copiedExport->user_id = $userId;
+                        $copiedExport->save();
+                        $this->copyExportFiles($this->export, $copiedExport);
+                        $copiedExport->load('user');
+
+                        if ($copiedExport->user) {
+                            $copiedExport->user->notify(new $notificationClass($copiedExport, $this->report, $this->schedule));
+                        }
                     }
                 }
-
             } else {
-                // Log error if the notification class does not exist
-                Log::error('Notification class does not exist.  Check the config/export-scheduler.php to add a notification class.', [
+                Log::error('Notification class does not exist. Check config/export-scheduler.php.', [
                     'class' => $notificationClass,
                     'user_id' => $this->export->user->id,
                 ]);
             }
         } else {
-            // Log error if the user cannot be notified
             Log::error('Attempted to notify a user that does not use the Notifiable trait or user is null.', [
                 'user_id' => $this->export->user->id ?? null,
             ]);
         }
+    }
 
+    protected function copyExportFiles(Export $source, Export $destination): void
+    {
+        $sourceDisk = $source->getFileDisk();
+        $sourceDirectory = $source->getFileDirectory();
+
+        if (! $sourceDisk->exists($sourceDirectory)) {
+            return;
+        }
+
+        $destinationDisk = $destination->getFileDisk();
+        $destinationDirectory = $destination->getFileDirectory();
+
+        foreach ($sourceDisk->files($sourceDirectory) as $file) {
+            $destinationDisk->writeStream(
+                $destinationDirectory . DIRECTORY_SEPARATOR . basename($file),
+                $sourceDisk->readStream($file)
+            );
+        }
     }
 }

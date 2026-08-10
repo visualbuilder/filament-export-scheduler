@@ -3,12 +3,12 @@
 namespace Visualbuilder\ExportScheduler;
 
 use Filament\Actions\Exports\Models\Export;
-use Filament\Support\Assets\Asset;
-use Illuminate\Filesystem\Filesystem;
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Visualbuilder\ExportScheduler\Commands\ExportSchedulerCommand;
+use Visualbuilder\ExportScheduler\Contracts\ResolvesReportUsers;
+use Visualbuilder\ExportScheduler\Support\ReportUserResolver;
 
 class ExportSchedulerServiceProvider extends PackageServiceProvider
 {
@@ -74,10 +74,9 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
     protected function getMigrations(): array
     {
         return [
-            'create_export_scheduler_table',
-            'add_dynamic_owner_columns_to_export_schedules_table',
-            'add_sql_query_columns_to_export_schedules_table',
-            'add_send_empty_report_to_export_schedules_table',
+            '2026_08_10_000001_create_custom_reports_table',
+            '2026_08_10_000002_create_scheduled_reports_table',
+            '2026_08_10_000003_migrate_export_schedules_to_custom_reports',
         ];
     }
 
@@ -91,23 +90,24 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
         $this->app->singleton(ExportScheduler::class, function () {
             return new ExportScheduler;
         });
+
+        // Every user id, label and email address the package reads goes through
+        // this. Rebind it in your own provider to change how users are named or
+        // addressed application-wide.
+        $this->app->singleton(ResolvesReportUsers::class, function () {
+            return app(config('export-scheduler.user_resolver', ReportUserResolver::class));
+        });
     }
 
     public function packageBooted(): void
     {
         parent::packageBooted();
 
-        // Handle Stubs
+        // publish seeders
         if (app()->runningInConsole()) {
-            foreach (app(Filesystem::class)->files(__DIR__.'/../stubs/') as $file) {
-                $this->publishes([
-                    $file->getRealPath() => base_path("stubs/filament-export-scheduler/{$file->getFilename()}"),
-                ], 'filament-export-scheduler-stubs');
-            }
             $this->publishes([
-                __DIR__.'/../database/seeders/ExportScheduleSeeder.php' => database_path('seeders/ExportScheduleSeeder.php'),
-
-            ], 'filament-export-scheduler-seeds');
+                __DIR__.'/../database/seeders/CustomReportSeeder.php' => database_path('seeders/CustomReportSeeder.php'),
+            ], 'export-scheduler-seeders');
         }
 
         if(app()->environment('testing')) {

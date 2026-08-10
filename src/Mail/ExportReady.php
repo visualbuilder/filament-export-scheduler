@@ -7,24 +7,26 @@ use Filament\Actions\Exports\Models\Export;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
-use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Illuminate\Support\Facades\Log;
+use Visualbuilder\ExportScheduler\Contracts\ResolvesReportUsers;
+use Visualbuilder\ExportScheduler\Models\CustomReport;
+use Visualbuilder\ExportScheduler\Models\ScheduledReport;
 
 class ExportReady extends Mailable
 {
     use Queueable;
     use SerializesModels;
 
-    public $name;
-
     public $url;
 
     /**
      * Create a new message instance.
-     *
-     * @return void
      */
-    public function __construct(public $notifiable, public Export $export, public ExportSchedule $exportSchedule)
-    {
+    public function __construct(
+        public Export $export,
+        public CustomReport $report,
+        public ?ScheduledReport $schedule = null,
+    ) {
         $this->url = route('filament.exports.download', ['export' => $export, 'format' => $this->resolveFormat()]);
     }
 
@@ -45,14 +47,24 @@ class ExportReady extends Mailable
 
     public function build()
     {
-        return $this->subject("Download your {$this->exportSchedule->name}")
-            ->to($this->notifiable->email ?? $this->exportSchedule->owner->email)
+        $resolver = app(ResolvesReportUsers::class);
+        $userEmail = $resolver->getEmail($this->export->user) ?? $resolver->getEmail($this->report->owner);
+
+        if (!$userEmail) {
+            Log::warning('Cannot send export email: user has no configured email address', [
+                'export_id' => $this->export->id,
+                'user_type' => $this->export->user_type,
+                'user_id' => $this->export->user_id,
+            ]);
+        }
+
+        return $this->subject("Download your {$this->report->name}")
+            ->to($userEmail)
             ->view('export-scheduler::emails.export-ready')
             ->with([
-                'user' => $this->notifiable,
-                'url' => $this->url,
                 'export' => $this->export,
-                'exportSchedule' => $this->exportSchedule,
+                'report' => $this->report,
+                'schedule' => $this->schedule,
             ]);
     }
 }

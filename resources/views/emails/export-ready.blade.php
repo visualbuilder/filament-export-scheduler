@@ -1,9 +1,9 @@
 <x-export-scheduler::layouts.email>
-    <h1 style="font-size: large">{{$exportSchedule->frequency}} {{$exportSchedule->name}}</h1>
+    <h1 style="font-size: large">{{ $schedule?->frequency ?? 'Export' }} {{$report->name}}</h1>
 
     <p>
-        <strong>From</strong>: {{$exportSchedule->starts_at_formatted}}<br>
-        <strong>Until</strong>: {{$exportSchedule->ends_at_formatted}}
+        <strong>From</strong>: {{ $schedule?->starts_at_formatted ?? $report->starts_at_formatted }}<br>
+        <strong>Until</strong>: {{ $schedule?->ends_at_formatted ?? $report->ends_at_formatted }}
     </p>
     <p>Has completed and is ready for download.</p>
 

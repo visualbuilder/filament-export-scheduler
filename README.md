@@ -696,7 +696,7 @@ Please review [our security policy](../../security/policy) on how to report secu
 
 ## Credits
 
-- [Lee Evans](https://github.com/lee)
+- [Lee Evans](https://github.com/cannycookie)
 - [All Contributors](../../contributors)
 
 ## License

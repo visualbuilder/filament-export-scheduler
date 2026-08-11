@@ -7,7 +7,6 @@ use Filament\Actions\Action;
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\MorphToSelect;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -15,6 +14,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Toggle;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
@@ -528,12 +528,11 @@ class Fields
             ]);
     }
 
-    public static function cronHint(): Placeholder
+    public static function cronHint(): TextEntry
     {
-        return Placeholder::make('cron_hint')
+        return TextEntry::make(__('Cron Tips'))
             ->visible(fn (Get $get) => ScheduleFrequency::CRON->is($get('schedule_frequency')))
-            ->label(__('Cron Tips'))
-            ->content(new HtmlString("<div style='line-height: 1.7'><p>" . __('export-scheduler::scheduler.cron_expression_hint') . '</p></div>'));
+            ->belowContent(new HtmlString("<div style='line-height: 1.7'><p>" . __('export-scheduler::scheduler.cron_expression_hint') . '</p></div>'));
     }
 
     public static function scheduleDayOfWeek(): Select
@@ -814,8 +813,8 @@ class Fields
     public static function copyToUserFields(): array
     {
         return [
-            Placeholder::make('Data Security Warning')
-                ->content(fn (Get $get) => new HtmlString(__('export-scheduler::scheduler.cc_warning', ['owner_type' => class_basename($get('owner_type'))]))),
+            TextEntry::make('Data Security Warning')
+                ->belowContent(fn (Get $get) => new HtmlString(__('export-scheduler::scheduler.cc_warning', ['owner_type' => class_basename($get('owner_type'))]))),
 
             Repeater::make('cc')
                 ->hiddenLabel()
@@ -945,8 +944,8 @@ class Fields
         return Section::make(__('export-scheduler::scheduler.automatic_recipients'))
             ->columns()
             ->schema([
-                Placeholder::make('Send Multiple Reports')
-                    ->content('Select a user relationship and the report will be run once for each user found in the data with just their records'),
+                TextEntry::make('Send Multiple Reports')
+                    ->belowContent('Select a user relationship and the report will be run once for each user found in the data with just their records'),
                 Toggle::make('dynamic_owner_enabled')
                     ->inline(false)
                     ->label(__('export-scheduler::scheduler.dynamic_owner_enabled'))

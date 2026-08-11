@@ -3,7 +3,7 @@
 namespace Visualbuilder\ExportScheduler\Filament\Resources;
 
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
@@ -107,15 +107,19 @@ class CustomReportResource extends Resource
                 // recipients, so "run this report" has no single meaning — running is
                 // a property of a schedule. Download is the report-level equivalent:
                 // ad hoc, and returned to whoever asked for it.
-                ViewAction::make(),
                 DownloadExport::make('download'),
+                ViewAction::make(),
                 EditAction::make()
+                    ->visible(fn (CustomReport $record): bool => $record->isOwnedBy(auth()->user())),
+                DeleteAction::make()
+                    ->modalHeading(__('export-scheduler::scheduler.delete_custom_report'))
+                    ->modalDescription(__('export-scheduler::scheduler.confirm_delete_custom_report'))
                     ->visible(fn (CustomReport $record): bool => $record->isOwnedBy(auth()->user())),
             ])
             ->headerActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
+                DeleteBulkAction::make()
+                    ->modalHeading(__('export-scheduler::scheduler.bulk_delete_custom_report'))
+                    ->modalDescription(__('export-scheduler::scheduler.confirm_bulk_delete_custom_report')),
             ]);
     }
 

@@ -3,7 +3,7 @@
 namespace Visualbuilder\ExportScheduler\Filament\Resources;
 
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Pages\Enums\SubNavigationPosition;
@@ -14,7 +14,6 @@ use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource;
 use UnitEnum;
 use Visualbuilder\ExportScheduler\Contracts\ResolvesReportUsers;
 use Visualbuilder\ExportScheduler\ExportSchedulerPlugin;
@@ -112,13 +111,16 @@ class ScheduledReportResource extends Resource
                     ->label(__('export-scheduler::scheduler.enabled')),
             ])
             ->recordActions([
-                EditAction::make(),
                 RunExport::make('run'),
+                EditAction::make(),
+                DeleteAction::make()
+                    ->modalHeading(__('export-scheduler::scheduler.delete_scheduled_report'))
+                    ->modalDescription(__('export-scheduler::scheduler.confirm_delete_scheduled_report')),
             ])
             ->headerActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
+                DeleteBulkAction::make()
+                    ->modalHeading(__('export-scheduler::scheduler.bulk_delete_scheduled_report'))
+                    ->modalDescription(__('export-scheduler::scheduler.confirm_bulk_delete_scheduled_report')),
             ]);
     }
 

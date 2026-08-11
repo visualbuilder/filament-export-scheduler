@@ -74,9 +74,27 @@ return [
     'visible_to_ids_placeholder'         => 'Search for a user',
 
     /*
+     * Custom Reports
+     */
+    'custom_reports'                  => 'Custom Reports',
+    'create_custom_report'            => 'Create Custom Report',
+    'edit_custom_report'              => 'Edit Report',
+    'delete_custom_report'            => 'Delete Report',
+    'confirm_delete_custom_report'    => 'Are you sure you want to delete this report? Any schedules associated with it will also be deleted.',
+    'bulk_delete_custom_report'         => 'Delete selected Report(s)',
+    'confirm_bulk_delete_custom_report' => 'Are you sure you want to delete the selected report(s)? Any schedules associated with the report(s) will also be deleted.',
+
+    /*
      * Schedules
      */
-    'new_schedule'                    => 'New schedule',
+    'new_schedule'                    => 'New Scheduled Report',
+    'scheduled_reports'               => 'Scheduled Reports',
+    'create_scheduled_report'         => 'Create Schedule',
+    'edit_scheduled_report'           => 'Edit Scheduled Report',
+    'delete_scheduled_report'         => 'Delete Scheduled Report',
+    'confirm_delete_scheduled_report' => 'Are you sure you want to delete this scheduled report? The report will not be sent according to this schedule anymore.',
+    'bulk_delete_scheduled_report'         => 'Delete selected Scheduled Report(s)',
+    'confirm_bulk_delete_scheduled_report' => 'Are you sure you want to delete the selected scheduled report(s)? The report(s) will not be sent according to this schedule anymore.',
     'view_report'                     => 'View Report',
     'schedule_action'                 => 'Schedule',
     'recipient_type'                  => 'Send to',

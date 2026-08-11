@@ -2,9 +2,9 @@
 
 namespace Visualbuilder\ExportScheduler\Filament\Forms;
 
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
@@ -39,7 +39,7 @@ class ScheduleFields
             $includeReportPicker ? static::reportPicker()->columnSpanFull() : null,
 
             // Timing on the left, stacked; recipient alongside it on the right.
-            Grid::make(2)
+            Grid::make()
                 ->columnSpanFull()
                 ->schema([
                     Group::make([
@@ -58,9 +58,7 @@ class ScheduleFields
                             ]),
 
                         Section::make(__('export-scheduler::scheduler.when_to_send'))
-                            ->schema([
-                                Fields::sendEmptyReport(),
-                            ]),
+                            ->schema([Fields::sendEmptyReport()]),
                     ]),
 
                     Group::make([
@@ -70,6 +68,12 @@ class ScheduleFields
                                 static::recipientId(),
                                 static::copyToUser(),
                             ]),
+
+                        // Hidden by default. Existing rows keep fanning out at runtime; this
+                        // only governs whether the fields can be reached in the UI
+                        config('export-scheduler.dynamic_recipients', false)
+                            ? Fields::automaticRecipients()->columnSpanFull()
+                            : null,
                     ]),
                 ]),
 
@@ -90,12 +94,6 @@ class ScheduleFields
                         ->default(null)
                         ->helperText(__('export-scheduler::scheduler.inherits_from_report')),
                 ]),
-
-            // Hidden by default. Existing rows keep fanning out at runtime; this
-            // only governs whether the fields can be reached in the UI.
-            config('export-scheduler.dynamic_recipients', false)
-                ? Fields::automaticRecipients()->columnSpanFull()
-                : null,
         ]));
     }
 
@@ -193,9 +191,9 @@ class ScheduleFields
         return Fieldset::make(__('export-scheduler::scheduler.cc'))
             ->visible(fn (Get $get) => filled($get('recipient_id')))
             ->schema([
-                Placeholder::make('cc_warning')
+                TextEntry::make('cc_warning')
                     ->hiddenLabel()
-                    ->content(fn (Get $get) => new HtmlString(__(
+                    ->belowContent(fn (Get $get) => new HtmlString(__(
                         'export-scheduler::scheduler.cc_warning',
                         ['owner_type' => class_basename((string) $get('recipient_type'))]
                     ))),

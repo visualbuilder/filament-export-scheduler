@@ -6,6 +6,4 @@ parameters:
     - src
     - config
     - database
-  ignoreErrors:
-    - '#^Error\: Class App\\Models\\User not found$#'
   tmpDir: build/phpstan

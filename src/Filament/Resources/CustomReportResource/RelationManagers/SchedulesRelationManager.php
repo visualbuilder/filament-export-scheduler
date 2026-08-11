@@ -4,6 +4,7 @@ namespace Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\
 
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
@@ -13,6 +14,7 @@ use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 use Visualbuilder\ExportScheduler\Contracts\ResolvesReportUsers;
+use Visualbuilder\ExportScheduler\Filament\Actions\Tables\RunExport;
 use Visualbuilder\ExportScheduler\Filament\Forms\ScheduleFields;
 use Visualbuilder\ExportScheduler\Models\ScheduledReport;
 
@@ -70,15 +72,20 @@ class SchedulesRelationManager extends RelationManager
                     ->label(__('export-scheduler::scheduler.enabled')),
             ])
             ->headerActions([
+                DeleteBulkAction::make()
+                    ->modalHeading(__('export-scheduler::scheduler.bulk_delete_scheduled_report'))
+                    ->modalDescription(__('export-scheduler::scheduler.confirm_bulk_delete_scheduled_report')),
                 CreateAction::make()
-                    ->label(__('export-scheduler::scheduler.schedule_action'))
                     ->modalWidth(static::modalWidth()),
             ])
             ->recordActions([
+                RunExport::make('run'),
                 EditAction::make()
+                    ->modalHeading(__('export-scheduler::scheduler.edit_scheduled_report'))
                     ->modalWidth(static::modalWidth()),
                 DeleteAction::make()
-                    ->modalWidth(static::modalWidth()),
+                    ->modalHeading(__('export-scheduler::scheduler.delete_scheduled_report'))
+                    ->modalDescription(__('export-scheduler::scheduler.confirm_delete_scheduled_report')),
             ]);
     }
 

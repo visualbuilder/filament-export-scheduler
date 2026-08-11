@@ -24,7 +24,7 @@ class ExportCsv extends BaseExportCsv
         $processedRows = 0;
         $successfulRows = 0;
 
-        $csv = Writer::createFromFileObject(new SplTempFileObject);
+        $csv = Writer::from(new SplTempFileObject);
         $csv->setDelimiter($this->exporter::getCsvDelimiter());
 
         $query = EloquentSerializeFacade::unserialize($this->query);

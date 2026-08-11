@@ -93,7 +93,7 @@ class ViewCustomReport extends Page implements HasTable
         return [
             DownloadExport::make('download'),
             EditAction::make()
-                ->visible(fn (): bool => $this->getRecord()->isOwnedBy(auth()->user())),
+                ->visible(fn (): bool => CustomReportResource::canEdit($this->getRecord())),
         ];
     }
 

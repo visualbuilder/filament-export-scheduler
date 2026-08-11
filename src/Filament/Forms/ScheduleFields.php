@@ -13,6 +13,7 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
+use Visualbuilder\ExportScheduler\Contracts\BypassesReportVisibility;
 use Visualbuilder\ExportScheduler\Contracts\ResolvesReportUsers;
 use Visualbuilder\ExportScheduler\Models\CustomReport;
 
@@ -100,7 +101,8 @@ class ScheduleFields
 
     /**
      * Only reports the signed-in user owns — a report shared with you is readable,
-     * but scheduling it is the owner's call.
+     * but scheduling it is the owner's call. See {@see static::schedulableReports()}
+     * for the one exception.
      *
      * Deliberately not ->relationship(): that would pair with the options below
      * rather than replace them, and the relationship's own scope is applied at a
@@ -110,13 +112,13 @@ class ScheduleFields
     {
         return Select::make('custom_report_id')
             ->label(__('export-scheduler::scheduler.report'))
-            ->options(fn () => static::ownedReports()->pluck('name', 'id')->all())
-            ->getSearchResultsUsing(fn (string $search) => static::ownedReports()
+            ->options(fn () => static::schedulableReports()->pluck('name', 'id')->all())
+            ->getSearchResultsUsing(fn (string $search) => static::schedulableReports()
                 ->where('name', 'like', "%{$search}%")
                 ->pluck('name', 'id')
                 ->all())
-            ->getOptionLabelUsing(fn ($value) => static::ownedReports()->find($value)?->name)
-            ->helperText(fn () => static::ownedReports()->doesntExist()
+            ->getOptionLabelUsing(fn ($value) => static::schedulableReports()->find($value)?->name)
+            ->helperText(fn () => static::schedulableReports()->doesntExist()
                 ? __('export-scheduler::scheduler.no_reports_yet')
                 : null)
             ->searchable()
@@ -126,14 +128,23 @@ class ScheduleFields
     }
 
     /**
+     * The reports this user may attach a schedule to: their own, plus every report
+     * at all if they hold a visibility bypass. Without the bypass arm, an admin
+     * editing somebody else's schedule would see the picker render blank — the
+     * label lookup would miss the very report the schedule already points at.
+     *
      * @return \Illuminate\Database\Eloquent\Builder<CustomReport>
      */
-    protected static function ownedReports(): Builder
+    protected static function schedulableReports(): Builder
     {
         $user = auth()->user();
 
         if (! $user) {
             return CustomReport::query()->whereRaw('1 = 0');
+        }
+
+        if (app(BypassesReportVisibility::class)->can($user)) {
+            return CustomReport::query();
         }
 
         return CustomReport::query()

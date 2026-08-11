@@ -39,8 +39,7 @@ Keeping them apart means one report can be
 - downloaded ad hoc whenever somebody wants a copy,
 - delivered on several schedules at once — daily to the ops team, monthly to the board.
 
-<!-- SCREENSHOT: Custom Reports list, showing type,
-     date range, visibility, owner and schedule count -->
+<img width="1484" height="542" alt="Screenshot 2026-08-11 at 21 32 53" src="https://github.com/user-attachments/assets/fca3be02-cce6-40ca-bdfb-3f171d2b534f" />
 
 &nbsp;
 
@@ -48,13 +47,11 @@ Both sit under a **Reports** navigation group by default: *Custom Reports* for d
 *Report Schedules* for deliveries. Schedules are also managed inline from the report itself, through
 the Schedules relation manager on its edit page, so you rarely need the second menu item.
 
-<!-- SCREENSHOT: Report Schedules list, showing report name,
-     frequency, recipient, next run and last run -->
+<img width="1477" height="499" alt="Screenshot 2026-08-11 at 21 39 29" src="https://github.com/user-attachments/assets/69e542f9-ac08-4718-9a09-cbc0a8f9675d" />
 
 &nbsp;
 
-<!-- SCREENSHOT: Schedules relation manager on the report edit page,
-     with the create-schedule modal open -->
+<img width="1468" height="854" alt="Screenshot 2026-08-11 at 21 45 15" src="https://github.com/user-attachments/assets/7c1baad7-e27b-4522-838a-9ac14254ce37" />
 
 &nbsp;
 
@@ -65,8 +62,7 @@ the Schedules relation manager on its edit page, so you rarely need the second m
   the emailed export alike.
 - To keep data secure, only system users can own a report or receive one.
 
-<!-- SCREENSHOT: Custom Report form, Exporter tab — name,
-     report type, exporter picker and report defaults -->
+<img width="1473" height="897" alt="Screenshot 2026-08-11 at 21 47 49" src="https://github.com/user-attachments/assets/0d206e07-a5f8-40a5-a1f1-905280fdc9bb" />
 
 &nbsp;
 
@@ -86,8 +82,7 @@ A SQL query is more privilege than most users should have, so creating one is ga
 'sql_query_roles' => ['Developer'],   // Spatie hasRole() check; [] allows everyone
 ```
 
-<!-- SCREENSHOT: Custom Report form with report type set to
-     SQL Query, showing the query field -->
+<img width="1304" height="902" alt="Screenshot 2026-08-11 at 21 48 26" src="https://github.com/user-attachments/assets/0d2d99af-716d-4861-8e0e-f9ed0266256d" />
 
 &nbsp;
 
@@ -105,8 +100,7 @@ Visibility grants viewing and downloading, nothing more. Editing, deleting, runn
 management stay with the owner whatever the mode — a report shared with you is yours to read, not to
 change.
 
-<!-- SCREENSHOT: Sharing section on the report form, with
-     Named Users selected and the user picker populated -->
+<img width="1468" height="375" alt="Screenshot 2026-08-11 at 21 51 09" src="https://github.com/user-attachments/assets/7f3e2b22-3a78-4f10-b1cf-63fbf2f6a03d" />
 
 &nbsp;
 
@@ -178,8 +172,7 @@ attributes/properties.
 - Columns must be defined in the exporter, or selected by the SQL query.
 - All column formatting options set in the exporter are applied.
 
-<!-- SCREENSHOT: Columns tab, with the available-columns
-     picker on the left and the chosen columns on the right -->
+<img width="1476" height="823" alt="Screenshot 2026-08-11 at 21 57 58" src="https://github.com/user-attachments/assets/3d194f25-8c70-4e14-9030-5fa1cf12c28f" />
 
 &nbsp;
 
@@ -231,8 +224,7 @@ list.
 The date range and file formats can both be overridden per schedule, in a collapsed **Schedule
 overrides** section. Left empty, they inherit from the report.
 
-<!-- SCREENSHOT: Schedule form — When to run on the left,
-     recipient and cc on the right, overrides collapsed below -->
+<img width="1476" height="823" alt="Screenshot 2026-08-11 at 21 53 49" src="https://github.com/user-attachments/assets/1b1c2e96-ab78-4c4a-8140-bccf72cccc22" />
 
 &nbsp;
 
@@ -277,8 +269,7 @@ expressions a SQL query report happens to select. The whole result set is theref
 page is opened. On very large reports set `viewer_max_rows` in the config to cap how many rows the
 viewer will load — the export itself is never capped.
 
-<!-- SCREENSHOT: Report viewer, full width results table
-     with the Download action in the header -->
+<img width="1240" height="467" alt="Screenshot 2026-08-11 at 22 00 52" src="https://github.com/user-attachments/assets/529ef990-9141-4af5-83b2-1f9924882f27" />
 
 &nbsp;
 

@@ -6,6 +6,7 @@ use Filament\Notifications\Notification;
 use Filament\Support\Enums\Alignment;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Number;
+use Visualbuilder\ExportScheduler\Contracts\BypassesReportVisibility;
 use Visualbuilder\ExportScheduler\Models\ScheduledReport;
 use Visualbuilder\ExportScheduler\Services\ScheduledExporter;
 
@@ -25,7 +26,8 @@ trait RunExportTrait
         $this
             ->icon('heroicon-s-play')
             ->color('success')
-            ->visible(fn (ScheduledReport $record): bool => $record->report?->isOwnedBy(auth()->user()) ?? false)
+            ->visible(fn (ScheduledReport $record): bool => $record->report?->isOwnedBy(auth()->user())
+                || app(BypassesReportVisibility::class)->can(auth()->user()))
             ->requiresConfirmation(fn (ScheduledReport $record) => $record->willLogoutUser())
             ->modalHeading(fn (ScheduledReport $record) => $record->willLogoutUser()
                 ? __('export-scheduler::scheduler.run_modal_heading')

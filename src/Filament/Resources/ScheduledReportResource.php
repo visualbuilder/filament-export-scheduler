@@ -15,6 +15,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
+use Visualbuilder\ExportScheduler\Contracts\BypassesReportVisibility;
 use Visualbuilder\ExportScheduler\Contracts\ResolvesReportUsers;
 use Visualbuilder\ExportScheduler\ExportSchedulerPlugin;
 use Visualbuilder\ExportScheduler\Filament\Actions\Tables\RunExport;
@@ -127,6 +128,8 @@ class ScheduledReportResource extends Resource
     /**
      * Only schedules on reports you own. A report shared with you is readable,
      * but its delivery configuration is not yours to see or change.
+     *
+     * Can be overridden via BypassesReportVisibility contract.
      */
     public static function getEloquentQuery(): Builder
     {
@@ -134,9 +137,18 @@ class ScheduledReportResource extends Resource
 
         return parent::getEloquentQuery()
             ->with('report')
-            ->whereHas('report', fn (Builder $q) => $user
-                ? $q->where('owner_type', $user::class)->where('owner_id', $user->getKey())
-                : $q->whereRaw('1 = 0'));
+            ->whereHas('report', function (Builder $q) use ($user) {
+                if (! $user) {
+                    return $q->whereRaw('1 = 0');
+                }
+
+                // Check if user can bypass visibility restrictions
+                if (app(BypassesReportVisibility::class)->can($user)) {
+                    return $q;
+                }
+
+                return $q->where('owner_type', $user::class)->where('owner_id', $user->getKey());
+            });
     }
 
     public static function getPages(): array
@@ -150,11 +162,17 @@ class ScheduledReportResource extends Resource
 
     public static function canEdit(Model $record): bool
     {
-        return $record->report?->isOwnedBy(auth()->user()) ?? false;
+        $user = auth()->user();
+
+        return $record->report?->isOwnedBy($user)
+            || app(BypassesReportVisibility::class)->can($user);
     }
 
     public static function canDelete(Model $record): bool
     {
-        return $record->report?->isOwnedBy(auth()->user()) ?? false;
+        $user = auth()->user();
+
+        return $record->report?->isOwnedBy($user)
+            || app(BypassesReportVisibility::class)->can($user);
     }
 }

@@ -15,6 +15,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
+use Visualbuilder\ExportScheduler\Contracts\BypassesReportVisibility;
 use Visualbuilder\ExportScheduler\Contracts\ResolvesReportUsers;
 use Visualbuilder\ExportScheduler\ExportSchedulerPlugin;
 use Visualbuilder\ExportScheduler\Filament\Actions\Tables\DownloadExport;
@@ -110,11 +111,11 @@ class CustomReportResource extends Resource
                 DownloadExport::make('download'),
                 ViewAction::make(),
                 EditAction::make()
-                    ->visible(fn (CustomReport $record): bool => $record->isOwnedBy(auth()->user())),
+                    ->visible(fn (CustomReport $record): bool => static::canEdit($record)),
                 DeleteAction::make()
                     ->modalHeading(__('export-scheduler::scheduler.delete_custom_report'))
                     ->modalDescription(__('export-scheduler::scheduler.confirm_delete_custom_report'))
-                    ->visible(fn (CustomReport $record): bool => $record->isOwnedBy(auth()->user())),
+                    ->visible(fn (CustomReport $record): bool => static::canDelete($record)),
             ])
             ->headerActions([
                 DeleteBulkAction::make()
@@ -165,11 +166,15 @@ class CustomReportResource extends Resource
 
     public static function canEdit(Model $record): bool
     {
-        return $record->isOwnedBy(auth()->user());
+        $user = auth()->user();
+
+        return $record->isOwnedBy($user) || app(BypassesReportVisibility::class)->can($user);
     }
 
     public static function canDelete(Model $record): bool
     {
-        return $record->isOwnedBy(auth()->user());
+        $user = auth()->user();
+
+        return $record->isOwnedBy($user) || app(BypassesReportVisibility::class)->can($user);
     }
 }

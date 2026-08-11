@@ -7,8 +7,10 @@ use Spatie\LaravelPackageTools\Commands\InstallCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Visualbuilder\ExportScheduler\Commands\ExportSchedulerCommand;
+use Visualbuilder\ExportScheduler\Contracts\BypassesReportVisibility;
 use Visualbuilder\ExportScheduler\Contracts\ResolvesReportUsers;
 use Visualbuilder\ExportScheduler\Support\ReportUserResolver;
+use Visualbuilder\ExportScheduler\Support\VisibilityBypass;
 
 class ExportSchedulerServiceProvider extends PackageServiceProvider
 {
@@ -97,6 +99,12 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
         $this->app->singleton(ResolvesReportUsers::class, function () {
             return app(config('export-scheduler.user_resolver', ReportUserResolver::class));
         });
+
+        // Determines which users can bypass visibility restrictions and see all reports.
+        // Rebind it in your own provider to allow admins or specific roles to see everything.
+        $this->app->singleton(BypassesReportVisibility::class, function () {
+            return app(config('export-scheduler.visibility_bypass', VisibilityBypass::class));
+        });
     }
 
     public function packageBooted(): void
@@ -120,7 +128,6 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
     {
         return 'visualbuilder/filament-export-scheduler';
     }
-
 
     /**
      * @return array<string>

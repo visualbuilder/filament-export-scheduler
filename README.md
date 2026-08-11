@@ -110,6 +110,50 @@ change.
 
 &nbsp;
 
+### Let an admin see and manage everything
+
+Ownership is deliberately strict, which leaves nobody able to tidy up a report whose owner has left.
+The `BypassesReportVisibility` contract is the escape hatch: return `true` for a user and they are
+treated as the owner of every report and every schedule.
+
+```php
+namespace App\Support;
+
+use Illuminate\Database\Eloquent\Model;
+use Visualbuilder\ExportScheduler\Contracts\BypassesReportVisibility;
+
+class ReportAdmins implements BypassesReportVisibility
+{
+    public function can(?Model $user): bool
+    {
+        return $user?->hasRole('Report Admin') ?? false;
+    }
+}
+```
+
+Point the config at it, or bind the contract directly in a service provider:
+
+```php
+// config/export-scheduler.php
+'visibility_bypass' => \App\Support\ReportAdmins::class,
+```
+
+A user who passes the check gets, on every report regardless of its visibility mode:
+
+| | Without a bypass | With a bypass |
+|---|---|---|
+| See it in the reports list | Owner, or shared with them | Always |
+| View and download it | Owner, or shared with them | Always |
+| Edit and delete it | Owner only | Always |
+| See its schedules panel and the schedules list | Owner only | Always |
+| Edit, delete and run a schedule | Owner only | Always |
+
+The contract takes a nullable user and is asked about guests too, so an implementation must handle
+`null`. The default, `VisibilityBypass`, returns `false` for everyone — nothing changes until you
+bind your own.
+
+&nbsp;
+
 ## Filter by available attributes
 
 Exclude attributes with the `excludeFilterableAttributes` method on the
@@ -316,6 +360,7 @@ Here you can
 - restrict who may write SQL query reports
 - set which user classes can own reports, receive them, and be given visibility of them
 - change how a user's display name and email address are read
+- decide who, if anyone, may bypass visibility and administer every report
 
 ```php
 use Filament\Pages\Enums\SubNavigationPosition;
@@ -325,6 +370,7 @@ use Visualbuilder\ExportScheduler\Filament\Resources\ScheduledReportResource;
 use Visualbuilder\ExportScheduler\Mail\ExportReady;
 use Visualbuilder\ExportScheduler\Notifications\ScheduledExportCompleteNotification;
 use Visualbuilder\ExportScheduler\Support\ReportUserResolver;
+use Visualbuilder\ExportScheduler\Support\VisibilityBypass;
 
 return [
 
@@ -411,6 +457,15 @@ return [
      * attributes below are not enough.
      */
     'user_resolver' => ReportUserResolver::class,
+
+    /**
+     * Which users may see, edit, delete and run every report and schedule,
+     * regardless of who owns them.
+     *
+     * The default grants this to nobody. Bind your own implementation of
+     * BypassesReportVisibility to open it up to admins.
+     */
+    'visibility_bypass' => VisibilityBypass::class,
 
     /**
      * Automatic Recipients - reruns a report once per user found in the data and

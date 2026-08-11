@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Collection;
+use Visualbuilder\ExportScheduler\Contracts\BypassesReportVisibility;
 use Visualbuilder\ExportScheduler\Database\Factories\CustomReportFactory;
 use Visualbuilder\ExportScheduler\Enums\DateRange;
 use Visualbuilder\ExportScheduler\Enums\ReportType;
@@ -166,6 +167,10 @@ class CustomReport extends Model
             return false;
         }
 
+        if (app(BypassesReportVisibility::class)->can($user)) {
+            return true;
+        }
+
         if ($this->isOwnedBy($user)) {
             return true;
         }
@@ -191,6 +196,10 @@ class CustomReport extends Model
     {
         if (! $user) {
             return $query->whereRaw('1 = 0');
+        }
+
+        if (app(BypassesReportVisibility::class)->can($user)) {
+            return $query;
         }
 
         return $query->where(fn (Builder $q) => $q

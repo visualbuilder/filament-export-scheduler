@@ -14,6 +14,7 @@ All notable changes to `filament-export-scheduler` will be documented in this fi
 - `CustomReportResource` and `ScheduledReportResource` replacing monolithic `ExportScheduleResource`
 - `SchedulesRelationManager` for inline schedule management on report edit page
 - `dynamic_recipients` config flag to hide Automatic Recipients UI while preserving existing behavior
+- `BypassesReportVisibility` contract, bound from the `visibility_bypass` config key. A user it returns `true` for is treated as the owner of every report and schedule: they see all reports whatever the visibility mode, and may edit, delete and run reports and schedules they do not own. The default implementation, `VisibilityBypass`, grants this to nobody, so behaviour is unchanged until you bind your own
 
 ### Changed
 - `ScheduledExporter` constructor now takes `(CustomReport, ?ScheduledReport)` instead of `ExportSchedule`

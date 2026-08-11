@@ -13,6 +13,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
+use Visualbuilder\ExportScheduler\Contracts\BypassesReportVisibility;
 use Visualbuilder\ExportScheduler\Contracts\ResolvesReportUsers;
 use Visualbuilder\ExportScheduler\Filament\Actions\Tables\RunExport;
 use Visualbuilder\ExportScheduler\Filament\Forms\ScheduleFields;
@@ -100,10 +101,13 @@ class SchedulesRelationManager extends RelationManager
 
     /**
      * Scheduling is an owner-only concern, so the whole panel is absent for
-     * someone who merely has the report shared with them.
+     * someone who merely has the report shared with them. A user granted a
+     * bypass sees it on every report.
      */
     public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
     {
-        return $ownerRecord->isOwnedBy(auth()->user());
+        $user = auth()->user();
+
+        return $ownerRecord->isOwnedBy($user) || app(BypassesReportVisibility::class)->can($user);
     }
 }

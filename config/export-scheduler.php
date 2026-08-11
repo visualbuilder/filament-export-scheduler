@@ -7,6 +7,7 @@ use Visualbuilder\ExportScheduler\Filament\Resources\ScheduledReportResource;
 use Visualbuilder\ExportScheduler\Mail\ExportReady;
 use Visualbuilder\ExportScheduler\Notifications\ScheduledExportCompleteNotification;
 use Visualbuilder\ExportScheduler\Support\ReportUserResolver;
+use Visualbuilder\ExportScheduler\Support\VisibilityBypass;
 
 return [
 
@@ -88,6 +89,13 @@ return [
      * address that depends on a per-user preference.
      */
     'user_resolver' => ReportUserResolver::class,
+
+    /**
+     * Determines which users can bypass visibility restrictions and see all reports
+     * and schedules. Bind your own implementation to control who gets admin-like access.
+     * Default allows no one to bypass.
+     */
+    'visibility_bypass' => VisibilityBypass::class,
 
     /**
      * Automatic Recipients — reruns a report once per user found in the data and

@@ -3,8 +3,7 @@
 use Carbon\Carbon;
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Illuminate\Support\Facades\Notification;
-use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
-use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Models\CustomReport;
 use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
 use Visualbuilder\ExportScheduler\Services\ScheduledExporter;
 use Visualbuilder\ExportScheduler\Tests\Models\User;
@@ -24,14 +23,11 @@ function createDateFilterUser(array $overrides = []): User
     ], $overrides));
 }
 
-function createScheduleWithAttributeFilter(array $filter): ExportSchedule
+function createScheduleWithAttributeFilter(array $filter): CustomReport
 {
-    return ExportSchedule::create([
+    return CustomReport::create([
         'name' => 'Date Filter Test',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::DAILY,
-        'schedule_time' => now()->toTimeString(),
-        'next_run_at' => now(),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -53,14 +49,14 @@ it('filters with "before" operator for future relative dates', function () {
     // User created in the past
     createDateFilterUser(['created_at' => '2024-01-01 12:00:00']);
 
-    $schedule = createScheduleWithAttributeFilter([
+    $report = createScheduleWithAttributeFilter([
         'column' => 'created_at',
         'operator' => 'before',
         'value' => ['amount' => 30, 'unit' => 'days'],
         'condition' => 'and',
     ]);
 
-    $exporter = new ScheduledExporter($schedule);
+    $exporter = new ScheduledExporter($report);
     $exporter->run();
 
     // "before" means <= now + 30 days (2024-07-15), so past user + 5-day-future user match, but not the 40-day one
@@ -75,14 +71,14 @@ it('filters with "is_in" operator for future preset ranges', function () {
     // User created in the past
     createDateFilterUser(['created_at' => '2024-01-01 12:00:00']);
 
-    $schedule = createScheduleWithAttributeFilter([
+    $report = createScheduleWithAttributeFilter([
         'column' => 'created_at',
         'operator' => 'is_in',
         'value' => 'next_7_days',
         'condition' => 'and',
     ]);
 
-    $exporter = new ScheduledExporter($schedule);
+    $exporter = new ScheduledExporter($report);
     $exporter->run();
 
     // next_7_days = 2024-06-15 00:00:00 to 2024-06-21 23:59:59
@@ -93,14 +89,14 @@ it('filters with "is_before" operator using absolute date', function () {
     createDateFilterUser(['created_at' => '2024-03-01 12:00:00']);
     createDateFilterUser(['created_at' => '2024-06-10 12:00:00']);
 
-    $schedule = createScheduleWithAttributeFilter([
+    $report = createScheduleWithAttributeFilter([
         'column' => 'created_at',
         'operator' => 'is_before',
         'value' => '2024-06-01',
         'condition' => 'and',
     ]);
 
-    $exporter = new ScheduledExporter($schedule);
+    $exporter = new ScheduledExporter($report);
     $exporter->run();
 
     expect($exporter->getTotalRows())->toBe(1);
@@ -110,14 +106,14 @@ it('filters with "is_after" operator using absolute date', function () {
     createDateFilterUser(['created_at' => '2024-03-01 12:00:00']);
     createDateFilterUser(['created_at' => '2024-06-10 12:00:00']);
 
-    $schedule = createScheduleWithAttributeFilter([
+    $report = createScheduleWithAttributeFilter([
         'column' => 'created_at',
         'operator' => 'is_after',
         'value' => '2024-06-01',
         'condition' => 'and',
     ]);
 
-    $exporter = new ScheduledExporter($schedule);
+    $exporter = new ScheduledExporter($report);
     $exporter->run();
 
     // The auth user (created at "now" = 2024-06-15) + the June 10 user are both after June 1
@@ -132,12 +128,9 @@ it('combines past and future date filters', function () {
     // Very old user
     createDateFilterUser(['created_at' => '2023-01-01 12:00:00']);
 
-    $schedule = ExportSchedule::create([
+    $report = CustomReport::create([
         'name' => 'Combined Date Filter Test',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::DAILY,
-        'schedule_time' => now()->toTimeString(),
-        'next_run_at' => now(),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -163,7 +156,7 @@ it('combines past and future date filters', function () {
         ],
     ]);
 
-    $exporter = new ScheduledExporter($schedule);
+    $exporter = new ScheduledExporter($report);
     $exporter->run();
 
     // Both June 10 and June 20 are after June 1 AND before June 25

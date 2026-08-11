@@ -7,7 +7,7 @@ use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Orchestra\Testbench\Factories\UserFactory;
+use Visualbuilder\ExportScheduler\Tests\Database\Factories\UserFactory;
 
 /**
  * @property string $email
@@ -16,6 +16,9 @@ use Orchestra\Testbench\Factories\UserFactory;
  */
 class User extends Authenticatable implements FilamentUser
 {
+    // newFactory() below was unreachable without this — HasFactory was imported
+    // but never applied, so User::factory() did not exist.
+    use HasFactory;
     use Notifiable;
 
     protected $guarded = [];

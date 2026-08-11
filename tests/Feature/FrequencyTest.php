@@ -7,26 +7,25 @@ use Visualbuilder\ExportScheduler\Enums\DayOfWeek;
 use Visualbuilder\ExportScheduler\Enums\Month;
 use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
 use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
-use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Models\CustomReport;
+use Visualbuilder\ExportScheduler\Models\ScheduledReport;
 use Visualbuilder\ExportScheduler\Notifications\ScheduledExportCompleteNotification;
 
 beforeEach(function () {
     Notification::fake();
     $this->assertDatabaseEmpty('exports');
-    $this->assertDatabaseEmpty('export_schedules');
+    $this->assertDatabaseEmpty('custom_reports');
+    $this->assertDatabaseEmpty('scheduled_reports');
     $this->assertDatabaseCount('users', 1);
 });
 
 it('sends a daily export email every day for 3 days', function () {
     $now = now();
 
-    $dailySchedule = ExportSchedule::create([
+    $dailyReport = CustomReport::create([
         'name' => 'User Export Daily',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::DAILY,
         'formats' => [ExportFormat::Csv],
-        'schedule_time' => $now->toTimeString(),
-        'next_run_at' => $now,
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -35,7 +34,17 @@ it('sends a daily export email every day for 3 days', function () {
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
-    $this->assertDatabaseCount('export_schedules', 1);
+
+    $dailySchedule = ScheduledReport::create([
+        'custom_report_id' => $dailyReport->id,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => $now->toTimeString(),
+        'next_run_at' => $now,
+        'recipient_id' => auth()->id(),
+        'recipient_type' => get_class(auth()->user()),
+    ]);
+    $this->assertDatabaseCount('custom_reports', 1);
+    $this->assertDatabaseCount('scheduled_reports', 1);
     $this->assertDatabaseHas($dailySchedule, ['schedule_frequency' => ScheduleFrequency::DAILY]);
 
     $testTime = $now;
@@ -44,22 +53,19 @@ it('sends a daily export email every day for 3 days', function () {
         $this->artisan('export:run');
         $testTime->addHour();
     }
+
     Notification::assertCount(3);
-    Notification::assertSentTo($dailySchedule->owner, ScheduledExportCompleteNotification::class);
+    Notification::assertSentTo($dailyReport->owner, ScheduledExportCompleteNotification::class);
 });
 
 it('sends a weekly export email every week (Wednesday) for 3 weeks', function () {
     $wednesday = now()->weekday(Carbon::WEDNESDAY);
     Carbon::setTestNow($wednesday);
 
-    $weeklySchedule = ExportSchedule::create([
+    $weeklyReport = CustomReport::create([
         'name' => 'User Export Weekly (Wednesday)',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::WEEKLY,
         'formats' => [ExportFormat::Csv],
-        'schedule_time' => $wednesday->toTimeString(),
-        'schedule_day_of_week' => DayOfWeek::WEDNESDAY,
-        'next_run_at' => $wednesday,
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -68,7 +74,19 @@ it('sends a weekly export email every week (Wednesday) for 3 weeks', function ()
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
-    $this->assertDatabaseCount('export_schedules', 1);
+
+    $weeklySchedule = ScheduledReport::create([
+        'custom_report_id' => $weeklyReport->id,
+        'schedule_frequency' => ScheduleFrequency::WEEKLY,
+        'schedule_time' => $wednesday->toTimeString(),
+        'schedule_day_of_week' => DayOfWeek::WEDNESDAY,
+        'next_run_at' => $wednesday,
+        'recipient_id' => auth()->id(),
+        'recipient_type' => get_class(auth()->user()),
+    ]);
+
+    $this->assertDatabaseCount('custom_reports', 1);
+    $this->assertDatabaseCount('scheduled_reports', 1);
     $this->assertDatabaseHas($weeklySchedule, ['schedule_frequency' => ScheduleFrequency::WEEKLY]);
 
     $testTime = $wednesday;
@@ -77,8 +95,9 @@ it('sends a weekly export email every week (Wednesday) for 3 weeks', function ()
         $this->artisan('export:run');
         $testTime->addHours(8);
     }
+
     Notification::assertCount(3);
-    Notification::assertSentTo($weeklySchedule->owner, ScheduledExportCompleteNotification::class);
+    Notification::assertSentTo($weeklyReport->owner, ScheduledExportCompleteNotification::class);
 });
 
 it('sends a monthly export email every month (15th)', function () {
@@ -86,14 +105,10 @@ it('sends a monthly export email every month (15th)', function () {
     $dayOfTheMonth = 15;
     $numOfDays = $firstDayOfTheYear->diffInDays($firstDayOfTheYear->copy()->endOfYear());
 
-    $monthlySchedule = ExportSchedule::create([
+    $monthlyReport = CustomReport::create([
         'name' => 'User Export Monthly (15th)',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::MONTHLY,
         'formats' => [ExportFormat::Csv],
-        'schedule_time' => $firstDayOfTheYear->toTimeString(),
-        'schedule_day_of_month' => $dayOfTheMonth,
-        'next_run_at' => $firstDayOfTheYear->copy()->setDay($dayOfTheMonth),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -102,7 +117,19 @@ it('sends a monthly export email every month (15th)', function () {
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
-    $this->assertDatabaseCount('export_schedules', 1);
+
+    $monthlySchedule = ScheduledReport::create([
+        'custom_report_id' => $monthlyReport->id,
+        'schedule_frequency' => ScheduleFrequency::MONTHLY,
+        'schedule_time' => $firstDayOfTheYear->toTimeString(),
+        'schedule_day_of_month' => $dayOfTheMonth,
+        'next_run_at' => $firstDayOfTheYear->copy()->setDay($dayOfTheMonth),
+        'recipient_id' => auth()->id(),
+        'recipient_type' => get_class(auth()->user()),
+    ]);
+
+    $this->assertDatabaseCount('custom_reports', 1);
+    $this->assertDatabaseCount('scheduled_reports', 1);
     $this->assertDatabaseHas($monthlySchedule, ['schedule_frequency' => ScheduleFrequency::MONTHLY]);
 
     $testTime = $firstDayOfTheYear;
@@ -111,8 +138,9 @@ it('sends a monthly export email every month (15th)', function () {
         $this->artisan('export:run');
         $testTime->addDay();
     }
+
     Notification::assertCount(12);
-    Notification::assertSentTo($monthlySchedule->owner, ScheduledExportCompleteNotification::class);
+    Notification::assertSentTo($monthlyReport->owner, ScheduledExportCompleteNotification::class);
 });
 
 it('sends a monthly export email every last day of the month', function () {
@@ -120,14 +148,11 @@ it('sends a monthly export email every last day of the month', function () {
     $dayOfTheMonth = -1;    // last day of the month
     $numOfDays = $firstDayOfTheYear->diffInDays($firstDayOfTheYear->copy()->addYear());
     $nextRun = $firstDayOfTheYear->copy()->endOfMonth()->setTime(0, 0);
-    $monthlySchedule = ExportSchedule::create([
+
+    $monthlyReport = CustomReport::create([
         'name' => 'User Export Monthly (-1)',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::MONTHLY,
         'formats' => [ExportFormat::Csv],
-        'schedule_time' => $firstDayOfTheYear->toTimeString(),
-        'schedule_day_of_month' => $dayOfTheMonth,
-        'next_run_at' => $nextRun,
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -136,7 +161,19 @@ it('sends a monthly export email every last day of the month', function () {
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
-    $this->assertDatabaseCount('export_schedules', 1);
+
+    $monthlySchedule = ScheduledReport::create([
+        'custom_report_id' => $monthlyReport->id,
+        'schedule_frequency' => ScheduleFrequency::MONTHLY,
+        'schedule_time' => $firstDayOfTheYear->toTimeString(),
+        'schedule_day_of_month' => $dayOfTheMonth,
+        'next_run_at' => $nextRun,
+        'recipient_id' => auth()->id(),
+        'recipient_type' => get_class(auth()->user()),
+    ]);
+
+    $this->assertDatabaseCount('custom_reports', 1);
+    $this->assertDatabaseCount('scheduled_reports', 1);
     $this->assertDatabaseHas($monthlySchedule, ['schedule_frequency' => ScheduleFrequency::MONTHLY]);
 
     $testTime = $firstDayOfTheYear;
@@ -146,8 +183,9 @@ it('sends a monthly export email every last day of the month', function () {
         $this->artisan('export:run');
         $testTime->addDay();
     }
+
     Notification::assertCount(12);
-    Notification::assertSentTo($monthlySchedule->owner, ScheduledExportCompleteNotification::class);
+    Notification::assertSentTo($monthlyReport->owner, ScheduledExportCompleteNotification::class);
 });
 
 it('sends a monthly export email every month (29th; 28th for non-leap year)', function () {
@@ -155,14 +193,10 @@ it('sends a monthly export email every month (29th; 28th for non-leap year)', fu
     $dayOfTheMonth = 28;
     $numOfDays = $nonLeapYear->diffInDays($nonLeapYear->copy()->endOfYear());
 
-    $monthlySchedule = ExportSchedule::create([
+    $monthlyReport = CustomReport::create([
         'name' => 'User Export Monthly (15th)',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::MONTHLY,
         'formats' => [ExportFormat::Csv],
-        'schedule_time' => $nonLeapYear->toTimeString(),
-        'schedule_day_of_month' => $dayOfTheMonth,
-        'next_run_at' => $nonLeapYear->copy()->setDay($dayOfTheMonth),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -171,7 +205,19 @@ it('sends a monthly export email every month (29th; 28th for non-leap year)', fu
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
-    $this->assertDatabaseCount('export_schedules', 1);
+
+    $monthlySchedule = ScheduledReport::create([
+        'custom_report_id' => $monthlyReport->id,
+        'schedule_frequency' => ScheduleFrequency::MONTHLY,
+        'schedule_time' => $nonLeapYear->toTimeString(),
+        'schedule_day_of_month' => $dayOfTheMonth,
+        'next_run_at' => $nonLeapYear->copy()->setDay($dayOfTheMonth),
+        'recipient_id' => auth()->id(),
+        'recipient_type' => get_class(auth()->user()),
+    ]);
+
+    $this->assertDatabaseCount('custom_reports', 1);
+    $this->assertDatabaseCount('scheduled_reports', 1);
     $this->assertDatabaseHas($monthlySchedule, ['schedule_frequency' => ScheduleFrequency::MONTHLY]);
 
     $testTime = $nonLeapYear;
@@ -180,8 +226,9 @@ it('sends a monthly export email every month (29th; 28th for non-leap year)', fu
         $this->artisan('export:run');
         $testTime->addDay();
     }
+
     Notification::assertCount(12);
-    Notification::assertSentTo($monthlySchedule->owner, ScheduledExportCompleteNotification::class);
+    Notification::assertSentTo($monthlyReport->owner, ScheduledExportCompleteNotification::class);
 });
 
 it('sends a monthly export email every month', function () {
@@ -189,14 +236,10 @@ it('sends a monthly export email every month', function () {
     $dayOfTheMonth = 15;
     $numOfDays = $nonLeapYear->diffInDays($nonLeapYear->copy()->endOfYear());
 
-    $monthlySchedule = ExportSchedule::create([
+    $monthlyReport = CustomReport::create([
         'name' => 'User Export Monthly (15th)',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::MONTHLY,
         'formats' => [ExportFormat::Csv],
-        'schedule_time' => $nonLeapYear->toTimeString(),
-        'schedule_day_of_month' => $dayOfTheMonth,
-        'next_run_at' => $nonLeapYear->copy()->setDay($dayOfTheMonth),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -205,7 +248,19 @@ it('sends a monthly export email every month', function () {
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
-    $this->assertDatabaseCount('export_schedules', 1);
+
+    $monthlySchedule = ScheduledReport::create([
+        'custom_report_id' => $monthlyReport->id,
+        'schedule_frequency' => ScheduleFrequency::MONTHLY,
+        'schedule_time' => $nonLeapYear->toTimeString(),
+        'schedule_day_of_month' => $dayOfTheMonth,
+        'next_run_at' => $nonLeapYear->copy()->setDay($dayOfTheMonth),
+        'recipient_id' => auth()->id(),
+        'recipient_type' => get_class(auth()->user()),
+    ]);
+
+    $this->assertDatabaseCount('custom_reports', 1);
+    $this->assertDatabaseCount('scheduled_reports', 1);
     $this->assertDatabaseHas($monthlySchedule, ['schedule_frequency' => ScheduleFrequency::MONTHLY]);
 
     $testTime = $nonLeapYear;
@@ -214,8 +269,9 @@ it('sends a monthly export email every month', function () {
         $this->artisan('export:run');
         $testTime->addDay();
     }
+
     Notification::assertCount(12);
-    Notification::assertSentTo($monthlySchedule->owner, ScheduledExportCompleteNotification::class);
+    Notification::assertSentTo($monthlyReport->owner, ScheduledExportCompleteNotification::class);
 });
 
 it('sends a monthly export email on the last day of every month (31st; 28th/29th/30th for others)', function () {
@@ -223,14 +279,10 @@ it('sends a monthly export email on the last day of every month (31st; 28th/29th
     $dayOfTheMonth = -1;
     $numOfDays = $nonLeapYear->diffInDays($nonLeapYear->copy()->addYear());
 
-    $monthlySchedule = ExportSchedule::create([
+    $monthlyReport = CustomReport::create([
         'name' => 'User export Last Day the month',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::MONTHLY,
         'formats' => [ExportFormat::Csv],
-        'schedule_time' => $nonLeapYear->toTimeString(),
-        'schedule_day_of_month' => $dayOfTheMonth,
-        'next_run_at' => $nonLeapYear->copy()->lastOfMonth(),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -239,7 +291,19 @@ it('sends a monthly export email on the last day of every month (31st; 28th/29th
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
-    $this->assertDatabaseCount('export_schedules', 1);
+
+    $monthlySchedule = ScheduledReport::create([
+        'custom_report_id' => $monthlyReport->id,
+        'schedule_frequency' => ScheduleFrequency::MONTHLY,
+        'schedule_time' => $nonLeapYear->toTimeString(),
+        'schedule_day_of_month' => $dayOfTheMonth,
+        'next_run_at' => $nonLeapYear->copy()->lastOfMonth(),
+        'recipient_id' => auth()->id(),
+        'recipient_type' => get_class(auth()->user()),
+    ]);
+
+    $this->assertDatabaseCount('custom_reports', 1);
+    $this->assertDatabaseCount('scheduled_reports', 1);
     $this->assertDatabaseHas($monthlySchedule, ['schedule_frequency' => ScheduleFrequency::MONTHLY]);
 
     $testTime = $nonLeapYear;
@@ -248,8 +312,9 @@ it('sends a monthly export email on the last day of every month (31st; 28th/29th
         $this->artisan('export:run');
         $testTime->addDay();
     }
+
     Notification::assertCount(12);
-    Notification::assertSentTo($monthlySchedule->owner, ScheduledExportCompleteNotification::class);
+    Notification::assertSentTo($monthlyReport->owner, ScheduledExportCompleteNotification::class);
 });
 
 it('sends a yearly export email (June 15th)', function () {
@@ -258,15 +323,10 @@ it('sends a yearly export email (June 15th)', function () {
     $month = Month::JUNE->value;
     $numOfYears = 12;
 
-    $yearlySchedule = ExportSchedule::create([
+    $yearlyReport = CustomReport::create([
         'name' => 'User Export Yearly (June 15th)',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::YEARLY,
         'formats' => [ExportFormat::Csv],
-        'schedule_time' => $nonLeapYear->toTimeString(),
-        'schedule_month' => $month,
-        'schedule_day_of_month' => $dayOfTheMonth,
-        'next_run_at' => $nonLeapYear->copy()->setMonth($month)->setDay($dayOfTheMonth),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -275,7 +335,20 @@ it('sends a yearly export email (June 15th)', function () {
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
-    $this->assertDatabaseCount('export_schedules', 1);
+
+    $yearlySchedule = ScheduledReport::create([
+        'custom_report_id' => $yearlyReport->id,
+        'schedule_frequency' => ScheduleFrequency::YEARLY,
+        'schedule_time' => $nonLeapYear->toTimeString(),
+        'schedule_month' => $month,
+        'schedule_day_of_month' => $dayOfTheMonth,
+        'next_run_at' => $nonLeapYear->copy()->setMonth($month)->setDay($dayOfTheMonth),
+        'recipient_id' => auth()->id(),
+        'recipient_type' => get_class(auth()->user()),
+    ]);
+
+    $this->assertDatabaseCount('custom_reports', 1);
+    $this->assertDatabaseCount('scheduled_reports', 1);
     $this->assertDatabaseHas($yearlySchedule, ['schedule_frequency' => ScheduleFrequency::YEARLY]);
 
     $testTime = $nonLeapYear;
@@ -284,8 +357,9 @@ it('sends a yearly export email (June 15th)', function () {
         $this->artisan('export:run');
         $testTime->addMonths(4);
     }
+
     Notification::assertCount($numOfYears);
-    Notification::assertSentTo($yearlySchedule->owner, ScheduledExportCompleteNotification::class);
+    Notification::assertSentTo($yearlyReport->owner, ScheduledExportCompleteNotification::class);
 });
 
 it('sends a yearly export email (February 29th; 28th for non-leap year)', function () {
@@ -294,15 +368,10 @@ it('sends a yearly export email (February 29th; 28th for non-leap year)', functi
     $month = Month::FEBRUARY->value;
     $numOfYears = 12;
 
-    $yearlySchedule = ExportSchedule::create([
+    $yearlyReport = CustomReport::create([
         'name' => 'User Export Yearly (June 15th)',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::YEARLY,
         'formats' => [ExportFormat::Csv],
-        'schedule_time' => $nonLeapYear->toTimeString(),
-        'schedule_month' => $month,
-        'schedule_day_of_month' => $dayOfTheMonth,
-        'next_run_at' => $nonLeapYear->copy()->setMonth($month)->setDay($dayOfTheMonth),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -311,7 +380,20 @@ it('sends a yearly export email (February 29th; 28th for non-leap year)', functi
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
-    $this->assertDatabaseCount('export_schedules', 1);
+
+    $yearlySchedule = ScheduledReport::create([
+        'custom_report_id' => $yearlyReport->id,
+        'schedule_frequency' => ScheduleFrequency::YEARLY,
+        'schedule_time' => $nonLeapYear->toTimeString(),
+        'schedule_month' => $month,
+        'schedule_day_of_month' => $dayOfTheMonth,
+        'next_run_at' => $nonLeapYear->copy()->setMonth($month)->setDay($dayOfTheMonth),
+        'recipient_id' => auth()->id(),
+        'recipient_type' => get_class(auth()->user()),
+    ]);
+
+    $this->assertDatabaseCount('custom_reports', 1);
+    $this->assertDatabaseCount('scheduled_reports', 1);
     $this->assertDatabaseHas($yearlySchedule, ['schedule_frequency' => ScheduleFrequency::YEARLY]);
 
     $testTime = $nonLeapYear;
@@ -320,8 +402,9 @@ it('sends a yearly export email (February 29th; 28th for non-leap year)', functi
         $this->artisan('export:run');
         $testTime->addMonths(4);
     }
+
     Notification::assertCount($numOfYears);
-    Notification::assertSentTo($yearlySchedule->owner, ScheduledExportCompleteNotification::class);
+    Notification::assertSentTo($yearlyReport->owner, ScheduledExportCompleteNotification::class);
 });
 
 it('sends a quarterly export email (starts on January 15th)', function () {
@@ -330,15 +413,10 @@ it('sends a quarterly export email (starts on January 15th)', function () {
     $startMonth = Month::JANUARY->value;
     $numOfYears = 10;
 
-    $yearlySchedule = ExportSchedule::create([
+    $yearlyReport = CustomReport::create([
         'name' => 'User Export Quarterly (January 15th)',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::QUARTERLY,
         'formats' => [ExportFormat::Csv],
-        'schedule_time' => $nonLeapYear->toTimeString(),
-        'schedule_month' => $startMonth,
-        'schedule_day_of_month' => $dayOfTheMonth,
-        'next_run_at' => $nonLeapYear->copy()->setMonth($startMonth)->setDay($dayOfTheMonth),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -347,7 +425,20 @@ it('sends a quarterly export email (starts on January 15th)', function () {
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
-    $this->assertDatabaseCount('export_schedules', 1);
+
+    $yearlySchedule = ScheduledReport::create([
+        'custom_report_id' => $yearlyReport->id,
+        'schedule_frequency' => ScheduleFrequency::QUARTERLY,
+        'schedule_time' => $nonLeapYear->toTimeString(),
+        'schedule_month' => $startMonth,
+        'schedule_day_of_month' => $dayOfTheMonth,
+        'next_run_at' => $nonLeapYear->copy()->setMonth($startMonth)->setDay($dayOfTheMonth),
+        'recipient_id' => auth()->id(),
+        'recipient_type' => get_class(auth()->user()),
+    ]);
+
+    $this->assertDatabaseCount('custom_reports', 1);
+    $this->assertDatabaseCount('scheduled_reports', 1);
     $this->assertDatabaseHas($yearlySchedule, ['schedule_frequency' => ScheduleFrequency::QUARTERLY]);
 
     $testTime = $nonLeapYear;
@@ -356,8 +447,9 @@ it('sends a quarterly export email (starts on January 15th)', function () {
         $this->artisan('export:run');
         $testTime->addMonth();
     }
+
     Notification::assertCount($numOfYears * 4);
-    Notification::assertSentTo($yearlySchedule->owner, ScheduledExportCompleteNotification::class);
+    Notification::assertSentTo($yearlyReport->owner, ScheduledExportCompleteNotification::class);
 });
 
 it('sends a quarterly export email (starts on November 29th; February 28th for non-leap year)', function () {
@@ -366,15 +458,10 @@ it('sends a quarterly export email (starts on November 29th; February 28th for n
     $startMonth = Month::NOVEMBER->value;
     $numOfYears = 10;
 
-    $yearlySchedule = ExportSchedule::create([
+    $yearlyReport = CustomReport::create([
         'name' => 'User Export Quarterly (November 29th)',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::QUARTERLY,
         'formats' => [ExportFormat::Csv],
-        'schedule_time' => $nonLeapMonth->toTimeString(),
-        'schedule_month' => $startMonth,
-        'schedule_day_of_month' => $dayOfTheMonth,
-        'next_run_at' => $nonLeapMonth->copy()->setMonth($startMonth)->setDay($dayOfTheMonth),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -383,7 +470,19 @@ it('sends a quarterly export email (starts on November 29th; February 28th for n
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
-    $this->assertDatabaseCount('export_schedules', 1);
+
+    $yearlySchedule = ScheduledReport::create([
+        'custom_report_id' => $yearlyReport->id,
+        'schedule_frequency' => ScheduleFrequency::QUARTERLY,
+        'schedule_time' => $nonLeapMonth->toTimeString(),
+        'schedule_month' => $startMonth,
+        'schedule_day_of_month' => $dayOfTheMonth,
+        'next_run_at' => $nonLeapMonth->copy()->setMonth($startMonth)->setDay($dayOfTheMonth),
+        'recipient_id' => auth()->id(),
+        'recipient_type' => get_class(auth()->user()),
+    ]);
+    $this->assertDatabaseCount('custom_reports', 1);
+    $this->assertDatabaseCount('scheduled_reports', 1);
     $this->assertDatabaseHas($yearlySchedule, ['schedule_frequency' => ScheduleFrequency::QUARTERLY]);
 
     $testTime = $nonLeapMonth;
@@ -392,8 +491,9 @@ it('sends a quarterly export email (starts on November 29th; February 28th for n
         $this->artisan('export:run');
         $testTime->addMonth();
     }
+
     Notification::assertCount($numOfYears * 4);
-    Notification::assertSentTo($yearlySchedule->owner, ScheduledExportCompleteNotification::class);
+    Notification::assertSentTo($yearlyReport->owner, ScheduledExportCompleteNotification::class);
 });
 
 it('sends a half-yearly export email (starts on January 15th)', function () {
@@ -402,15 +502,10 @@ it('sends a half-yearly export email (starts on January 15th)', function () {
     $startMonth = Month::JANUARY->value;
     $numOfYears = 10;
 
-    $yearlySchedule = ExportSchedule::create([
+    $yearlyReport = CustomReport::create([
         'name' => 'User Export Half-Yearly (January 15th)',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::HALF_YEARLY,
         'formats' => [ExportFormat::Csv],
-        'schedule_time' => $nonLeapYear->toTimeString(),
-        'schedule_month' => $startMonth,
-        'schedule_day_of_month' => $dayOfTheMonth,
-        'next_run_at' => $nonLeapYear->copy()->setMonth($startMonth)->setDay($dayOfTheMonth),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -419,7 +514,19 @@ it('sends a half-yearly export email (starts on January 15th)', function () {
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
-    $this->assertDatabaseCount('export_schedules', 1);
+
+    $yearlySchedule = ScheduledReport::create([
+        'custom_report_id' => $yearlyReport->id,
+        'schedule_frequency' => ScheduleFrequency::HALF_YEARLY,
+        'schedule_time' => $nonLeapYear->toTimeString(),
+        'schedule_month' => $startMonth,
+        'schedule_day_of_month' => $dayOfTheMonth,
+        'next_run_at' => $nonLeapYear->copy()->setMonth($startMonth)->setDay($dayOfTheMonth),
+        'recipient_id' => auth()->id(),
+        'recipient_type' => get_class(auth()->user()),
+    ]);
+    $this->assertDatabaseCount('custom_reports', 1);
+    $this->assertDatabaseCount('scheduled_reports', 1);
     $this->assertDatabaseHas($yearlySchedule, ['schedule_frequency' => ScheduleFrequency::HALF_YEARLY]);
 
     $testTime = $nonLeapYear;
@@ -428,8 +535,9 @@ it('sends a half-yearly export email (starts on January 15th)', function () {
         $this->artisan('export:run');
         $testTime->addMonth();
     }
+
     Notification::assertCount($numOfYears * 2);
-    Notification::assertSentTo($yearlySchedule->owner, ScheduledExportCompleteNotification::class);
+    Notification::assertSentTo($yearlyReport->owner, ScheduledExportCompleteNotification::class);
 });
 
 it('sends a half-yearly export email (starts on August 29th; February 28th for non-leap year)', function () {
@@ -438,15 +546,10 @@ it('sends a half-yearly export email (starts on August 29th; February 28th for n
     $startMonth = Month::AUGUST->value;
     $numOfYears = 10;
 
-    $yearlySchedule = ExportSchedule::create([
+    $yearlyReport = CustomReport::create([
         'name' => 'User Export Half-Yearly (November 29th)',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::HALF_YEARLY,
         'formats' => [ExportFormat::Csv],
-        'schedule_time' => $nonLeapMonth->toTimeString(),
-        'schedule_month' => $startMonth,
-        'schedule_day_of_month' => $dayOfTheMonth,
-        'next_run_at' => $nonLeapMonth->copy()->setMonth($startMonth)->setDay($dayOfTheMonth),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -455,7 +558,20 @@ it('sends a half-yearly export email (starts on August 29th; February 28th for n
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
-    $this->assertDatabaseCount('export_schedules', 1);
+
+    $yearlySchedule = ScheduledReport::create([
+        'custom_report_id' => $yearlyReport->id,
+        'schedule_frequency' => ScheduleFrequency::HALF_YEARLY,
+        'schedule_time' => $nonLeapMonth->toTimeString(),
+        'schedule_month' => $startMonth,
+        'schedule_day_of_month' => $dayOfTheMonth,
+        'next_run_at' => $nonLeapMonth->copy()->setMonth($startMonth)->setDay($dayOfTheMonth),
+        'recipient_id' => auth()->id(),
+        'recipient_type' => get_class(auth()->user()),
+    ]);
+
+    $this->assertDatabaseCount('custom_reports', 1);
+    $this->assertDatabaseCount('scheduled_reports', 1);
     $this->assertDatabaseHas($yearlySchedule, ['schedule_frequency' => ScheduleFrequency::HALF_YEARLY]);
 
     $testTime = $nonLeapMonth;
@@ -464,21 +580,18 @@ it('sends a half-yearly export email (starts on August 29th; February 28th for n
         $this->artisan('export:run');
         $testTime->addMonth();
     }
+
     Notification::assertCount($numOfYears * 2);
-    Notification::assertSentTo($yearlySchedule->owner, ScheduledExportCompleteNotification::class);
+    Notification::assertSentTo($yearlyReport->owner, ScheduledExportCompleteNotification::class);
 });
 
 it('sends a cron export email (quarterly at 2:00 am)', function () {
     $numOfYears = 10;
 
-    $cronSchedule = ExportSchedule::create([
+    $cronReport = CustomReport::create([
         'name' => 'User Export Cron (Quarterly at 2:00 am)',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::CRON,
         'formats' => [ExportFormat::Csv],
-        'next_run_at' => now()->setMonth(3)->setTime(2, 0),
-        // at 2:00 am on the 1st of March, June, September, Dec
-        'cron' => '0 2 1 3,6,9,12 *',
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -487,7 +600,19 @@ it('sends a cron export email (quarterly at 2:00 am)', function () {
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
-    $this->assertDatabaseCount('export_schedules', 1);
+
+    $cronSchedule = ScheduledReport::create([
+        'custom_report_id' => $cronReport->id,
+        'schedule_frequency' => ScheduleFrequency::CRON,
+        'next_run_at' => now()->setMonth(3)->setTime(2, 0),
+        // at 2:00 am on the 1st of March, June, September, Dec
+        'cron' => '0 2 1 3,6,9,12 *',
+        'recipient_id' => auth()->id(),
+        'recipient_type' => get_class(auth()->user()),
+    ]);
+
+    $this->assertDatabaseCount('custom_reports', 1);
+    $this->assertDatabaseCount('scheduled_reports', 1);
     $this->assertDatabaseHas($cronSchedule, ['schedule_frequency' => ScheduleFrequency::CRON]);
 
     $testTime = now()->firstOfYear()->setDay(2);
@@ -496,8 +621,9 @@ it('sends a cron export email (quarterly at 2:00 am)', function () {
         $this->artisan('export:run');
         $testTime->addMonth();
     }
+
     Notification::assertCount($numOfYears * 4);
-    Notification::assertSentTo($cronSchedule->owner, ScheduledExportCompleteNotification::class);
+    Notification::assertSentTo($cronReport->owner, ScheduledExportCompleteNotification::class);
 });
 
 it('sends a cron export email (every weekday at 10:30 am)', function () {
@@ -507,14 +633,10 @@ it('sends a cron export email (every weekday at 10:30 am)', function () {
     $lastWeekDayOfTheYear = $lastDayOfTheYear->isWeekend() ? $lastDayOfTheYear->previousWeekday() : $lastDayOfTheYear;
     $numOfWeekDays = $firstWeekDayOfTheYear->diffInWeekdays($lastWeekDayOfTheYear);
 
-    $cronSchedule = ExportSchedule::create([
+    $cronReport = CustomReport::create([
         'name' => 'User Export Cron (Every weekday at 10:30 am)',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::CRON,
         'formats' => [ExportFormat::Csv],
-        'next_run_at' => $firstWeekDayOfTheYear->copy()->setTime(10, 30),
-        // every week from Monday to Friday at 10:30am
-        'cron' => '30 10 * * 1-5',
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -523,7 +645,19 @@ it('sends a cron export email (every weekday at 10:30 am)', function () {
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
-    $this->assertDatabaseCount('export_schedules', 1);
+
+    $cronSchedule = ScheduledReport::create([
+        'custom_report_id' => $cronReport->id,
+        'schedule_frequency' => ScheduleFrequency::CRON,
+        'next_run_at' => $firstWeekDayOfTheYear->copy()->setTime(10, 30),
+        // every week from Monday to Friday at 10:30am
+        'cron' => '30 10 * * 1-5',
+        'recipient_id' => auth()->id(),
+        'recipient_type' => get_class(auth()->user()),
+    ]);
+
+    $this->assertDatabaseCount('custom_reports', 1);
+    $this->assertDatabaseCount('scheduled_reports', 1);
     $this->assertDatabaseHas($cronSchedule, ['schedule_frequency' => ScheduleFrequency::CRON]);
 
     $testTime = $firstWeekDayOfTheYear;
@@ -532,6 +666,7 @@ it('sends a cron export email (every weekday at 10:30 am)', function () {
         $this->artisan('export:run');
         $testTime->addWeekday();
     }
+
     Notification::assertCount($numOfWeekDays - 1);
-    Notification::assertSentTo($cronSchedule->owner, ScheduledExportCompleteNotification::class);
+    Notification::assertSentTo($cronReport->owner, ScheduledExportCompleteNotification::class);
 });

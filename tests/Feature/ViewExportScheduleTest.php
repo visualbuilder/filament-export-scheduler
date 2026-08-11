@@ -1,33 +1,35 @@
 <?php
 
+use Filament\Actions\Exports\Models\Export;
+use Filament\Actions\Testing\TestAction;
 use Visualbuilder\ExportScheduler\Enums\DateRange;
 use Visualbuilder\ExportScheduler\Enums\ReportType;
 use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
 use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
-use Visualbuilder\ExportScheduler\Filament\Resources\ExportScheduleResource\Pages\ViewExportSchedule;
-use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource;
+use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\Pages\ListCustomReports;
+use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\Pages\ViewCustomReport;
+use Visualbuilder\ExportScheduler\Filament\Resources\ScheduledReportResource\Pages\ListScheduledReports;
+use Visualbuilder\ExportScheduler\Models\CustomReport;
+use Visualbuilder\ExportScheduler\Models\ScheduledReport;
 use Visualbuilder\ExportScheduler\Tests\Exporters\DocumentOwnerExporter;
 use Visualbuilder\ExportScheduler\Tests\Models\Document;
 use Visualbuilder\ExportScheduler\Tests\Models\User;
 
 use function Pest\Livewire\livewire;
 
-function makeSchedule(array $overrides = []): ExportSchedule
+function makeSchedule(array $overrides = []): CustomReport
 {
-    return ExportSchedule::create(array_merge([
+    return CustomReport::create(array_merge([
         'name' => 'Preview Report',
         'exporter' => UserExporter::class,
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
         ],
-        'schedule_frequency' => ScheduleFrequency::DAILY,
-        'schedule_time' => '08:00',
-        'schedule_timezone' => 'UTC',
         'formats' => ['csv'],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
-        'enabled' => true,
     ], $overrides));
 }
 
@@ -40,14 +42,14 @@ it('lists the rows an exporter report would export', function () {
         'password' => 'password',
     ]);
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => $schedule->getKey()])
         ->assertOk()
         ->assertCanSeeTableRecords([$included, auth()->user()])
         ->assertSee('included@domain.com');
 });
 
 it('only lists rows matching the schedule date range', function () {
-    $schedule = makeSchedule(['date_range' => DateRange::TODAY]);
+    $schedule = makeSchedule(['date_range' => DateRange::TODAY], );
 
     $old = User::create([
         'name' => 'Old',
@@ -62,7 +64,7 @@ it('only lists rows matching the schedule date range', function () {
         'password' => 'password',
     ]);
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => $schedule->getKey()])
         ->assertOk()
         ->assertCanSeeTableRecords([$recent])
         ->assertCanNotSeeTableRecords([$old]);
@@ -82,7 +84,7 @@ it('lists the rows of a sql query report', function () {
         'password' => 'password',
     ]);
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => $schedule->getKey()])
         ->assertOk()
         ->assertSee('from-sql@domain.com')
         ->assertSee('Email');
@@ -96,7 +98,7 @@ it('shows an empty table when a sql query report is not a safe select', function
         'sql_query' => 'DELETE FROM users',
     ]);
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => $schedule->getKey()])
         ->assertOk()
         ->assertSee('No rows to show');
 });
@@ -104,19 +106,18 @@ it('shows an empty table when a sql query report is not a safe select', function
 it('does not run an export when previewing', function () {
     $schedule = makeSchedule();
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => $schedule->getKey()])
         ->assertOk();
 
-    expect(\Filament\Actions\Exports\Models\Export::count())->toBe(0);
-    expect($schedule->refresh()->last_run_at)->toBeNull();
+    expect(Export::count())->toBe(0);
 });
 it('links to the view page from the list table', function () {
     $schedule = makeSchedule();
 
-    livewire(\Visualbuilder\ExportScheduler\Filament\Resources\ExportScheduleResource\Pages\ListExportSchedules::class)
+    livewire(ListCustomReports::class)
         ->assertOk()
-        ->assertTableActionExists('view')
-        ->assertTableActionHasUrl('view', \Visualbuilder\ExportScheduler\Filament\Resources\ExportScheduleResource::getUrl('view', ['record' => $schedule]), record: $schedule);
+        ->assertActionExists(TestAction::make('view')->table())
+        ->assertActionHasUrl(TestAction::make('view')->table($schedule), CustomReportResource::getUrl('view', ['record' => $schedule]));
 });
 
 it('paginates sql query rows', function () {
@@ -135,7 +136,7 @@ it('paginates sql query rows', function () {
         ]);
     }
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => $schedule->getKey()])
         ->set('tableRecordsPerPage', 5)
         ->assertSee('admin@domain.com')
         ->assertDontSee('user11@domain.com')
@@ -147,15 +148,15 @@ it('paginates sql query rows', function () {
 it('exposes a view page url for a schedule', function () {
     $schedule = makeSchedule();
 
-    expect(\Visualbuilder\ExportScheduler\Filament\Resources\ExportScheduleResource::hasPage('view'))->toBeTrue();
-    expect(\Visualbuilder\ExportScheduler\Filament\Resources\ExportScheduleResource::getUrl('view', ['record' => $schedule]))
+    expect(CustomReportResource::hasPage('view'))->toBeTrue();
+    expect(CustomReportResource::getUrl('view', ['record' => $schedule]))
         ->toContain('/' . $schedule->getKey() . '/view');
 });
 
 it('shows fifty rows per page by default', function () {
     $schedule = makeSchedule();
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => $schedule->getKey()])
         ->assertOk()
         ->assertSet('tableRecordsPerPage', 50);
 });
@@ -178,7 +179,7 @@ it('searches every field across all pages of an exporter report', function () {
     ]);
 
     // The match is on the last page, so it can only be found by searching the whole result set.
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => $schedule->getKey()])
         ->assertDontSee('needle@elsewhere.test')
         ->searchTable('needle@elsewhere')
         ->assertSee('needle@elsewhere.test')
@@ -189,7 +190,7 @@ it('searches every field across all pages of an exporter report', function () {
 it('shows the empty state when a search matches nothing', function () {
     $schedule = makeSchedule();
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => $schedule->getKey()])
         ->searchTable('nothing-matches-this')
         ->assertSee('No rows to show');
 });
@@ -210,7 +211,7 @@ it('searches the value produced by the exporter formatting', function () {
     ]);
 
     // 2024-03-17 is only searchable if the datetime cast has been rendered to a string.
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => $schedule->getKey()])
         ->searchTable('2024-03-17')
         ->assertSee('formatted@domain.com')
         ->assertDontSee('admin@domain.com');
@@ -222,7 +223,7 @@ it('sorts an exporter report by a column header', function () {
     User::create(['name' => 'Zeta', 'email' => 'zeta@domain.com', 'password' => 'password']);
     User::create(['name' => 'Alpha', 'email' => 'alpha@domain.com', 'password' => 'password']);
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => $schedule->getKey()])
         ->sortTable('email')
         ->assertSeeInOrder(['admin@domain.com', 'alpha@domain.com', 'zeta@domain.com'])
         ->sortTable('email', 'desc')
@@ -240,7 +241,7 @@ it('searches and sorts a sql query report', function () {
     User::create(['name' => 'Zeta', 'email' => 'zeta@domain.com', 'password' => 'password']);
     User::create(['name' => 'Alpha', 'email' => 'alpha@domain.com', 'password' => 'password']);
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => $schedule->getKey()])
         ->sortTable('email', 'desc')
         ->assertSeeInOrder(['zeta@domain.com', 'alpha@domain.com', 'admin@domain.com'])
         ->searchTable('alpha')
@@ -256,7 +257,7 @@ it('ignores a sort column that is not part of the report', function () {
         'sql_query' => 'SELECT id, email FROM users',
     ]);
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => $schedule->getKey()])
         ->call('sortTable', 'not_a_column')
         ->assertOk()
         ->assertSee('admin@domain.com');
@@ -276,7 +277,7 @@ it('sorts and searches a morph relation column that a database sort could not ha
         ],
     ]);
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => $schedule->getKey()])
         ->assertOk()
         ->sortTable('title')
         ->assertSeeInOrder(['Alpha doc', 'Zeta doc'])
@@ -305,7 +306,7 @@ it('renders the value of a relation column whose name contains a dot', function 
         ],
     ]);
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => $schedule->getKey()])
         ->assertSee('Doc A')
         ->assertSee('2023-05-09');
 });
@@ -322,7 +323,7 @@ it('shows an unconventional sql result set exactly as the query returns it', fun
             . " UNION ALL SELECT 'Total', COUNT(*) FROM users",
     ]);
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => $schedule->getKey()])
         ->assertOk()
         // The alias is shown verbatim, while a plain snake_case name is tidied up.
         ->assertSee('Name')
@@ -340,39 +341,45 @@ it('still shows the columns of a sql query report that matches no rows', functio
     ]);
 
     // An empty result set must still be recognisable as this report, not a blank page.
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => $schedule->getKey()])
         ->assertOk()
         ->assertSee('Contact Email')
         ->assertSee('No rows to show');
 });
 
 it('offers the run action on a sql query report that has no exporter class', function () {
-    $schedule = makeSchedule([
+    $report = makeSchedule([
         'report_type' => ReportType::SQL_QUERY,
         'exporter' => null,
         'columns' => null,
         'sql_query' => 'SELECT id, email FROM users',
     ]);
 
+    $schedule = ScheduledReport::create([
+        'custom_report_id' => $report->id,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => '08:00',
+        'schedule_timezone' => 'UTC',
+        'enabled' => true,
+    ]);
+
     // willLogoutUser() used to ask a non-existent exporter class for its queue.
-    expect($schedule->isSyncQueue())->toBeBool();
+    expect($report->isSyncQueue())->toBeBool();
     expect($schedule->willLogoutUser())->toBeBool();
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
-        ->mountAction('run export')
-        ->assertHasNoActionErrors();
+    livewire(ListScheduledReports::class)
+        ->callAction(TestAction::make('run')->table($schedule))
+        ->assertHasNoFormErrors();
 });
 
 it('treats a schedule with no owner as not owned by the current user', function () {
     $schedule = makeSchedule(['owner_id' => null, 'owner_type' => null]);
 
-    expect($schedule->isCurrentUserOwner())->toBeFalse();
+    expect($schedule->isOwnedBy(auth()->user()))->toBeFalse();
 });
 
 it('caps the rows loaded when a viewer limit is configured', function () {
     config()->set('export-scheduler.viewer_max_rows', 3);
-
-    $schedule = makeSchedule();
 
     foreach (range(1, 10) as $i) {
         User::create([
@@ -382,7 +389,7 @@ it('caps the rows loaded when a viewer limit is configured', function () {
         ]);
     }
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => makeSchedule()->getKey()])
         ->assertOk()
         ->assertSee('Showing the first 3 rows')
         ->assertDontSee('user9@domain.com');

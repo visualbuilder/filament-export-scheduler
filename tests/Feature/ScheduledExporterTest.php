@@ -6,9 +6,8 @@ use Filament\Actions\Exports\Models\Export;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Notification;
 use Visualbuilder\ExportScheduler\Enums\DateRange;
-use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
 use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
-use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Models\CustomReport;
 use Visualbuilder\ExportScheduler\Services\ScheduledExporter;
 use Visualbuilder\ExportScheduler\Tests\Models\User;
 
@@ -26,7 +25,7 @@ function fakeUserData(array $overrides = []): array
     ], $overrides);
 }
 
-function createFakeUsers(int $count = 1, array $overrides = []): array|null|User
+function createFakeUsers(int $count = 1, array $overrides = []): array | null | User
 {
     $users = [];
 
@@ -44,12 +43,9 @@ it('applies date range filter to export query', function () {
     createFakeUsers(overrides: ['created_at' => '2024-01-01']);
     createFakeUsers(overrides: ['created_at' => '2024-06-10']);
 
-    $schedule = ExportSchedule::create([
+    $report = CustomReport::create([
         'name' => 'User Export with Date Range',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::DAILY,
-        'schedule_time' => now()->toTimeString(),
-        'next_run_at' => now(),
         'date_range' => DateRange::LAST_7_DAYS,
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
@@ -60,7 +56,7 @@ it('applies date range filter to export query', function () {
         'formats' => [ExportFormat::Csv],
     ]);
 
-    $exporter = new ScheduledExporter($schedule);
+    $exporter = new ScheduledExporter($report);
     $exporter->run();
 
     // Only the recent user should be included (within last 7 days)
@@ -70,12 +66,9 @@ it('applies date range filter to export query', function () {
 it('applies attribute filter with like operator', function () {
     $users = createFakeUsers(2);
 
-    $schedule = ExportSchedule::create([
+    $report = CustomReport::create([
         'name' => 'User Export with Like Filter',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::DAILY,
-        'schedule_time' => now()->toTimeString(),
-        'next_run_at' => now(),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -95,7 +88,7 @@ it('applies attribute filter with like operator', function () {
         ],
     ]);
 
-    $exporter = new ScheduledExporter($schedule);
+    $exporter = new ScheduledExporter($report);
     $exporter->run();
 
     expect($exporter->getTotalRows())->toBe(1);
@@ -104,12 +97,9 @@ it('applies attribute filter with like operator', function () {
 it('applies attribute filter with in operator', function () {
     $users = createFakeUsers(3);
 
-    $schedule = ExportSchedule::create([
+    $report = CustomReport::create([
         'name' => 'User Export with In Filter',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::DAILY,
-        'schedule_time' => now()->toTimeString(),
-        'next_run_at' => now(),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -129,7 +119,7 @@ it('applies attribute filter with in operator', function () {
         ],
     ]);
 
-    $exporter = new ScheduledExporter($schedule);
+    $exporter = new ScheduledExporter($report);
     $exporter->run();
 
     expect($exporter->getTotalRows())->toBe(2);
@@ -138,12 +128,9 @@ it('applies attribute filter with in operator', function () {
 it('applies attribute filter with not_in operator', function () {
     $users = createFakeUsers(3);
 
-    $schedule = ExportSchedule::create([
+    $report = CustomReport::create([
         'name' => 'User Export with Not In Filter',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::DAILY,
-        'schedule_time' => now()->toTimeString(),
-        'next_run_at' => now(),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -163,7 +150,7 @@ it('applies attribute filter with not_in operator', function () {
         ],
     ]);
 
-    $exporter = new ScheduledExporter($schedule);
+    $exporter = new ScheduledExporter($report);
     $exporter->run();
 
     // Should exclude user1, so only user2, user3, and auth user
@@ -176,12 +163,9 @@ it('applies attribute filter with since operator using array value', function ()
     createFakeUsers(3, ['created_at' => '2024-06-10']); // recent users
     createFakeUsers(3, ['created_at' => '2024-01-01']); // past users
 
-    $schedule = ExportSchedule::create([
+    $report = CustomReport::create([
         'name' => 'User Export with Since Filter',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::DAILY,
-        'schedule_time' => now()->toTimeString(),
-        'next_run_at' => now(),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -201,7 +185,7 @@ it('applies attribute filter with since operator using array value', function ()
         ],
     ]);
 
-    $exporter = new ScheduledExporter($schedule);
+    $exporter = new ScheduledExporter($report);
     $exporter->run();
 
     // Only users created in the last 10 days + auth user (auth user is also recent)
@@ -222,12 +206,9 @@ it('applies attribute filter with date range operator', function () {
     createFakeUsers(3, ['created_at' => '2024-06-07']); // 8 days ago
     createFakeUsers(3, ['created_at' => '2024-06-05']); // 10 days ago
 
-    $schedule = ExportSchedule::create([
+    $report = CustomReport::create([
         'name' => 'User Export with DateRange Filter',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::DAILY,
-        'schedule_time' => now()->toTimeString(),
-        'next_run_at' => now(),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -247,7 +228,7 @@ it('applies attribute filter with date range operator', function () {
         ],
     ]);
 
-    $exporter = new ScheduledExporter($schedule);
+    $exporter = new ScheduledExporter($report);
     $exporter->run();
 
     expect($exporter->getTotalRows())->toBe(12);
@@ -259,22 +240,19 @@ it('applies multiple attribute filters with AND condition', function () {
     $similarCount = 5;
 
     // similar users
-    for($i = 0; $i < $similarCount; $i++) {
+    for ($i = 0; $i < $similarCount; $i++) {
         createFakeUsers(overrides: [
-            'name' => $similarName.fake()->name(),
-            'email' => $similarEmail.fake()->unique()->safeEmail()
+            'name' => $similarName . fake()->name(),
+            'email' => $similarEmail . fake()->unique()->safeEmail(),
         ]);
     }
 
     // unique users
     createFakeUsers(3);
 
-    $schedule = ExportSchedule::create([
+    $report = CustomReport::create([
         'name' => 'User Export with Multiple AND Filters',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::DAILY,
-        'schedule_time' => now()->toTimeString(),
-        'next_run_at' => now(),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -300,7 +278,7 @@ it('applies multiple attribute filters with AND condition', function () {
         ],
     ]);
 
-    $exporter = new ScheduledExporter($schedule);
+    $exporter = new ScheduledExporter($report);
     $exporter->run();
 
     expect($exporter->getTotalRows())->toBe($similarCount);
@@ -314,12 +292,9 @@ it('applies attribute filters with OR condition', function () {
     createFakeUsers(overrides: $user2);
     createFakeUsers();
 
-    $schedule = ExportSchedule::create([
+    $report = CustomReport::create([
         'name' => 'User Export with OR Filters',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::DAILY,
-        'schedule_time' => now()->toTimeString(),
-        'next_run_at' => now(),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -345,7 +320,7 @@ it('applies attribute filters with OR condition', function () {
         ],
     ]);
 
-    $exporter = new ScheduledExporter($schedule);
+    $exporter = new ScheduledExporter($report);
     $exporter->run();
 
     // John Doe, Jane Smith, and auth user
@@ -355,12 +330,9 @@ it('applies attribute filters with OR condition', function () {
 it('skips filters with blank column or value', function () {
     createFakeUsers(10);
 
-    $schedule = ExportSchedule::create([
+    $report = CustomReport::create([
         'name' => 'User Export with Blank Filters',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::DAILY,
-        'schedule_time' => now()->toTimeString(),
-        'next_run_at' => now(),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -386,7 +358,7 @@ it('skips filters with blank column or value', function () {
         ],
     ]);
 
-    $exporter = new ScheduledExporter($schedule);
+    $exporter = new ScheduledExporter($report);
     $exporter->run();
 
     // Should include all users since filters are blank
@@ -396,12 +368,9 @@ it('skips filters with blank column or value', function () {
 it('generates unique file names with timestamp', function () {
     Carbon::setTestNow('2024-06-15 14:30:00');
 
-    $schedule = ExportSchedule::create([
+    $report = CustomReport::create([
         'name' => 'Test Export Schedule',
         'exporter' => UserExporter::class,
-        'schedule_frequency' => ScheduleFrequency::DAILY,
-        'schedule_time' => now()->toTimeString(),
-        'next_run_at' => now(),
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
         ],
@@ -410,7 +379,7 @@ it('generates unique file names with timestamp', function () {
         'formats' => [ExportFormat::Csv],
     ]);
 
-    $exporter = new ScheduledExporter($schedule);
+    $exporter = new ScheduledExporter($report);
     $exporter->run();
 
     expect(Export::latest()->first()->file_name)->toContain('test-export-schedule', '2024-06-15', '1430');

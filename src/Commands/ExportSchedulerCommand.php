@@ -38,6 +38,7 @@ class ExportSchedulerCommand extends Command
                 try {
                     (new ScheduledExporter($schedule->report, $schedule))->run();
                     $schedule->update([
+                        'next_run_at' => $schedule->calculateNextRun(),
                         'last_run_at' => now(),
                         'last_successful_run_at' => now(),
                     ]);

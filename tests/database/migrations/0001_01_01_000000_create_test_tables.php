@@ -90,26 +90,41 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('export_schedules', function (Blueprint $table) {
+        Schema::create('custom_reports', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->string('report_type', 20)->default('exporter');
             $table->text('sql_query')->nullable();
             $table->string('exporter')->nullable();
             $table->json('columns')->nullable();
+            $table->json('filters')->nullable();
+            $table->string('date_range')->nullable();
+            $table->json('formats')->nullable();
+            $table->string('owner_type')->nullable();
+            $table->unsignedBigInteger('owner_id')->nullable();
+            $table->string('visibility', 20)->default('owner');
+            $table->string('visible_to_type')->nullable();
+            $table->json('visible_to_ids')->nullable();
+            $table->timestamps();
+            $table->index(['owner_type', 'owner_id']);
+            $table->index(['visibility', 'visible_to_type']);
+        });
+
+        Schema::create('scheduled_reports', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('custom_report_id')->constrained('custom_reports')->cascadeOnDelete();
             $table->string('schedule_frequency');
             $table->time('schedule_time')->default('00:00:00');
             $table->string('cron')->nullable();
             $table->unsignedTinyInteger('schedule_day_of_week')->nullable();
             $table->tinyInteger('schedule_day_of_month')->nullable();
             $table->unsignedTinyInteger('schedule_month')->nullable();
-            $table->string('schedule_timezone', 50)->default('UTC');
             $table->unsignedTinyInteger('schedule_start_month')->nullable();
-            $table->json('filters')->nullable();
-            $table->string('formats')->nullable();
+            $table->string('schedule_timezone', 50)->default('UTC');
             $table->string('date_range')->nullable();
-            $table->string('owner_type')->nullable();
-            $table->unsignedBigInteger('owner_id')->nullable();
+            $table->json('formats')->nullable();
+            $table->string('recipient_type')->nullable();
+            $table->unsignedBigInteger('recipient_id')->nullable();
             $table->json('cc')->nullable();
             $table->boolean('enabled')->default(true);
             $table->boolean('send_empty_report')->default(true);
@@ -119,7 +134,8 @@ return new class extends Migration
             $table->timestamp('last_run_at')->nullable();
             $table->timestamp('last_successful_run_at')->nullable();
             $table->timestamps();
-            $table->index(['owner_type', 'owner_id']);
+            $table->index(['recipient_type', 'recipient_id']);
+            $table->index(['enabled', 'next_run_at']);
         });
 
         Schema::create('notifications', function (Blueprint $table) {
@@ -135,7 +151,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('notifications');
-        Schema::dropIfExists('export_schedules');
+        Schema::dropIfExists('scheduled_reports');
+        Schema::dropIfExists('custom_reports');
         Schema::dropIfExists('failed_import_rows');
         Schema::dropIfExists('exports');
         Schema::dropIfExists('imports');

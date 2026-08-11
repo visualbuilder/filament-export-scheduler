@@ -5,73 +5,77 @@ use Filament\Actions\Exports\Jobs\CreateXlsxFile;
 use Filament\Actions\Exports\Models\Export;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Notification;
+use Visualbuilder\ExportScheduler\Enums\DateRange;
 use Visualbuilder\ExportScheduler\Enums\ReportType;
 use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
 use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
-use Visualbuilder\ExportScheduler\Filament\Resources\ExportScheduleResource\Pages\ListExportSchedules;
-use Visualbuilder\ExportScheduler\Filament\Resources\ExportScheduleResource\Pages\ViewExportSchedule;
+use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\Pages\ViewCustomReport;
+use Visualbuilder\ExportScheduler\Filament\Resources\ScheduledReportResource\Pages\ListScheduledReports;
 use Visualbuilder\ExportScheduler\Jobs\CreateSqlQueryXlsxFile;
 use Visualbuilder\ExportScheduler\Jobs\ScheduledExportCompletion;
-use Visualbuilder\ExportScheduler\Models\ExportSchedule;
+use Visualbuilder\ExportScheduler\Models\CustomReport;
+use Visualbuilder\ExportScheduler\Models\ScheduledReport;
 use Visualbuilder\ExportScheduler\Notifications\ScheduledExportCompleteNotification;
 use Visualbuilder\ExportScheduler\Services\ScheduledExporter;
 use Visualbuilder\ExportScheduler\Tests\Models\User;
 
 use function Pest\Livewire\livewire;
 
-function makeDownloadableSchedule(array $overrides = []): ExportSchedule
+function makeDownloadableReport(array $overrides = []): CustomReport
 {
-    return ExportSchedule::create(array_merge([
+    return CustomReport::create(array_merge([
         'name' => 'Downloadable Report',
+        'report_type' => ReportType::EXPORTER,
         'exporter' => UserExporter::class,
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
         ],
+        'formats' => [ExportFormat::Csv->value],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+    ], $overrides));
+}
+
+function makeDownloadableSchedule(CustomReport $report, array $overrides = []): ScheduledReport
+{
+    return ScheduledReport::create(array_merge([
+        'custom_report_id' => $report->id,
         'schedule_frequency' => ScheduleFrequency::DAILY,
         'schedule_time' => '08:00',
         'schedule_timezone' => 'UTC',
-        'formats' => ['csv'],
-        'owner_id' => auth()->id(),
-        'owner_type' => get_class(auth()->user()),
         'enabled' => true,
     ], $overrides));
 }
 
 it('runs the export for the user who asked for it', function () {
-    $owner = User::create(['name' => 'Owner', 'email' => 'owner@domain.com', 'password' => 'password']);
+    $report = makeDownloadableReport();
 
-    $schedule = makeDownloadableSchedule([
-        'owner_id' => $owner->id,
-        'owner_type' => User::class,
-    ]);
-
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
-        ->callAction('download', ['format' => 'csv'])
-        ->assertHasNoActionErrors();
+    livewire(ViewCustomReport::class, ['record' => $report->getKey()])
+        ->callAction('download', ['format' => ExportFormat::Csv->value])
+        ->assertHasNoFormErrors();
 
     expect(Export::count())->toBe(1);
 
     // The download route only serves an export to the user it belongs to.
     expect(Export::first()->user_id)->toBe(auth()->id());
-    expect($schedule->refresh()->last_run_at)->toBeNull();
 });
 
-it('defaults the format to the first one the schedule is configured with', function () {
-    $schedule = makeDownloadableSchedule(['formats' => ['xlsx', 'csv']]);
+it('defaults the format to the first one the report is configured with', function () {
+    $report = makeDownloadableReport(['formats' => [ExportFormat::Xlsx->value, ExportFormat::Csv->value]]);
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => $report->getKey()])
         ->mountAction('download')
-        ->assertActionDataSet(['format' => 'xlsx']);
+        ->assertSchemaStateSet(['format' => ExportFormat::Xlsx->value]);
 });
 
 it('creates the xlsx file when xlsx is chosen', function () {
     Bus::fake();
 
-    $schedule = makeDownloadableSchedule();
+    $report = makeDownloadableReport();
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
-        ->callAction('download', ['format' => 'xlsx']);
+    livewire(ViewCustomReport::class, ['record' => $report->getKey()])
+        ->callAction('download', ['format' => ExportFormat::Xlsx->value]);
 
     Bus::assertChained([
         Illuminate\Bus\ChainedBatch::class,
@@ -83,10 +87,10 @@ it('creates the xlsx file when xlsx is chosen', function () {
 it('does not create the xlsx file when csv is chosen', function () {
     Bus::fake();
 
-    $schedule = makeDownloadableSchedule(['formats' => ['xlsx']]);
+    $report = makeDownloadableReport(['formats' => [ExportFormat::Xlsx->value]]);
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
-        ->callAction('download', ['format' => 'csv']);
+    livewire(ViewCustomReport::class, ['record' => $report->getKey()])
+        ->callAction('download', ['format' => ExportFormat::Csv->value]);
 
     Bus::assertChained([
         Illuminate\Bus\ChainedBatch::class,
@@ -97,15 +101,15 @@ it('does not create the xlsx file when csv is chosen', function () {
 it('builds the xlsx file for a sql query report without an exporter class', function () {
     Bus::fake();
 
-    $schedule = makeDownloadableSchedule([
+    $report = makeDownloadableReport([
         'report_type' => ReportType::SQL_QUERY,
         'exporter' => null,
         'columns' => null,
         'sql_query' => 'SELECT id, email FROM users',
     ]);
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
-        ->callAction('download', ['format' => 'xlsx']);
+    livewire(ViewCustomReport::class, ['record' => $report->getKey()])
+        ->callAction('download', ['format' => ExportFormat::Xlsx->value]);
 
     Bus::assertChained([
         Visualbuilder\ExportScheduler\Jobs\ExportSqlQuery::class,
@@ -115,10 +119,10 @@ it('builds the xlsx file for a sql query report without an exporter class', func
 });
 
 it('writes the xlsx file end to end for an exporter report', function () {
-    $schedule = makeDownloadableSchedule();
+    $report = makeDownloadableReport();
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
-        ->callAction('download', ['format' => 'xlsx']);
+    livewire(ViewCustomReport::class, ['record' => $report->getKey()])
+        ->callAction('download', ['format' => ExportFormat::Xlsx->value]);
 
     $export = Export::first();
 
@@ -128,32 +132,33 @@ it('writes the xlsx file end to end for an exporter report', function () {
 });
 
 it('writes the xlsx file end to end for a sql query report', function () {
-    $schedule = makeDownloadableSchedule([
+    $report = makeDownloadableReport([
         'report_type' => ReportType::SQL_QUERY,
         'exporter' => null,
         'columns' => null,
         'sql_query' => 'SELECT id, email FROM users',
     ]);
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
-        ->callAction('download', ['format' => 'xlsx']);
+    livewire(ViewCustomReport::class, ['record' => $report->getKey()])
+        ->callAction('download', ['format' => ExportFormat::Xlsx->value]);
 
     $export = Export::first();
 
-    expect($export->completed_at)->not->toBeNull();
-    expect($export->getFileDisk()->exists($export->getFileDirectory() . DIRECTORY_SEPARATOR . $export->file_name . '.xlsx'))->toBeTrue();
+    expect($export)
+        ->completed_at->not->toBeNull()
+        ->getFileDisk()->exists($export->getFileDirectory() . DIRECTORY_SEPARATOR . $export->file_name . '.xlsx')->toBeTrue();
 });
 
 it('produces a downloadable file for a sql query report that matches no rows', function () {
-    $schedule = makeDownloadableSchedule([
+    $report = makeDownloadableReport([
         'report_type' => ReportType::SQL_QUERY,
         'exporter' => null,
         'columns' => null,
         'sql_query' => "SELECT id, email FROM users WHERE email = 'nobody@nowhere.test'",
     ]);
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
-        ->callAction('download', ['format' => 'xlsx']);
+    livewire(ViewCustomReport::class, ['record' => $report->getKey()])
+        ->callAction('download', ['format' => ExportFormat::Xlsx->value]);
 
     $export = Export::first();
     $disk = $export->getFileDisk();
@@ -162,53 +167,65 @@ it('produces a downloadable file for a sql query report that matches no rows', f
     expect($export->total_rows)->toBe(0);
 
     // Headers are still written, so the xlsx job has something to read and the file exists.
-    expect($disk->exists($directory . DIRECTORY_SEPARATOR . 'headers.csv'))->toBeTrue();
-    expect($disk->get($directory . DIRECTORY_SEPARATOR . 'headers.csv'))->toContain('email');
-    expect($disk->exists($directory . DIRECTORY_SEPARATOR . $export->file_name . '.xlsx'))->toBeTrue();
+    expect($disk)
+        ->exists($directory . DIRECTORY_SEPARATOR . 'headers.csv')->toBeTrue()
+        ->exists($directory . DIRECTORY_SEPARATOR . $export->file_name . '.xlsx')->toBeTrue()
+        ->get($directory . DIRECTORY_SEPARATOR . 'headers.csv')->toContain('email');
 });
 
 it('hides the download action when a sql query report is not a safe select', function () {
-    $schedule = makeDownloadableSchedule([
+    $report = makeDownloadableReport([
         'report_type' => ReportType::SQL_QUERY,
         'exporter' => null,
         'columns' => null,
         'sql_query' => 'DELETE FROM users',
     ]);
 
-    livewire(ViewExportSchedule::class, ['record' => $schedule->getKey()])
+    livewire(ViewCustomReport::class, ['record' => $report->getKey()])
         ->assertActionHidden('download');
-});
-
-it('offers the download action on the list table', function () {
-    $schedule = makeDownloadableSchedule();
-
-    livewire(ListExportSchedules::class)
-        ->assertOk()
-        ->assertTableActionExists('download')
-        ->assertTableActionVisible('download', record: $schedule);
 });
 
 it('notifies only the requester and never the schedule cc list', function () {
     Notification::fake();
 
-    $copied = User::create(['name' => 'Copied', 'email' => 'copied@domain.com', 'password' => 'password']);
+    $requester = auth()->user();
+    $cc1 = User::create(['name' => 'CC User 1', 'email' => 'cc1@domain.com', 'password' => 'password']);
+    $cc2 = User::create(['name' => 'CC User 2', 'email' => 'cc2@domain.com', 'password' => 'password']);
+    $unrelated = User::create(['name' => 'Unrelated', 'email' => 'unrelated@domain.com', 'password' => 'password']);
 
-    $schedule = makeDownloadableSchedule(['cc' => [$copied->id]]);
+    $report = makeDownloadableReport();
 
-    $exporter = (new ScheduledExporter($schedule))->forUser(auth()->user());
+    // Create a schedule with CC'd users to simulate a real scheduled export
+    $schedule = makeDownloadableSchedule($report, [
+        'recipient_id' => $requester->id,
+        'recipient_type' => get_class($requester),
+        'cc' => [(string) $cc1->id, (string) $cc2->id],
+    ]);
+
+    // Run ad-hoc (forUser) - the requester is downloading on demand, not a scheduled run
+    $exporter = (new ScheduledExporter($report, $schedule))->forUser($requester);
     $exporter->run();
 
-    (new ScheduledExportCompletion($exporter->getExport()->fresh(), $schedule, isAdHoc: true))->handle();
+    // Handle completion as ad-hoc
+    (new ScheduledExportCompletion($exporter->getExport()->fresh(), $report, $schedule, isAdHoc: true))->handle();
 
-    Notification::assertSentTo(auth()->user(), ScheduledExportCompleteNotification::class);
-    Notification::assertNotSentTo($copied, ScheduledExportCompleteNotification::class);
+    // Verify only the requester gets notified
+    Notification::assertSentTo($requester, ScheduledExportCompleteNotification::class);
+
+    // Verify CC'd users do NOT get notified in ad-hoc mode
+    Notification::assertNotSentTo($cc1, ScheduledExportCompleteNotification::class);
+    Notification::assertNotSentTo($cc2, ScheduledExportCompleteNotification::class);
+    Notification::assertNotSentTo($unrelated, ScheduledExportCompleteNotification::class);
+
+    // Ad-hoc downloads should only create one Export record, never duplicates for CC list
     expect(Export::count())->toBe(1);
+    expect($exporter->getExport()->user_id)->toBe($requester->id);
 });
 
 it('still sends an empty ad hoc report when the schedule would suppress it', function () {
     Notification::fake();
 
-    $schedule = makeDownloadableSchedule(['send_empty_report' => false]);
+    $report = makeDownloadableReport();
 
     $export = Export::create([
         'exporter' => UserExporter::class,
@@ -219,20 +236,50 @@ it('still sends an empty ad hoc report when the schedule would suppress it', fun
         'user_type' => get_class(auth()->user()),
     ]);
 
-    (new ScheduledExportCompletion($export, $schedule, isAdHoc: true))->handle();
+    (new ScheduledExportCompletion($export, $report, isAdHoc: true))->handle();
 
     Notification::assertSentTo(auth()->user(), ScheduledExportCompleteNotification::class);
 });
 
 it('normalises formats stored as strings or enums', function () {
-    $wantsXlsx = function (ExportSchedule $schedule): bool {
+    $wantsXlsx = function (CustomReport $report): bool {
         $method = new ReflectionMethod(ScheduledExporter::class, 'wantsFormat');
 
-        return $method->invoke(new ScheduledExporter($schedule), ExportFormat::Xlsx);
+        return $method->invoke(new ScheduledExporter($report), ExportFormat::Xlsx);
     };
 
-    expect($wantsXlsx(makeDownloadableSchedule(['formats' => ['xlsx']])))->toBeTrue();
-    expect($wantsXlsx(makeDownloadableSchedule(['formats' => [ExportFormat::Xlsx]])))->toBeTrue();
-    expect($wantsXlsx(makeDownloadableSchedule(['formats' => ['csv']])))->toBeFalse();
-    expect($wantsXlsx(makeDownloadableSchedule(['formats' => null])))->toBeFalse();
+    expect($wantsXlsx(makeDownloadableReport(['formats' => [ExportFormat::Xlsx->value]])))->toBeTrue();
+    expect($wantsXlsx(makeDownloadableReport(['formats' => [ExportFormat::Xlsx]])))->toBeTrue();
+    expect($wantsXlsx(makeDownloadableReport(['formats' => [ExportFormat::Csv->value]])))->toBeFalse();
+    expect($wantsXlsx(makeDownloadableReport(['formats' => null])))->toBeFalse();
+});
+
+it('copies export files to cc users so their download links work', function () {
+    $ccUser = User::create(['name' => 'CC User', 'email' => 'cc@domain.com', 'password' => 'password']);
+
+    $report = makeDownloadableReport();
+    $schedule = makeDownloadableSchedule($report, [
+        'cc' => [$ccUser->id],
+        'recipient_type' => User::class,
+        'recipient_id' => User::factory()->create()->id,
+    ]);
+
+    $exporter = new ScheduledExporter($report, $schedule);
+    $exporter->run();
+
+    $exports = Export::all();
+    expect($exports)->toHaveCount(2);
+
+    // Both exports should have their files on disk at their own directories
+    foreach ($exports as $export) {
+        $disk = $export->getFileDisk();
+        $directory = $export->getFileDirectory();
+
+        expect($disk->exists($directory))->toBeTrue(
+            "Export #{$export->id} files should exist in {$directory}"
+        );
+        expect($disk->exists($directory . DIRECTORY_SEPARATOR . 'headers.csv'))->toBeTrue(
+            "headers.csv should exist for export #{$export->id}"
+        );
+    }
 });

@@ -30,8 +30,17 @@ The existing `export_schedules` table is automatically migrated to the new struc
 - `CustomReport` rows inherit the `owner_type` and `owner_id` from the original `ExportSchedule`, and all get `visibility = 'owner'` so only the original owner can see them.
 - `ScheduledReport` rows have their `recipient_type` and `recipient_id` set from the original `ExportSchedule.owner_type` and `owner_id` (the delivery recipient, not the report creator).
 - `ScheduledReport` rows inherit all timing fields from the original schedule, with `date_range` and `formats` left **null** to inherit from the report.
+- `next_run_at`, `last_run_at` and `last_successful_run_at` are copied verbatim, so nothing fires early, late or twice.
+- Once the copy completes, `export_schedules` is dropped.
 
 No data is lost. All existing schedules continue running after the upgrade, with identical timing and recipients.
+
+The migration is a no-op on a fresh install, where there is no `export_schedules` table to read.
+
+It is reversible: `php artisan migrate:rollback` recreates `export_schedules` and repopulates it by
+joining the two new tables back together. A schedule's override wins over the report default on the
+way back, the inverse of how `up()` split them. Note that reports sharing one definition across
+several schedules become one legacy row per schedule, and visibility settings have nowhere to go.
 
 ## Model Changes
 
@@ -45,7 +54,7 @@ No data is lost. All existing schedules continue running after the upgrade, with
 
 - `ExportSchedule.owner_type` / `owner_id` → `ScheduledReport.recipient_type` / `recipient_id`  
   (The `owner` morph on `CustomReport` is the report's creator, not the recipient)
-- `ExportSchedule.format` → `ScheduledReport.formats` (array of overrides) with fallback to `CustomReport.formats`
+- `ExportSchedule.formats` → `CustomReport.formats`, with `ScheduledReport.formats` as a nullable override. Null on the schedule means inherit from the report.
 - `ExportSchedule.date_range` → both tables (report defaults, schedule overrides)
 
 ## API Changes
@@ -111,17 +120,21 @@ public function __construct(public Export $export, public CustomReport $report, 
 
 ### Configuration
 
-Update your `config/export-scheduler.php`:
+Update your `config/export-scheduler.php`. The keys that changed shape:
 
 ```php
+// Was: 'resources' => [ExportScheduleResource::class],
 'resources' => [
     CustomReportResource::class,
     ScheduledReportResource::class,
 ],
 
+// Was: one flat block of nav settings. Now one block per resource.
+// See the README for the full annotated block, including the new
+// 'modal_width' controlling the schedule modals in the relation manager.
 'navigation' => [
-    'reports' => [/* config for custom reports nav */],
-    'schedules' => [/* config for report schedules nav */],
+    'reports' => [/* enabled, sort, label, plural_label, icon, group, cluster, position */],
+    'schedules' => [/* the same, plus 'modal_width' */],
 ],
 
 // New: configure how users are identified
@@ -170,7 +183,9 @@ Dot-notation works for relations:
 Per-model override:
 
 ```php
-class Contact implements \Visualbuilder\ExportScheduler\Contracts\HasExportReportIdentity
+use Visualbuilder\ExportScheduler\Contracts\HasExportReportIdentity;
+
+class Contact extends Model implements HasExportReportIdentity
 {
     public function getExportReportLabel(): string
     {
@@ -226,13 +241,21 @@ Or update manually from `CustomReportSeeder` instead of `ExportScheduleSeeder`.
 
 ## Testing Your Upgrade
 
-1. Run migrations: `php artisan migrate`
-2. Check that `custom_reports` and `scheduled_reports` tables exist
-3. Verify row counts match: `SELECT COUNT(*) FROM custom_reports` should equal old `export_schedules` count
-4. Confirm next_run_at values are unchanged: `SELECT next_run_at FROM scheduled_reports`
-5. Load the admin panel and verify both nav items appear under "Reports"
-6. Click into a migrated report and confirm the Schedule relation manager shows the schedule
-7. Run a test schedule: `php artisan export:run`
+1. **Before migrating**, note two things, because the migration drops `export_schedules` when it
+   finishes and you cannot go back for them afterwards:
+   `SELECT COUNT(*) FROM export_schedules` and `SELECT id, next_run_at FROM export_schedules ORDER BY id`
+2. Run migrations: `php artisan migrate`
+3. Check that the `custom_reports` and `scheduled_reports` tables exist
+4. Verify the counts match the number you noted: `SELECT COUNT(*) FROM custom_reports` and
+   `SELECT COUNT(*) FROM scheduled_reports` should both equal it
+5. Confirm the timings are unchanged: `SELECT next_run_at FROM scheduled_reports ORDER BY id`
+   against what you noted in step 1
+6. Load the admin panel and verify both nav items appear under "Reports"
+7. Click into a migrated report and confirm the Schedules relation manager shows its schedule
+8. Run a test schedule: `php artisan export:run`
+
+Rehearse on a copy of production first. `migrate:rollback` does restore `export_schedules`, but a
+restore is not the same as never having left.
 
 ## Troubleshooting
 
@@ -262,3 +285,14 @@ Search your app for `ExportSchedule` and update:
 - Mails → pass both models
 - Resources → use `CustomReportResource` and `ScheduledReportResource`
 - Configs → update the resources list
+
+## Further Reading
+
+The [README](README.md) documents the 6.0 features in full, rather than just the migration path:
+
+- *Reports and schedules are separate things* — the model the rest of the release follows from
+- *Share reports with other users* — the three visibility modes and what each one grants
+- *How the package identifies your users* — the resolver's fallback chain, and how to override it
+  per model or replace it wholesale
+- *Choose who receives it* — recipients, cc, and the per-schedule date range and format overrides
+- *Extending the package* — the constructor signatures collected in one table

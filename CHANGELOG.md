@@ -34,6 +34,16 @@ All notable changes to `filament-export-scheduler` will be documented in this fi
 - Form fields clear visibly as the user changes types, mirroring model-level guards
 - UUID and non-numeric user keys no longer silently dropped in cc fan-out
 
+### Documentation
+- README restructured around the report/schedule split, and the previously undocumented 6.0 features written up: SQL query reports and the `sql_query_roles` gate, report visibility and sharing, user identity resolution, per-schedule date range and format overrides, per-resource navigation gating on the plugin, and a table of the four changed constructor signatures
+- README config sample replaced. It still registered the removed `ExportScheduleResource` and showed the old flat `navigation` block, so following it produced a broken install
+- README seeder command corrected to `CustomReportSeeder`, preceded by the `export-scheduler-seeders` publish
+- README trait name corrected to `InteractsWithExportSchedulerFilter`, and the section now shows importing it rather than pasting its source
+- Removed a documented "since X days/weeks/months/years ago" custom date period that the package has never implemented, and documented the `next_7_days` / `next_30_days` / `next_60_days` / `next_90_days` presets, which were absent
+- Fixed an unclosed README code fence that suppressed rendering from the Testing section onward
+- Dropped five screenshots showing the pre-6.0 UI, including the removed **Schedule** tab
+- UPGRADE.md: corrected the legacy column name to `formats`, and the verification steps, which asked you to count rows in `export_schedules` after the migration had already dropped it. Documented that the migration no-ops on fresh installs, drops the old table when it completes, and is reversible
+
 ### Migration
 - See `UPGRADE.md` for a detailed migration guide
 - Run `php artisan vendor:publish --tag=export-scheduler-migrations` to publish migrations, then `php artisan migrate`

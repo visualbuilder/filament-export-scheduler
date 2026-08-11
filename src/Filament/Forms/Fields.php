@@ -5,14 +5,15 @@ namespace Visualbuilder\ExportScheduler\Filament\Forms;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\Exports\Enums\ExportFormat;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\MorphToSelect;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
-use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
@@ -23,7 +24,6 @@ use Filament\Schemas\Components\Utilities\Set;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
-use Filament\Forms\Components\Textarea;
 use Visualbuilder\ExportScheduler\Enums\DateRange;
 use Visualbuilder\ExportScheduler\Enums\DayOfWeek;
 use Visualbuilder\ExportScheduler\Enums\Month;
@@ -783,6 +783,7 @@ class Fields
     {
         return Toggle::make('enabled')
             ->inline(false)
+            ->default(true)
             ->label(__('export-scheduler::scheduler.enabled'));
     }
 

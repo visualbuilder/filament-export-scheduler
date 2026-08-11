@@ -47,6 +47,7 @@ class ScheduleFields
                             ->columns()
                             ->schema([
                                 Fields::scheduleFrequency(),
+                                Fields::enableToggle(),
                                 Fields::scheduleTime(),
                                 Fields::scheduleDayOfWeek(),
                                 Fields::scheduleDayOfMonth(),

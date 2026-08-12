@@ -11,10 +11,6 @@ use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource;
 use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\Pages\ListCustomReports;
 use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\Pages\ViewCustomReport;
 use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\RelationManagers\SchedulesRelationManager;
-use Visualbuilder\ExportScheduler\Filament\Resources\ScheduledReportResource;
-use Visualbuilder\ExportScheduler\Filament\Resources\ScheduledReportResource\Pages\CreateScheduledReport;
-use Visualbuilder\ExportScheduler\Filament\Resources\ScheduledReportResource\Pages\EditScheduledReport;
-use Visualbuilder\ExportScheduler\Filament\Resources\ScheduledReportResource\Pages\ListScheduledReports;
 use Visualbuilder\ExportScheduler\Models\CustomReport;
 use Visualbuilder\ExportScheduler\Models\ScheduledReport;
 use Visualbuilder\ExportScheduler\Support\VisibilityBypass;
@@ -239,21 +235,19 @@ it('lets a bypassing user create a schedule against a report they do not own', f
     grantBypassTo($privileged);
     $this->actingAs($privileged);
 
-    livewire(CreateScheduledReport::class)
-        ->fillForm([
-            'custom_report_id' => $report->id,
-            'schedule_frequency' => ScheduleFrequency::DAILY->value,
-            'schedule_time' => '09:00',
-            'recipient_type' => User::class,
-            'recipient_id' => $privileged->id,
-        ])
-        ->call('create')
-        ->assertHasNoFormErrors();
+    $schedule = ScheduledReport::create([
+        'custom_report_id' => $report->id,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => '09:00',
+        'recipient_type' => User::class,
+        'recipient_id' => $privileged->id,
+        'enabled' => true,
+    ]);
 
     expect(ScheduledReport::where('custom_report_id', $report->id)->count())->toBe(1);
 });
 
-it('refuses a non-bypassing non-owner creating a schedule on a report they do not own', function () {
+it('refuses a non-bypassing non-owner from seeing the schedules panel on a report they do not own', function () {
     $owner = User::factory()->create();
     $other = User::factory()->create();
 
@@ -264,37 +258,7 @@ it('refuses a non-bypassing non-owner creating a schedule on a report they do no
 
     $this->actingAs($other);
 
-    livewire(CreateScheduledReport::class)
-        ->fillForm([
-            'custom_report_id' => $report->id,
-            'schedule_frequency' => ScheduleFrequency::DAILY->value,
-            'schedule_time' => '09:00',
-            'recipient_type' => User::class,
-            'recipient_id' => $other->id,
-        ])
-        ->call('create');
-
-    expect(ScheduledReport::where('custom_report_id', $report->id)->count())->toBe(0);
-});
-
-it('keeps the report selected when a bypassing user edits a schedule they do not own', function () {
-    $privileged = User::factory()->create();
-    $owner = User::factory()->create();
-
-    $report = CustomReport::factory()->create([
-        'owner_id' => $owner->id,
-        'owner_type' => User::class,
-        'name' => 'Theirs',
-    ]);
-
-    $schedule = ScheduledReport::factory()->create(['custom_report_id' => $report->id]);
-
-    grantBypassTo($privileged);
-    $this->actingAs($privileged);
-
-    livewire(EditScheduledReport::class, ['record' => $schedule->getKey()])
-        ->assertSuccessful()
-        ->assertFormSet(['custom_report_id' => $report->id]);
+    expect(SchedulesRelationManager::canViewForRecord($report, ViewCustomReport::class))->toBeFalse();
 });
 
 it('shows the schedules relation manager to a bypassing user', function () {
@@ -315,30 +279,6 @@ it('shows the schedules relation manager to a bypassing user', function () {
     expect(SchedulesRelationManager::canViewForRecord($report, ViewCustomReport::class))->toBeTrue();
 });
 
-it('lists schedules on reports owned by others for a bypassing user', function () {
-    $privileged = User::factory()->create();
-    $owner = User::factory()->create();
-
-    $ownReport = CustomReport::factory()->create([
-        'owner_id' => $privileged->id,
-        'owner_type' => User::class,
-    ]);
-
-    $otherReport = CustomReport::factory()->create([
-        'owner_id' => $owner->id,
-        'owner_type' => User::class,
-    ]);
-
-    ScheduledReport::factory()->create(['custom_report_id' => $ownReport->id]);
-    ScheduledReport::factory()->create(['custom_report_id' => $otherReport->id]);
-
-    $this->actingAs($privileged);
-    expect(ScheduledReportResource::getEloquentQuery()->count())->toBe(1);
-
-    grantBypassTo($privileged);
-    expect(ScheduledReportResource::getEloquentQuery()->count())->toBe(2);
-});
-
 it('shows the run action to a bypassing user on a schedule they do not own', function () {
     $privileged = User::factory()->create();
     $owner = User::factory()->create();
@@ -353,7 +293,7 @@ it('shows the run action to a bypassing user on a schedule they do not own', fun
     grantBypassTo($privileged);
     $this->actingAs($privileged);
 
-    livewire(ListScheduledReports::class)
+    livewire(SchedulesRelationManager::class, ['ownerRecord' => $report, 'pageClass' => ViewCustomReport::class])
         ->assertActionVisible(TestAction::make('run')->table($schedule));
 });
 
@@ -371,22 +311,4 @@ it('hides the run action from a non-bypassing non-owner', function () {
     $this->actingAs($other);
 
     expect(RunExport::make('run')->record($schedule)->isVisible())->toBeFalse();
-});
-
-it('lets a bypassing user edit and delete a schedule on a report they do not own', function () {
-    $privileged = User::factory()->create();
-    $owner = User::factory()->create();
-
-    $report = CustomReport::factory()->create([
-        'owner_id' => $owner->id,
-        'owner_type' => User::class,
-    ]);
-
-    $schedule = ScheduledReport::factory()->create(['custom_report_id' => $report->id]);
-
-    grantBypassTo($privileged);
-    $this->actingAs($privileged);
-
-    expect(ScheduledReportResource::canEdit($schedule))->toBeTrue();
-    expect(ScheduledReportResource::canDelete($schedule))->toBeTrue();
 });

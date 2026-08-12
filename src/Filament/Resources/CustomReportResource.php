@@ -34,42 +34,42 @@ class CustomReportResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        return ExportSchedulerPlugin::get()->shouldRegisterReportNavigation();
+        return ExportSchedulerPlugin::get()->shouldRegisterNavigation();
     }
 
     public static function getNavigationGroup(): ?string
     {
-        return config('export-scheduler.navigation.reports.group');
+        return config('export-scheduler.navigation.group');
     }
 
     public static function getNavigationIcon(): string | BackedEnum | null
     {
-        return config('export-scheduler.navigation.reports.icon');
+        return config('export-scheduler.navigation.icon');
     }
 
     public static function getNavigationSort(): ?int
     {
-        return config('export-scheduler.navigation.reports.sort');
+        return config('export-scheduler.navigation.sort');
     }
 
     public static function getModelLabel(): string
     {
-        return __(config('export-scheduler.navigation.reports.label'));
+        return __(config('export-scheduler.navigation.label'));
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __(config('export-scheduler.navigation.reports.plural_label'));
+        return __(config('export-scheduler.navigation.plural_label'));
     }
 
     public static function getCluster(): ?string
     {
-        return config('export-scheduler.navigation.reports.cluster') ?: null;
+        return config('export-scheduler.navigation.cluster') ?: null;
     }
 
     public static function getSubNavigationPosition(): SubNavigationPosition
     {
-        return config('export-scheduler.navigation.reports.position') ?? SubNavigationPosition::Top;
+        return config('export-scheduler.navigation.position') ?? SubNavigationPosition::Top;
     }
 
     public static function form(Schema $schema): Schema

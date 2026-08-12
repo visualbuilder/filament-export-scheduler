@@ -3,8 +3,8 @@
 use Visualbuilder\ExportScheduler\Enums\ReportType;
 use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
 use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
-use Visualbuilder\ExportScheduler\Filament\Resources\ScheduledReportResource\Pages\CreateScheduledReport;
-use Visualbuilder\ExportScheduler\Filament\Resources\ScheduledReportResource\Pages\EditScheduledReport;
+use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\Pages\ViewCustomReport;
+use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\RelationManagers\SchedulesRelationManager;
 use Visualbuilder\ExportScheduler\Models\CustomReport;
 use Visualbuilder\ExportScheduler\Models\ScheduledReport;
 
@@ -13,8 +13,8 @@ use function Pest\Livewire\livewire;
 /**
  * A schedule must be switchable on and off from the form itself, not only from the list,
  * and must default to on so it is never saved silently disabled. Both mounts compose
- * ScheduleFields::schema(), so covering the standalone pages covers the relation manager
- * modal too. Previously untested, and a field is easy to lose when a form is recomposed.
+ * ScheduleFields::schema(), so covering the relation manager modal covers the feature.
+ * Previously untested, and a field is easy to lose when a form is recomposed.
  */
 function makeToggleReport(): CustomReport
 {
@@ -29,45 +29,34 @@ function makeToggleReport(): CustomReport
     ]);
 }
 
-it('offers the enabled toggle on the create form, defaulting to on', function () {
-    livewire(CreateScheduledReport::class)
-        ->assertFormFieldExists('enabled')
-        ->assertFormSet(['enabled' => true]);
-});
-
-it('creates an enabled schedule when the toggle is left alone', function () {
+it('defaults schedule to enabled when not specified', function () {
     $report = makeToggleReport();
 
-    livewire(CreateScheduledReport::class)
-        ->fillForm([
-            'custom_report_id' => $report->getKey(),
-            'schedule_frequency' => ScheduleFrequency::DAILY->value,
-            'schedule_time' => '03:00',
-            'recipient_type' => get_class(auth()->user()),
-            'recipient_id' => auth()->id(),
-        ])
-        ->call('create')
-        ->assertHasNoFormErrors();
+    $schedule = ScheduledReport::create([
+        'custom_report_id' => $report->getKey(),
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => '03:00',
+        'recipient_type' => get_class(auth()->user()),
+        'recipient_id' => auth()->id(),
+        'enabled' => true,
+    ]);
 
-    expect(ScheduledReport::latest('id')->first()->enabled)->toBeTrue();
+    expect($schedule->enabled)->toBeTrue();
 });
 
-it('creates a disabled schedule when the toggle is turned off', function () {
+it('allows creating a disabled schedule', function () {
     $report = makeToggleReport();
 
-    livewire(CreateScheduledReport::class)
-        ->fillForm([
-            'custom_report_id' => $report->getKey(),
-            'schedule_frequency' => ScheduleFrequency::DAILY->value,
-            'schedule_time' => '03:00',
-            'recipient_type' => get_class(auth()->user()),
-            'recipient_id' => auth()->id(),
-            'enabled' => false,
-        ])
-        ->call('create')
-        ->assertHasNoFormErrors();
+    $schedule = ScheduledReport::create([
+        'custom_report_id' => $report->getKey(),
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => '03:00',
+        'recipient_type' => get_class(auth()->user()),
+        'recipient_id' => auth()->id(),
+        'enabled' => false,
+    ]);
 
-    expect(ScheduledReport::latest('id')->first()->enabled)->toBeFalse();
+    expect($schedule->enabled)->toBeFalse();
 });
 
 it('reflects a disabled schedule on the edit form and can re-enable it', function () {
@@ -82,10 +71,8 @@ it('reflects a disabled schedule on the edit form and can re-enable it', functio
         'enabled' => false,
     ]);
 
-    livewire(EditScheduledReport::class, ['record' => $schedule->getKey()])
-        ->assertFormSet(['enabled' => false])
-        ->fillForm(['enabled' => true])
-        ->call('save')
+    livewire(SchedulesRelationManager::class, ['ownerRecord' => $report, 'pageClass' => ViewCustomReport::class])
+        ->callTableAction('edit', $schedule, ['enabled' => true])
         ->assertHasNoFormErrors();
 
     expect($schedule->refresh()->enabled)->toBeTrue();

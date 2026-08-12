@@ -1,4 +1,109 @@
-# Upgrade Guide: 5.x to 6.0.0
+# Upgrade Guide
+
+## 6.0 → 6.0.2: Consolidation of Schedule Management
+
+Version 6.0 introduced the standalone `ScheduledReportResource` as a separate navigation item for managing schedules globally. Version 6.0.2 removes it, consolidating all schedule management into the inline `SchedulesRelationManager` on each report's edit page.
+
+### Breaking Changes
+
+#### Navigation
+
+The standalone "Report Schedules" navigation item is no longer registered. Schedules are now managed exclusively inline when editing a report.
+
+**If you subclassed `ScheduledReportResource` or customized its navigation:**
+- Delete any subclass of `ScheduledReportResource`.
+- Remove its import from your plugin registration or config.
+- Schedule management is now done via the `SchedulesRelationManager` on `CustomReportResource`.
+
+#### Configuration
+
+Your `config/export-scheduler.php` must change:
+
+**Before:**
+```php
+'resources' => [
+    CustomReportResource::class,
+    ScheduledReportResource::class,
+],
+
+'navigation' => [
+    'reports' => [
+        'enabled' => true,
+        'sort' => 100,
+        'label' => 'Custom Report',
+        'plural_label' => 'Custom Reports',
+        'icon' => 'heroicon-o-document-chart-bar',
+        'group' => 'Reports',
+        // ...
+    ],
+    'schedules' => [
+        'enabled' => true,
+        'sort' => 101,
+        'label' => 'Report Schedule',
+        'plural_label' => 'Report Schedules',
+        'icon' => 'heroicon-o-paper-airplane',
+        'group' => 'Reports',
+        'modal_width' => Width::FiveExtraLarge,
+        // ...
+    ],
+],
+```
+
+**After:**
+```php
+'resources' => [
+    CustomReportResource::class,
+],
+
+'navigation' => [
+    'enabled' => true,
+    'sort' => 100,
+    'label' => 'Custom Report',
+    'plural_label' => 'Custom Reports',
+    'icon' => 'heroicon-o-document-chart-bar',
+    'group' => 'Reports',
+    'modal_width' => Width::FiveExtraLarge,
+    // ...
+],
+```
+
+#### Plugin API
+
+The `ExportSchedulerPlugin` no longer supports per-resource navigation control:
+
+**Before:**
+```php
+ExportSchedulerPlugin::make()
+    ->enableNavigation(fn () => auth()->user()->can('viewReports'))
+    ->enableScheduleNavigation(fn () => auth()->user()->can('sendReports'))
+```
+
+**After:**
+```php
+ExportSchedulerPlugin::make()
+    ->enableNavigation(fn () => auth()->user()->can('viewReports'))
+    // Use a single enableNavigation() to gate both reports and inline schedule management
+```
+
+The following methods are removed:
+- `enableReportNavigation()`
+- `enableScheduleNavigation()`
+- `shouldRegisterReportNavigation()`
+- `shouldRegisterScheduleNavigation()`
+
+### Migration Checklist
+
+- [ ] Remove `ScheduledReportResource` from `config/export-scheduler.php` resources array
+- [ ] Collapse the two-block `navigation` config into one (reports + schedules → single block with `modal_width`)
+- [ ] Update config keys from `navigation.reports.*` to `navigation.*`
+- [ ] Delete any subclass of `ScheduledReportResource` in your application
+- [ ] Replace any `enableScheduleNavigation()` calls with a single `enableNavigation()`
+- [ ] Verify no tests reference `ScheduledReportResource` or its pages directly
+- [ ] Test schedule creation/editing inline on the report edit page
+
+---
+
+## 5.x to 6.0.0: Report/Schedule Split
 
 Version 6.0.0 is a **breaking change** that restructures how reports and schedules work. This guide covers the migration path.
 

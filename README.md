@@ -43,9 +43,8 @@ Keeping them apart means one report can be
 
 &nbsp;
 
-Both sit under a **Reports** navigation group by default: *Custom Reports* for definitions,
-*Report Schedules* for deliveries. Schedules are also managed inline from the report itself, through
-the Schedules relation manager on its edit page, so you rarely need the second menu item.
+It sits under a **Reports** navigation group by default: *Custom Reports*. Schedules are managed
+inline from the report itself, through the Schedules relation manager on its edit page.
 
 <img width="1477" height="499" alt="Screenshot 2026-08-11 at 21 39 29" src="https://github.com/user-attachments/assets/69e542f9-ac08-4718-9a09-cbc0a8f9675d" />
 
@@ -343,8 +342,8 @@ Ensure your server is set up to run Laravel's scheduler by adding this cron entr
 
 Here you can
 
-- override either resource
-- customise both navigation menus independently
+- override the resource
+- customise the navigation menu
 - set the disk to be used
 - customise which notification and email template is used
 - cap how many rows the viewer loads
@@ -357,7 +356,6 @@ Here you can
 use Filament\Pages\Enums\SubNavigationPosition;
 use Filament\Support\Enums\Width;
 use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource;
-use Visualbuilder\ExportScheduler\Filament\Resources\ScheduledReportResource;
 use Visualbuilder\ExportScheduler\Mail\ExportReady;
 use Visualbuilder\ExportScheduler\Notifications\ScheduledExportCompleteNotification;
 use Visualbuilder\ExportScheduler\Support\ReportUserResolver;
@@ -366,12 +364,11 @@ use Visualbuilder\ExportScheduler\Support\VisibilityBypass;
 return [
 
     /**
-     * Filament resources to register. Subclass either one and swap it in here
+     * Filament resources to register. Subclass the resource and swap it in here
      * to customise its forms, tables or pages.
      */
     'resources' => [
         CustomReportResource::class,
-        ScheduledReportResource::class,
     ],
 
     /**
@@ -407,36 +404,24 @@ return [
     'sql_query_roles' => ['Developer'],
 
     /**
-     * Admin Panel Navigation - separate config for reports and schedules
-     * See also Plugin options
+     * Admin Panel Navigation
      */
     'navigation' => [
-        'reports' => [
-            'enabled' => true,
-            'sort' => 100,
-            'label' => 'Custom Report',
-            'plural_label' => 'Custom Reports',
-            'icon' => 'heroicon-o-document-chart-bar',
-            'group' => 'Reports',
-            'cluster' => false,
-            'position' => SubNavigationPosition::Top,
-        ],
-        'schedules' => [
-            'enabled' => true,
-            'sort' => 101,
-            'label' => 'Report Schedule',
-            'plural_label' => 'Report Schedules',
-            'icon' => 'heroicon-o-paper-airplane',
-            'group' => 'Reports',
-            'cluster' => false,
-            'position' => SubNavigationPosition::Top,
+        'enabled' => true,
+        'sort' => 100,
+        'label' => 'Custom Report',
+        'plural_label' => 'Custom Reports',
+        'icon' => 'heroicon-o-document-chart-bar',
+        'group' => 'Reports',
+        'cluster' => false,
+        'position' => SubNavigationPosition::Top,
 
-            /**
-             * Width of the create, edit and delete modals in the schedules
-             * relation manager. The schedule form is wide - frequency,
-             * recipient, cc and overrides - so it needs more room than a
-             * Filament default.
-             */
+        /**
+         * Width of the create, edit and delete modals in the schedules
+         * relation manager. The schedule form is wide - frequency,
+         * recipient, cc and overrides - so it needs more room than a
+         * Filament default.
+         */
             'modal_width' => Width::FiveExtraLarge,
         ],
     ],
@@ -543,10 +528,7 @@ Both navigation items can be gated together, or one at a time:
 
 ```php
 ExportSchedulerPlugin::make()
-    // both items
     ->enableNavigation(fn () => auth()->user()->can('viewReports'))
-    // just the schedules item, overriding the above
-    ->enableScheduleNavigation(fn () => auth()->user()->can('sendReports'))
 ```
 
 Make some export classes with:

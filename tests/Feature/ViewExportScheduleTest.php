@@ -9,7 +9,7 @@ use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
 use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource;
 use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\Pages\ListCustomReports;
 use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\Pages\ViewCustomReport;
-use Visualbuilder\ExportScheduler\Filament\Resources\ScheduledReportResource\Pages\ListScheduledReports;
+use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\RelationManagers\SchedulesRelationManager;
 use Visualbuilder\ExportScheduler\Models\CustomReport;
 use Visualbuilder\ExportScheduler\Models\ScheduledReport;
 use Visualbuilder\ExportScheduler\Tests\Exporters\DocumentOwnerExporter;
@@ -367,7 +367,7 @@ it('offers the run action on a sql query report that has no exporter class', fun
     expect($report->isSyncQueue())->toBeBool();
     expect($schedule->willLogoutUser())->toBeBool();
 
-    livewire(ListScheduledReports::class)
+    livewire(SchedulesRelationManager::class, ['ownerRecord' => $report, 'pageClass' => ViewCustomReport::class])
         ->callAction(TestAction::make('run')->table($schedule))
         ->assertHasNoFormErrors();
 });

@@ -10,7 +10,6 @@ use Visualbuilder\ExportScheduler\Enums\ReportType;
 use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
 use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
 use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\Pages\ViewCustomReport;
-use Visualbuilder\ExportScheduler\Filament\Resources\ScheduledReportResource\Pages\ListScheduledReports;
 use Visualbuilder\ExportScheduler\Jobs\CreateSqlQueryXlsxFile;
 use Visualbuilder\ExportScheduler\Jobs\ScheduledExportCompletion;
 use Visualbuilder\ExportScheduler\Models\CustomReport;

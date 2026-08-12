@@ -3,7 +3,6 @@
 use Filament\Pages\Enums\SubNavigationPosition;
 use Filament\Support\Enums\Width;
 use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource;
-use Visualbuilder\ExportScheduler\Filament\Resources\ScheduledReportResource;
 use Visualbuilder\ExportScheduler\Mail\ExportReady;
 use Visualbuilder\ExportScheduler\Notifications\ScheduledExportCompleteNotification;
 use Visualbuilder\ExportScheduler\Support\ReportUserResolver;
@@ -16,7 +15,6 @@ return [
      */
     'resources' => [
         CustomReportResource::class,
-        ScheduledReportResource::class,
     ],
 
     /**
@@ -49,36 +47,24 @@ return [
     'sql_query_roles' => ['Developer'],
 
     /**
-     * Admin Panel Navigation - separate config for reports and schedules
+     * Admin Panel Navigation
      */
     'navigation' => [
-        'reports' => [
-            'enabled' => true,
-            'sort' => 100,
-            'label' => 'Custom Report',
-            'plural_label' => 'Custom Reports',
-            'icon' => 'heroicon-o-document-chart-bar',
-            'group' => 'Reports',
-            'cluster' => false,
-            'position' => SubNavigationPosition::Top,
-        ],
-        'schedules' => [
-            'enabled' => true,
-            'sort' => 101,
-            'label' => 'Report Schedule',
-            'plural_label' => 'Report Schedules',
-            'icon' => 'heroicon-o-paper-airplane',
-            'group' => 'Reports',
-            'cluster' => false,
-            'position' => SubNavigationPosition::Top,
+        'enabled' => true,
+        'sort' => 100,
+        'label' => 'Custom Report',
+        'plural_label' => 'Custom Reports',
+        'icon' => 'heroicon-o-document-chart-bar',
+        'group' => 'Reports',
+        'cluster' => false,
+        'position' => SubNavigationPosition::Top,
 
-            /**
-             * Width of the create, edit and delete modals in the schedules
-             * relation manager. The schedule form is wide — frequency, recipient,
-             * cc and overrides — so it needs more room than a Filament default.
-             */
-            'modal_width' => Width::FiveExtraLarge,
-        ],
+        /**
+         * Width of the create, edit and delete modals in the schedules
+         * relation manager. The schedule form is wide — frequency, recipient,
+         * cc and overrides — so it needs more room than a Filament default.
+         */
+        'modal_width' => Width::FiveExtraLarge,
     ],
 
     /**

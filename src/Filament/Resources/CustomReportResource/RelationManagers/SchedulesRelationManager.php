@@ -69,6 +69,10 @@ class SchedulesRelationManager extends RelationManager
                 TextColumn::make('last_run_at')
                     ->label(__('export-scheduler::scheduler.last_run'))
                     ->dateTime(),
+                TextColumn::make('last_successful_run_at')
+                    ->label(__('export-scheduler::scheduler.last_success'))
+                    ->dateTime()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 ToggleColumn::make('enabled')
                     ->label(__('export-scheduler::scheduler.enabled')),
             ])
@@ -96,7 +100,7 @@ class SchedulesRelationManager extends RelationManager
      */
     protected static function modalWidth(): Width | string
     {
-        return config('export-scheduler.navigation.schedules.modal_width') ?? Width::FiveExtraLarge;
+        return config('export-scheduler.navigation.modal_width') ?? Width::FiveExtraLarge;
     }
 
     /**

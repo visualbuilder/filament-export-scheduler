@@ -95,7 +95,6 @@ return [
     'confirm_delete_scheduled_report' => 'Are you sure you want to delete this scheduled report? The report will not be sent according to this schedule anymore.',
     'bulk_delete_scheduled_report'         => 'Delete selected Scheduled Report(s)',
     'confirm_bulk_delete_scheduled_report' => 'Are you sure you want to delete the selected scheduled report(s)? The report(s) will not be sent according to this schedule anymore.',
-    'view_report'                     => 'View Report',
     'schedule_action'                 => 'Schedule',
     'recipient_type'                  => 'Send to',
     'when_to_run'                     => 'When to Run',

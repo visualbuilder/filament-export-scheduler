@@ -2,6 +2,15 @@
 
 All notable changes to `filament-export-scheduler` will be documented in this file.
 
+## 6.0.2 - 2026-08-12
+
+### Removed
+- **Breaking Change**: Removed the standalone `ScheduledReportResource` navigation item. Schedules are now managed exclusively inline via the `SchedulesRelationManager` on the `CustomReportResource` edit page. The `ScheduledReport` model and database table remain unchanged.
+
+### Changed
+- Navigation collapsed from two separate items (`CustomReports` / `Report Schedules`) to a single `CustomReports` item. Config `navigation.schedules.*` keys are no longer used; only `navigation.enabled`, `navigation.*` (for the resource), and `navigation.modal_width` (for schedule modals) are meaningful.
+- `ExportSchedulerPlugin` simplified: removed `enableReportNavigation()` / `enableScheduleNavigation()` / `shouldRegisterReportNavigation()` / `shouldRegisterScheduleNavigation()` methods. Use `enableNavigation()` / `shouldRegisterNavigation()` to control visibility of the single remaining navigation item.
+
 ## 6.0.0 - 2026-08-10
 
 ### Added

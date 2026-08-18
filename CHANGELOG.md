@@ -2,6 +2,29 @@
 
 All notable changes to `filament-export-scheduler` will be documented in this file.
 
+## 6.0.3 - 2026-08-18
+
+### Added
+- `HasLinkedColumns` contract. An exporter can implement it and define `getColumnLinks(): array`, mapping a column name to a resolver `callable(Model $record): ?string`. The report viewer calls the resolver for each row of a linked column and, when it returns a URL, renders that cell as a link through to the record — an "Order ID" column linking to the order itself, an "End User" column linking to the user a relation resolves to.
+
+### Changed
+- **Breaking Change**: Schedule-level `date_range` field is removed entirely. All schedules now inherit the report's `date_range`; overrides are no longer supported. This simplifies the schedule form and prevents confusion between report and schedule date ranges. See migration `2026_08_18_000001_consolidate_report_defaults_to_schedules.php`.
+- **Breaking Change**: Consolidated multiple report-default migrations into a single migration step. The individual migrations (`create_custom_reports_table`, etc.) are replaced by one unified approach.
+- Report defaults for `date_range` and `formats` are now editable on the report itself, and all schedules inherit them. Previously, per-schedule overrides were possible; now they are not.
+- Ad hoc downloads (from the report viewer's **Download** button) now send completion notifications to the requester, matching the behaviour of scheduled exports.
+- The report viewer's free-text search now only matches against the columns actually shown, so a column's resolved link URL can never itself be matched as if it were displayed text.
+
+### Notes
+- Fully opt-in `HasLinkedColumns`: exporters that don't implement it behave exactly as before. SQL query reports are unaffected.
+- See the README section *Make columns clickable to their records* for usage.
+
+### Migration
+
+For applications upgrading from 6.0.2:
+
+- Run the new consolidation migration: `php artisan migrate`. This removes the `date_range` column from `ScheduledReport`.
+- If you had any logic depending on per-schedule `date_range` overrides, you will need to refactor it to read from the report's `date_range` instead.
+
 ## 6.0.2 - 2026-08-12
 
 ### Removed

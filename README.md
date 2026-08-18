@@ -173,6 +173,49 @@ exporter.
 
 ![Filter by relations](https://raw.githubusercontent.com/visualbuilder/filament-export-scheduler/5.x/media/filter-by-relations.png)
 
+## Make columns clickable to their records
+
+A column can link straight through to the record it describes, the same way it already does on
+that record's own Filament table — an "Order ID" column linking to the order, an "End User" column
+linking to the user a relation resolves to.
+
+Whoever builds a report only picks columns; there is nothing to configure per report. The exporter's
+author decides once, by implementing `HasLinkedColumns` on the exporter and returning a resolver per
+linkable column:
+
+```php
+use Illuminate\Database\Eloquent\Model;
+use Visualbuilder\ExportScheduler\Contracts\HasLinkedColumns;
+
+class OrderExporter extends Exporter implements HasLinkedColumns
+{
+    public static function getColumns(): array
+    {
+        return [
+            ExportColumn::make('id')->label('Order ID'),
+            ExportColumn::make('user.name')->label('End User'),
+        ];
+    }
+
+    public static function getColumnLinks(): array
+    {
+        return [
+            'id' => fn (Order $order) => OrderResource::getUrl('view', ['record' => $order]),
+            'user.name' => fn (Order $order) => $order->user
+                ? UserResource::getUrl('view', ['record' => $order->user])
+                : null,
+        ];
+    }
+}
+```
+
+Every report built from `OrderExporter` gets these links automatically, on whichever of the two
+columns it selects. Returning `null` — no related record, or the resolver chooses not to link an
+unauthorized one — just leaves that cell as plain text for that row.
+
+Only exporters implementing `HasLinkedColumns` get links; everything else, including SQL query
+reports, renders exactly as before.
+
 ## Users choose which columns to include
 
 - Columns must be defined in the exporter, or selected by the SQL query.

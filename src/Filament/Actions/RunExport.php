@@ -7,6 +7,7 @@ use Filament\Actions\Action;
 class RunExport extends Action
 {
     use RunExportTrait;
+
     protected function setUp(): void
     {
         parent::setUp();

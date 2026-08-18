@@ -81,12 +81,12 @@ class Helper
         $lastKey = array_pop($segments);
 
         foreach ($segments as $segment) {
-            if (!method_exists($model, $segment)) {
+            if (! method_exists($model, $segment)) {
                 return false; // invalid relation
             }
 
             $relation = $model->$segment();
-            if (!$relation instanceof Relation) {
+            if (! $relation instanceof Relation) {
                 return false; // not a valid eloquent relation
             }
 

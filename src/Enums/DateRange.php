@@ -26,7 +26,7 @@ enum DateRange: string implements HasLabel
 
     public function getLabel(): string
     {
-        return __('export-scheduler::date_ranges.'.$this->value);
+        return __('export-scheduler::date_ranges.' . $this->value);
     }
 
     public function getDateRange(): array
@@ -34,61 +34,61 @@ enum DateRange: string implements HasLabel
         $now = Carbon::now();
 
         return match ($this) {
-            self::TODAY        => [
+            self::TODAY => [
                 'start' => $now->copy()->startOfDay(),
-                'end'   => $now->copy()->endOfDay(),
+                'end' => $now->copy()->endOfDay(),
             ],
-            self::YESTERDAY    => [
+            self::YESTERDAY => [
                 'start' => $now->copy()->subDay()->startOfDay(),
-                'end'   => $now->copy()->subDay()->endOfDay(),
+                'end' => $now->copy()->subDay()->endOfDay(),
             ],
-            self::LAST_7_DAYS  => [
+            self::LAST_7_DAYS => [
                 'start' => $now->copy()->subDays(6)->startOfDay(),
-                'end'   => $now->copy()->endOfDay(),
+                'end' => $now->copy()->endOfDay(),
             ],
-            self::LAST_WEEK    => [
+            self::LAST_WEEK => [
                 'start' => $now->copy()->subWeek()->startOfWeek(),
-                'end'   => $now->copy()->subWeek()->endOfWeek(),
+                'end' => $now->copy()->subWeek()->endOfWeek(),
             ],
             self::LAST_30_DAYS => [
                 'start' => $now->copy()->subDays(29)->startOfDay(),
-                'end'   => $now->copy()->endOfDay(),
+                'end' => $now->copy()->endOfDay(),
             ],
-            self::LAST_MONTH   => [
+            self::LAST_MONTH => [
                 'start' => $now->copy()->subMonth()->startOfMonth(),
-                'end'   => $now->copy()->subMonth()->endOfMonth(),
+                'end' => $now->copy()->subMonth()->endOfMonth(),
             ],
-            self::THIS_MONTH   => [
+            self::THIS_MONTH => [
                 'start' => $now->copy()->startOfMonth(),
-                'end'   => $now->copy()->endOfMonth(),
+                'end' => $now->copy()->endOfMonth(),
             ],
             self::LAST_QUARTER => [
                 'start' => $now->copy()->subQuarter()->firstOfQuarter(),
-                'end'   => $now->copy()->subQuarter()->lastOfQuarter(),
+                'end' => $now->copy()->subQuarter()->lastOfQuarter(),
             ],
-            self::THIS_YEAR    => [
+            self::THIS_YEAR => [
                 'start' => $now->copy()->startOfYear(),
-                'end'   => $now->copy()->endOfYear(),
+                'end' => $now->copy()->endOfYear(),
             ],
-            self::LAST_YEAR    => [
+            self::LAST_YEAR => [
                 'start' => $now->copy()->subYear()->startOfYear(),
-                'end'   => $now->copy()->subYear()->endOfYear(),
+                'end' => $now->copy()->subYear()->endOfYear(),
             ],
-            self::NEXT_7_DAYS  => [
+            self::NEXT_7_DAYS => [
                 'start' => $now->copy()->startOfDay(),
-                'end'   => $now->copy()->addDays(6)->endOfDay(),
+                'end' => $now->copy()->addDays(6)->endOfDay(),
             ],
             self::NEXT_30_DAYS => [
                 'start' => $now->copy()->startOfDay(),
-                'end'   => $now->copy()->addDays(29)->endOfDay(),
+                'end' => $now->copy()->addDays(29)->endOfDay(),
             ],
             self::NEXT_60_DAYS => [
                 'start' => $now->copy()->startOfDay(),
-                'end'   => $now->copy()->addDays(59)->endOfDay(),
+                'end' => $now->copy()->addDays(59)->endOfDay(),
             ],
             self::NEXT_90_DAYS => [
                 'start' => $now->copy()->startOfDay(),
-                'end'   => $now->copy()->addDays(89)->endOfDay(),
+                'end' => $now->copy()->addDays(89)->endOfDay(),
             ],
         };
     }

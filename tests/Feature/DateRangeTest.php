@@ -137,6 +137,6 @@ it('returns proper labels for all date ranges', function () {
     foreach (DateRange::cases() as $dateRange) {
         expect($dateRange->getLabel())
             ->toBeString()
-            ->toEqual(__('export-scheduler::date_ranges.'.$dateRange->value));
+            ->toEqual(__('export-scheduler::date_ranges.' . $dateRange->value));
     }
 });

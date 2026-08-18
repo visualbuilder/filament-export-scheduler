@@ -5,11 +5,9 @@ namespace Visualbuilder\ExportScheduler\Notifications;
 use Filament\Actions\Exports\Models\Export;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Mail\Mailable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use Visualbuilder\ExportScheduler\Models\CustomReport;
 use Visualbuilder\ExportScheduler\Models\ScheduledReport;
@@ -28,21 +26,19 @@ class ScheduledExportCompleteNotification extends Notification
         public Export $export,
         public CustomReport $report,
         public ?ScheduledReport $schedule = null,
-    ) {
-    }
+    ) {}
 
     /**
      * Get the mail representation of the notification.
      *
      * @param  mixed  $notifiable
-     *
      * @return MailMessage
      */
     public function toMail($notifiable)
     {
         $mailableClass = config('export-scheduler.mailable');
 
-        if (!class_exists($mailableClass)) {
+        if (! class_exists($mailableClass)) {
             throw new InvalidArgumentException("The configured mailable class [{$mailableClass}] does not exist.");
         }
 
@@ -53,24 +49,23 @@ class ScheduledExportCompleteNotification extends Notification
      * Get the array representation of the notification.
      *
      * @param  mixed  $notifiable
-     *
      * @return array
      */
     public function toArray($notifiable)
     {
         return [
-            'actions'   => [],
-            'body'      => 'Scheduled Export Complete',
-            'color'     => null,
-            'duration'  => 'persistent',
-            'icon'      => 'heroicon-o-arrow-down-tray',
+            'actions' => [],
+            'body' => 'Scheduled Export Complete',
+            'color' => null,
+            'duration' => 'persistent',
+            'icon' => 'heroicon-o-arrow-down-tray',
             'iconColor' => 'success',
-            'status'    => null,
-            'title'     => 'Scheduled Export Complete',
-            'view'      => 'filament-notifications::notification',
-            'viewData'  => [],
-            'format'    => 'filament',
-            'sent_via'  => $this->via($notifiable),
+            'status' => null,
+            'title' => 'Scheduled Export Complete',
+            'view' => 'filament-notifications::notification',
+            'viewData' => [],
+            'format' => 'filament',
+            'sent_via' => $this->via($notifiable),
         ];
     }
 
@@ -78,7 +73,6 @@ class ScheduledExportCompleteNotification extends Notification
      * Get the notification's delivery channels.
      *
      * @param  mixed  $notifiable
-     *
      * @return array
      */
     public function via($notifiable)

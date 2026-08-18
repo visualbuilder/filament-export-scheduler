@@ -50,7 +50,7 @@ class ExportReady extends Mailable
         $resolver = app(ResolvesReportUsers::class);
         $userEmail = $resolver->getEmail($this->export->user) ?? $resolver->getEmail($this->report->owner);
 
-        if (!$userEmail) {
+        if (! $userEmail) {
             Log::warning('Cannot send export email: user has no configured email address', [
                 'export_id' => $this->export->id,
                 'user_type' => $this->export->user_type,

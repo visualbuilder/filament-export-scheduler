@@ -31,7 +31,7 @@ it('applies attribute filter on nested MorphTo relation', function () {
                 ],
             ],
         ],
-        'formats' => ["xlsx"]
+        'formats' => ['xlsx'],
     ]);
 
     $exporter = new ScheduledExporter($report);

@@ -25,7 +25,7 @@ interface ResolvesReportUsers
     /**
      * The value stored in a morph id column or in `visible_to_ids`.
      */
-    public function getId(Model $user): int|string;
+    public function getId(Model $user): int | string;
 
     /**
      * The text shown in every picker, table cell and email.
@@ -60,5 +60,5 @@ interface ResolvesReportUsers
      *
      * @param  class-string<Model>  $model
      */
-    public function find(string $model, int|string $id): ?Model;
+    public function find(string $model, int | string $id): ?Model;
 }

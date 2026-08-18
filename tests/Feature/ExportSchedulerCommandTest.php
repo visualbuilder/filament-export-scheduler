@@ -17,7 +17,7 @@ beforeEach(function () {
 });
 
 it('successfully runs export command for due schedules', function () {
-        $scheduleReport = CustomReport::create([
+    $scheduleReport = CustomReport::create([
         'name' => 'Test Schedule',
         'exporter' => UserExporter::class,
         'columns' => [
@@ -50,7 +50,7 @@ it('successfully runs export command for due schedules', function () {
 });
 
 it('skips disabled schedules', function () {
-        $scheduleReport = CustomReport::create([
+    $scheduleReport = CustomReport::create([
         'name' => 'Disabled Schedule',
         'exporter' => UserExporter::class,
         'columns' => [
@@ -77,7 +77,7 @@ it('skips disabled schedules', function () {
 });
 
 it('skips schedules not yet due', function () {
-        $scheduleReport = CustomReport::create([
+    $scheduleReport = CustomReport::create([
         'name' => 'Future Schedule',
         'exporter' => UserExporter::class,
         'columns' => [
@@ -109,7 +109,7 @@ it('processes multiple due schedules', function () {
         'columns' => [['name' => 'id', 'label' => 'ID']],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
-        'formats' => [ExportFormat::Csv]
+        'formats' => [ExportFormat::Csv],
     ];
 
     $schedule = [

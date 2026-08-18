@@ -61,16 +61,16 @@ class ScheduleFields
 
                         Group::make([
                             Section::make(__('export-scheduler::scheduler.when_to_send'))
-                            ->schema([
-                                Fields::sendEmptyReport()
-                            ]),
+                                ->schema([
+                                    Fields::sendEmptyReport(),
+                                ]),
 
                             Section::make(__('export-scheduler::scheduler.schedule_output'))
                                 ->hiddenLabel()
                                 ->contained()
                                 ->description(__('export-scheduler::scheduler.schedule_output_description'))
-                                ->schema([Fields::format()->hiddenLabel()])
-                        ])
+                                ->schema([Fields::format()->hiddenLabel()]),
+                        ]),
                     ])->columns(),
 
                     Group::make([

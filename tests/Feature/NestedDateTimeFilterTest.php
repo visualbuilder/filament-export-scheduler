@@ -32,7 +32,7 @@ it('detects chained datetime attributes', function () {
                     'condition' => 'and',
                 ],
             ],
-        ]
+        ],
     ]);
 
     expect((new ScheduledExporter($report))->run())->toBeTrue();

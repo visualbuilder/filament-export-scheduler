@@ -19,18 +19,20 @@ class ExportSchedulerCommand extends Command
         ScheduledReport::query()
             ->with('report')
             ->enabled()
-            ->where(fn ($q) => $q
-                ->nextRunDue()
-                ->orWhereNull('next_run_at')
+            ->where(
+                fn ($q) => $q
+                    ->nextRunDue()
+                    ->orWhereNull('next_run_at')
             )
             ->each(function (ScheduledReport $schedule) {
-                if (!$schedule->report) {
+                if (! $schedule->report) {
                     Log::warning('Scheduled report has no linked custom report', ['schedule_id' => $schedule->id]);
+
                     return;
                 }
 
                 // For schedules with null next_run_at, check if it should run now
-                if (is_null($schedule->next_run_at) && !$schedule->shouldRunNow()) {
+                if (is_null($schedule->next_run_at) && ! $schedule->shouldRunNow()) {
                     return;
                 }
 

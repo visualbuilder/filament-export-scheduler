@@ -20,6 +20,7 @@ use Illuminate\Pagination\LengthAwarePaginator as Paginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Visualbuilder\ExportScheduler\Contracts\HasLinkedColumns;
 use Visualbuilder\ExportScheduler\Filament\Actions\DownloadExport;
 use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource;
 use Visualbuilder\ExportScheduler\Models\CustomReport;
@@ -67,6 +68,15 @@ class ViewCustomReport extends Page implements HasTable
     protected ?array $resultColumns = null;
 
     protected bool $isTruncated = false;
+
+    /**
+     * Column names with a link resolver from the exporter's getColumnLinks(),
+     * restricted to columns this report actually selected. Populated by
+     * getExporterRows(); stays empty for SQL query reports.
+     *
+     * @var array<int, string>
+     */
+    protected array $linkedColumns = [];
 
     public function mount(int | string $record): void
     {
@@ -137,13 +147,19 @@ class ViewCustomReport extends Page implements HasTable
     protected function getReportColumns(): array
     {
         return collect($this->getResultColumns())
-            ->map(fn (string $label, string $name): TextColumn => TextColumn::make($name)
-                ->label($label)
-                // Names can be relation paths or arbitrary SQL aliases, so read the row's
-                // literal key rather than letting a dot be treated as a nested path.
-                ->state(fn (array $record) => $record[$name] ?? null)
-                ->sortable()
-                ->wrap())
+            ->map(function (string $label, string $name): TextColumn {
+                $column = TextColumn::make($name)
+                    ->label($label)
+                    ->state(fn (array $record) => $record[$name] ?? null)
+                    ->sortable()
+                    ->wrap();
+
+                if (in_array($name, $this->linkedColumns, true)) {
+                    $column->url(fn (array $record) => $record['__links'][$name] ?? null);
+                }
+
+                return $column;
+            })
             ->values()
             ->all();
     }
@@ -159,6 +175,7 @@ class ViewCustomReport extends Page implements HasTable
             $search = Str::lower($search);
 
             $rows = $rows->filter(fn (array $row): bool => collect($row)
+                ->except('__links')
                 ->contains(fn ($value): bool => str_contains(Str::lower((string) $value), $search)));
         }
 
@@ -297,6 +314,9 @@ class ViewCustomReport extends Page implements HasTable
 
         $this->resultColumns = $columnMap;
 
+        $linkResolvers = $this->getColumnLinkResolvers($exporterClass, $columnMap);
+        $this->linkedColumns = array_keys($linkResolvers);
+
         if ($columnMap === []) {
             return collect();
         }
@@ -323,9 +343,18 @@ class ViewCustomReport extends Page implements HasTable
             $names = array_keys($columnMap);
 
             return $query->cursor()
-                ->mapWithKeys(fn (Model $record): array => [
-                    $record->getKey() => array_combine($names, $exporter($record)),
-                ])
+                ->mapWithKeys(function (Model $record) use ($exporter, $names, $linkResolvers): array {
+                    $row = array_combine($names, $exporter($record));
+
+                    if ($linkResolvers) {
+                        $row['__links'] = [];
+                        foreach ($linkResolvers as $name => $resolver) {
+                            $row['__links'][$name] = $resolver($record);
+                        }
+                    }
+
+                    return [$record->getKey() => $row];
+                })
                 ->collect();
         } catch (\Exception $exception) {
             Log::error($exception->getMessage());
@@ -388,5 +417,22 @@ class ViewCustomReport extends Page implements HasTable
         }
 
         return (string) str($column)->replace('_', ' ')->headline();
+    }
+
+    /**
+     * Column link resolvers from the exporter, restricted to columns this
+     * report actually selected.
+     *
+     * @param  class-string  $exporterClass
+     * @param  array<string, string>  $columnMap
+     * @return array<string, callable(Model): (string|null)>
+     */
+    protected function getColumnLinkResolvers(string $exporterClass, array $columnMap): array
+    {
+        if (! is_a($exporterClass, HasLinkedColumns::class, allow_string: true)) {
+            return [];
+        }
+
+        return array_intersect_key($exporterClass::getColumnLinks(), $columnMap);
     }
 }

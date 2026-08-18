@@ -40,7 +40,7 @@ class ReportUserResolver implements ResolvesReportUsers
             ->all();
     }
 
-    public function getId(Model $user): int|string
+    public function getId(Model $user): int | string
     {
         return $user->getKey();
     }
@@ -101,7 +101,7 @@ class ReportUserResolver implements ResolvesReportUsers
             ->all();
     }
 
-    public function find(string $model, int|string $id): ?Model
+    public function find(string $model, int | string $id): ?Model
     {
         if (! $this->isConfigured($model)) {
             return null;

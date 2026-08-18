@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Facade;
 
 /**
  * @see \Visualbuilder\ExportScheduler\ExportScheduler
+ *
  * @method static bool isValidCronExpression(string $expression)
  * @method static array listExporters()
  */

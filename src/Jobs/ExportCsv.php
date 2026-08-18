@@ -3,6 +3,7 @@
 namespace Visualbuilder\ExportScheduler\Jobs;
 
 use AnourValar\EloquentSerialize\Facades\EloquentSerializeFacade;
+use Filament\Actions\Exports\Jobs\ExportCsv as BaseExportCsv;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Query\Expression;
@@ -10,7 +11,6 @@ use Illuminate\Support\Facades\DB;
 use League\Csv\Writer;
 use SplTempFileObject;
 use Throwable;
-use Filament\Actions\Exports\Jobs\ExportCsv as BaseExportCsv;
 
 class ExportCsv extends BaseExportCsv
 {

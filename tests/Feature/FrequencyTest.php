@@ -1,7 +1,6 @@
 <?php
 
 use Carbon\Carbon;
-use Filament\Actions\Exports\Enums\ExportFormat;
 use Illuminate\Support\Facades\Notification;
 use Visualbuilder\ExportScheduler\Enums\DayOfWeek;
 use Visualbuilder\ExportScheduler\Enums\Month;
@@ -175,7 +174,7 @@ it('sends a monthly export email every last day of the month', function () {
     $testTime = $firstDayOfTheYear;
     for ($i = 0; $i < $numOfDays; $i++) {   // run every once every day for a year
         Carbon::setTestNow($testTime);
-        fwrite(STDOUT, "Running test on day $i. ".$testTime->format("Y-m-d H:i:s")."\n");
+        fwrite(STDOUT, "Running test on day $i. " . $testTime->format('Y-m-d H:i:s') . "\n");
         $this->artisan('export:run');
         $testTime->addDay();
     }
@@ -311,7 +310,7 @@ it('sends a monthly export email on the last day of every month (31st; 28th/29th
 });
 
 it('sends a yearly export email (June 15th)', function () {
-    $nonLeapYear =  Carbon::createFromDate(2023)->firstOfYear();
+    $nonLeapYear = Carbon::createFromDate(2023)->firstOfYear();
     $dayOfTheMonth = 15;
     $month = Month::JUNE->value;
     $numOfYears = 12;

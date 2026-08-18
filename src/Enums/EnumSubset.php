@@ -19,7 +19,7 @@ trait EnumSubset
         return $array;
     }
 
-    public function is(self|string|null $value): bool
+    public function is(self | string | null $value): bool
     {
         if ($value === null) {
             return false;

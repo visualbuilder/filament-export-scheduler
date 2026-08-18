@@ -36,5 +36,4 @@ enum Month: int implements HasLabel
             self::DECEMBER => __('export-scheduler::scheduler.december'), // lowercase
         };
     }
-
 }

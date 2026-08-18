@@ -56,7 +56,7 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
             $package->hasViews(static::$viewNamespace);
         }
 
-        //Add Polymorphic relationship to Export
+        // Add Polymorphic relationship to Export
         Export::polymorphicUserRelationship();
     }
 
@@ -86,7 +86,7 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
     {
         parent::packageRegistered();
 
-        $this->loadJsonTranslationsFrom(__DIR__.'/../resources/lang/');
+        $this->loadJsonTranslationsFrom(__DIR__ . '/../resources/lang/');
 
         // Bind the ExportScheduler class to the container
         $this->app->singleton(ExportScheduler::class, function () {
@@ -114,11 +114,11 @@ class ExportSchedulerServiceProvider extends PackageServiceProvider
         // publish seeders
         if (app()->runningInConsole()) {
             $this->publishes([
-                __DIR__.'/../database/seeders/CustomReportSeeder.php' => database_path('seeders/CustomReportSeeder.php'),
+                __DIR__ . '/../database/seeders/CustomReportSeeder.php' => database_path('seeders/CustomReportSeeder.php'),
             ], 'export-scheduler-seeders');
         }
 
-        if(app()->environment('testing')) {
+        if (app()->environment('testing')) {
             $this->loadMigrationsFrom(__DIR__ . '/../../database/migrations');
         }
 

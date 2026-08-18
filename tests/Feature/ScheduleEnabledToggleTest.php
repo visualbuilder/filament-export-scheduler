@@ -23,7 +23,6 @@ function makeToggleReport(): CustomReport
         'report_type' => ReportType::EXPORTER,
         'exporter' => UserExporter::class,
         'columns' => [['name' => 'id', 'label' => 'ID']],
-        'formats' => ['csv'],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);

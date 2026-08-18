@@ -12,10 +12,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Collection;
 use Visualbuilder\ExportScheduler\Contracts\BypassesReportVisibility;
 use Visualbuilder\ExportScheduler\Database\Factories\CustomReportFactory;
-use Visualbuilder\ExportScheduler\Enums\DateRange;
 use Visualbuilder\ExportScheduler\Enums\ReportType;
 use Visualbuilder\ExportScheduler\Enums\ReportVisibility;
-use Visualbuilder\ExportScheduler\Models\Concerns\ResolvesDateRange;
 
 /**
  * The definition of a report: what to export, which columns, which filters, and
@@ -31,8 +29,6 @@ use Visualbuilder\ExportScheduler\Models\Concerns\ResolvesDateRange;
  * @property string|null $exporter
  * @property array|null $columns
  * @property array|null $filters
- * @property DateRange|null $date_range
- * @property array|null $formats
  * @property string|null $owner_type
  * @property int|null $owner_id
  * @property ReportVisibility $visibility
@@ -47,7 +43,6 @@ use Visualbuilder\ExportScheduler\Models\Concerns\ResolvesDateRange;
 class CustomReport extends Model
 {
     use HasFactory;
-    use ResolvesDateRange;
 
     protected $table = 'custom_reports';
 
@@ -58,8 +53,6 @@ class CustomReport extends Model
         'exporter',
         'columns',
         'filters',
-        'date_range',
-        'formats',
         'owner_id',
         'owner_type',
         'visibility',
@@ -71,8 +64,6 @@ class CustomReport extends Model
         'columns' => 'array',
         'available_columns' => 'array',
         'filters' => 'array',
-        'formats' => 'array',
-        'date_range' => DateRange::class,
         'report_type' => ReportType::class,
         'visibility' => ReportVisibility::class,
         'visible_to_ids' => 'array',
@@ -220,11 +211,6 @@ class CustomReport extends Model
     | Report definition
     |--------------------------------------------------------------------------
     */
-
-    public function effectiveDateRange(): ?DateRange
-    {
-        return $this->date_range;
-    }
 
     public function isSqlQuery(): bool
     {

@@ -80,15 +80,17 @@ class CustomReportResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            // Owner is deliberately not searchable: its label is resolved in PHP from a
+            // morph target, so there is no column to match against in SQL.
+            ->searchable()
+            ->searchPlaceholder(__('export-scheduler::scheduler.search_reports'))
+            ->persistSearchInSession()
             ->columns([
                 TextColumn::make('name')
+                    ->searchable()
                     ->label(__('export-scheduler::scheduler.name'))
                     ->sortable(),
                 TextColumn::make('report_type')->label('Type')->badge(),
-                TextColumn::make('date_range')
-                    ->label(__('export-scheduler::scheduler.date_range'))
-                    ->badge()
-                    ->color('warning'),
                 TextColumn::make('visibility')
                     ->label(__('export-scheduler::scheduler.visibility'))
                     ->badge(),
@@ -117,7 +119,7 @@ class CustomReportResource extends Resource
                     ->modalDescription(__('export-scheduler::scheduler.confirm_delete_custom_report'))
                     ->visible(fn (CustomReport $record): bool => static::canDelete($record)),
             ])
-            ->headerActions([
+            ->toolbarActions([
                 DeleteBulkAction::make()
                     ->modalHeading(__('export-scheduler::scheduler.bulk_delete_custom_report'))
                     ->modalDescription(__('export-scheduler::scheduler.confirm_bulk_delete_custom_report')),

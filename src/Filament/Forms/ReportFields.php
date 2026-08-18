@@ -47,14 +47,9 @@ class ReportFields
                                     Fields::sqlQuery(),
                                 ]),
 
-                            // Report defaults. A schedule may override either.
-                            Section::make(__('export-scheduler::scheduler.report_defaults'))
-                                ->description(__('export-scheduler::scheduler.report_defaults_description'))
-                                ->columns()
-                                ->schema([
-                                    Fields::dateRange(),
-                                    Fields::formats(),
-                                ]),
+                            // Date range and file format are not report settings. They
+                            // belong to a schedule, which is where they are now edited.
+                            static::ownershipSection(),
 
                             static::sharingSection(),
 
@@ -78,6 +73,67 @@ class ReportFields
                 ->persistTabInQueryString()
                 ->columnSpanFull(),
         ];
+    }
+
+    /**
+     * Who owns this report.
+     *
+     * Defaults to whoever is building it, but is transferable: you may build a
+     * report on someone else's behalf and hand it straight to them. Ownership is
+     * what carries edit, delete and schedule rights, so giving it away gives away
+     * your own access unless you hold a visibility bypass — hence the warning.
+     */
+    public static function ownershipSection(): Section
+    {
+        return Section::make(__('export-scheduler::scheduler.ownership'))
+            ->description(__('export-scheduler::scheduler.ownership_description'))
+            ->columns()
+            ->schema([
+                static::ownerType(),
+                static::ownerId(),
+            ]);
+    }
+
+    public static function ownerType(): Select
+    {
+        return Select::make('owner_type')
+            ->label(__('export-scheduler::scheduler.owner_type'))
+            ->options(fn () => app(ResolvesReportUsers::class)->userTypes())
+            // The class name itself, matching userTypes() and isOwnedBy().
+            ->default(fn () => ($user = auth()->user()) ? $user::class : null)
+            ->native(false)
+            ->required()
+            ->live()
+            // Bare ids are meaningless once the class moves — Admin #7 is not
+            // Associate #7. Mirrors recipientType() on the schedule form.
+            ->afterStateUpdated(fn (Set $set) => $set('owner_id', null));
+    }
+
+    public static function ownerId(): Select
+    {
+        return Select::make('owner_id')
+            ->label(__('export-scheduler::scheduler.owner'))
+            ->helperText(__('export-scheduler::scheduler.owner_helper'))
+            ->default(fn () => auth()->user()?->getKey())
+            ->options(function (Get $get) {
+                $type = $get('owner_type');
+
+                return $type ? app(ResolvesReportUsers::class)->options($type) : [];
+            })
+            ->getSearchResultsUsing(function (string $search, Get $get) {
+                $type = $get('owner_type');
+
+                return $type ? app(ResolvesReportUsers::class)->options($type, $search) : [];
+            })
+            ->getOptionLabelUsing(function ($value, Get $get) {
+                $type = $get('owner_type');
+
+                return $type ? (app(ResolvesReportUsers::class)->labelsFor($type, [$value])[$value] ?? null) : null;
+            })
+            ->visible(fn (Get $get) => filled($get('owner_type')))
+            ->searchable()
+            ->required()
+            ->native(false);
     }
 
     /**

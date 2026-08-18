@@ -171,21 +171,26 @@ class ScheduledReport extends Model
 
     /*
     |--------------------------------------------------------------------------
-    | Inheritance from the report
+    | Date range and formats
     |--------------------------------------------------------------------------
     |
-    | A null override means "use the report's value". Everything that needs a
-    | date range or a format list reads these, never the raw columns.
+    | Both belong to the schedule alone. They were once report-level defaults a
+    | schedule could override, but the report no longer carries either, so there
+    | is nothing left to inherit and these no longer fall back to it.
+    |
+    | Kept as accessors rather than folded into their callers: they are the
+    | documented read path, and the format column is still an array for the sake
+    | of the export pipeline even though the UI now writes a single value.
     */
 
     public function getResolvedDateRangeAttribute(): ?DateRange
     {
-        return $this->date_range ?? $this->report?->date_range;
+        return $this->date_range;
     }
 
     public function getResolvedFormatsAttribute(): array
     {
-        return $this->formats ?? $this->report?->formats ?? [];
+        return $this->formats ?? [];
     }
 
     public function effectiveDateRange(): ?DateRange

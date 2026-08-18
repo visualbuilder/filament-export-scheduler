@@ -98,8 +98,7 @@ return new class extends Migration
             $table->string('exporter')->nullable();
             $table->json('columns')->nullable();
             $table->json('filters')->nullable();
-            $table->string('date_range')->nullable();
-            $table->json('formats')->nullable();
+            // No date_range or formats: both belong to a schedule now.
             $table->string('owner_type')->nullable();
             $table->unsignedBigInteger('owner_id')->nullable();
             $table->string('visibility', 20)->default('owner');

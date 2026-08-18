@@ -2,7 +2,6 @@
 
 use Filament\Actions\Exports\Models\Export;
 use Filament\Actions\Testing\TestAction;
-use Visualbuilder\ExportScheduler\Enums\DateRange;
 use Visualbuilder\ExportScheduler\Enums\ReportType;
 use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
 use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
@@ -27,7 +26,6 @@ function makeSchedule(array $overrides = []): CustomReport
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
         ],
-        'formats' => ['csv'],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ], $overrides));
@@ -48,8 +46,8 @@ it('lists the rows an exporter report would export', function () {
         ->assertSee('included@domain.com');
 });
 
-it('only lists rows matching the schedule date range', function () {
-    $schedule = makeSchedule(['date_range' => DateRange::TODAY], );
+it('lists rows of every age, since a date range belongs to a schedule not a report', function () {
+    $schedule = makeSchedule();
 
     $old = User::create([
         'name' => 'Old',
@@ -64,10 +62,10 @@ it('only lists rows matching the schedule date range', function () {
         'password' => 'password',
     ]);
 
+    // The viewer previews the report itself, and the report carries no range.
     livewire(ViewCustomReport::class, ['record' => $schedule->getKey()])
         ->assertOk()
-        ->assertCanSeeTableRecords([$recent])
-        ->assertCanNotSeeTableRecords([$old]);
+        ->assertCanSeeTableRecords([$recent, $old]);
 });
 
 it('lists the rows of a sql query report', function () {

@@ -25,7 +25,6 @@ it('sends a daily export email every day for 3 days', function () {
     $dailyReport = CustomReport::create([
         'name' => 'User Export Daily',
         'exporter' => UserExporter::class,
-        'formats' => [ExportFormat::Csv],
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -65,7 +64,6 @@ it('sends a weekly export email every week (Wednesday) for 3 weeks', function ()
     $weeklyReport = CustomReport::create([
         'name' => 'User Export Weekly (Wednesday)',
         'exporter' => UserExporter::class,
-        'formats' => [ExportFormat::Csv],
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -108,7 +106,6 @@ it('sends a monthly export email every month (15th)', function () {
     $monthlyReport = CustomReport::create([
         'name' => 'User Export Monthly (15th)',
         'exporter' => UserExporter::class,
-        'formats' => [ExportFormat::Csv],
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -152,7 +149,6 @@ it('sends a monthly export email every last day of the month', function () {
     $monthlyReport = CustomReport::create([
         'name' => 'User Export Monthly (-1)',
         'exporter' => UserExporter::class,
-        'formats' => [ExportFormat::Csv],
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -196,7 +192,6 @@ it('sends a monthly export email every month (29th; 28th for non-leap year)', fu
     $monthlyReport = CustomReport::create([
         'name' => 'User Export Monthly (15th)',
         'exporter' => UserExporter::class,
-        'formats' => [ExportFormat::Csv],
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -239,7 +234,6 @@ it('sends a monthly export email every month', function () {
     $monthlyReport = CustomReport::create([
         'name' => 'User Export Monthly (15th)',
         'exporter' => UserExporter::class,
-        'formats' => [ExportFormat::Csv],
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -282,7 +276,6 @@ it('sends a monthly export email on the last day of every month (31st; 28th/29th
     $monthlyReport = CustomReport::create([
         'name' => 'User export Last Day the month',
         'exporter' => UserExporter::class,
-        'formats' => [ExportFormat::Csv],
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -326,7 +319,6 @@ it('sends a yearly export email (June 15th)', function () {
     $yearlyReport = CustomReport::create([
         'name' => 'User Export Yearly (June 15th)',
         'exporter' => UserExporter::class,
-        'formats' => [ExportFormat::Csv],
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -371,7 +363,6 @@ it('sends a yearly export email (February 29th; 28th for non-leap year)', functi
     $yearlyReport = CustomReport::create([
         'name' => 'User Export Yearly (June 15th)',
         'exporter' => UserExporter::class,
-        'formats' => [ExportFormat::Csv],
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -416,7 +407,6 @@ it('sends a quarterly export email (starts on January 15th)', function () {
     $yearlyReport = CustomReport::create([
         'name' => 'User Export Quarterly (January 15th)',
         'exporter' => UserExporter::class,
-        'formats' => [ExportFormat::Csv],
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -461,7 +451,6 @@ it('sends a quarterly export email (starts on November 29th; February 28th for n
     $yearlyReport = CustomReport::create([
         'name' => 'User Export Quarterly (November 29th)',
         'exporter' => UserExporter::class,
-        'formats' => [ExportFormat::Csv],
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -505,7 +494,6 @@ it('sends a half-yearly export email (starts on January 15th)', function () {
     $yearlyReport = CustomReport::create([
         'name' => 'User Export Half-Yearly (January 15th)',
         'exporter' => UserExporter::class,
-        'formats' => [ExportFormat::Csv],
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -549,7 +537,6 @@ it('sends a half-yearly export email (starts on August 29th; February 28th for n
     $yearlyReport = CustomReport::create([
         'name' => 'User Export Half-Yearly (November 29th)',
         'exporter' => UserExporter::class,
-        'formats' => [ExportFormat::Csv],
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -591,7 +578,6 @@ it('sends a cron export email (quarterly at 2:00 am)', function () {
     $cronReport = CustomReport::create([
         'name' => 'User Export Cron (Quarterly at 2:00 am)',
         'exporter' => UserExporter::class,
-        'formats' => [ExportFormat::Csv],
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
@@ -636,7 +622,6 @@ it('sends a cron export email (every weekday at 10:30 am)', function () {
     $cronReport = CustomReport::create([
         'name' => 'User Export Cron (Every weekday at 10:30 am)',
         'exporter' => UserExporter::class,
-        'formats' => [ExportFormat::Csv],
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],

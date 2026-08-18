@@ -32,8 +32,7 @@ it('detects chained datetime attributes', function () {
                     'condition' => 'and',
                 ],
             ],
-        ],
-        'formats' => ["xlsx"]
+        ]
     ]);
 
     expect((new ScheduledExporter($report))->run())->toBeTrue();

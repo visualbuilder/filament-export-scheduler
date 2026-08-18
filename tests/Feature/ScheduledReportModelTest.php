@@ -49,26 +49,31 @@ it('calculates next run time for daily schedule', function () {
     expect($schedule->next_run_at)->not->toBeNull();
 });
 
-it('uses schedule format override over report formats', function () {
+it('resolves the formats set on the schedule', function () {
     $schedule = ScheduledReport::factory()->create([
-        'custom_report_id' => CustomReport::factory()
-            ->create(['formats' => ['csv']])
-            ->id,
+        'custom_report_id' => CustomReport::factory()->create()->id,
         'formats' => ['xlsx'],
     ]);
 
     expect($schedule->resolved_formats)->toEqual(['xlsx']);
 });
 
-it('falls back to report formats when schedule has none', function () {
+it('does not inherit formats from the report', function () {
     $schedule = ScheduledReport::factory()->create([
-        'custom_report_id' => CustomReport::factory()
-            ->create(['formats' => ['csv']])
-            ->id,
+        'custom_report_id' => CustomReport::factory()->create()->id,
         'formats' => null,
     ]);
 
-    expect($schedule->resolved_formats)->toEqual(['csv']);
+    expect($schedule->resolved_formats)->toEqual([]);
+});
+
+it('does not inherit a date range from the report', function () {
+    $schedule = ScheduledReport::factory()->create([
+        'custom_report_id' => CustomReport::factory()->create()->id,
+        'date_range' => null,
+    ]);
+
+    expect($schedule->resolved_date_range)->toBeNull();
 });
 
 it('clears cc when changing recipient type', function () {

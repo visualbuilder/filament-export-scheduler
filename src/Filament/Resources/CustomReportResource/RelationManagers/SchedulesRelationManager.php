@@ -63,6 +63,10 @@ class SchedulesRelationManager extends RelationManager
                             ? $label . ' +' . $record->cc_count
                             : $label;
                     }),
+                TextColumn::make('formats')
+                    ->label(__('export-scheduler::scheduler.format'))
+                    ->badge()
+                    ->formatStateUsing(fn ($state): string => strtoupper((string) $state)),
                 TextColumn::make('next_run_at')
                     ->label(__('export-scheduler::scheduler.next_run_at'))
                     ->dateTime(),
@@ -77,9 +81,6 @@ class SchedulesRelationManager extends RelationManager
                     ->label(__('export-scheduler::scheduler.enabled')),
             ])
             ->headerActions([
-                DeleteBulkAction::make()
-                    ->modalHeading(__('export-scheduler::scheduler.bulk_delete_scheduled_report'))
-                    ->modalDescription(__('export-scheduler::scheduler.confirm_bulk_delete_scheduled_report')),
                 CreateAction::make()
                     ->modalWidth(static::modalWidth()),
             ])
@@ -91,6 +92,11 @@ class SchedulesRelationManager extends RelationManager
                 DeleteAction::make()
                     ->modalHeading(__('export-scheduler::scheduler.delete_scheduled_report'))
                     ->modalDescription(__('export-scheduler::scheduler.confirm_delete_scheduled_report')),
+            ])
+            ->toolbarActions([
+                DeleteBulkAction::make()
+                    ->modalHeading(__('export-scheduler::scheduler.bulk_delete_scheduled_report'))
+                    ->modalDescription(__('export-scheduler::scheduler.confirm_bulk_delete_scheduled_report')),
             ]);
     }
 

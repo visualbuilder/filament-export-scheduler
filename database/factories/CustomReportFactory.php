@@ -2,9 +2,7 @@
 
 namespace Visualbuilder\ExportScheduler\Database\Factories;
 
-use Filament\Actions\Exports\Enums\ExportFormat;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Visualbuilder\ExportScheduler\Enums\DateRange;
 use Visualbuilder\ExportScheduler\Enums\ReportType;
 use Visualbuilder\ExportScheduler\Enums\ReportVisibility;
 use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
@@ -25,22 +23,20 @@ class CustomReportFactory extends Factory
             // pre-encoded string would be encoded a second time on save.
             'columns' => [
                 [
-                    'name'  => 'id',
+                    'name' => 'id',
                     'label' => 'ID',
                 ],
                 [
-                    'name'  => 'email',
+                    'name' => 'email',
                     'label' => 'Email',
                 ],
                 [
-                    'name'      => 'created_at',
-                    'label'     => 'Date Added',
+                    'name' => 'created_at',
+                    'label' => 'Date Added',
                     'formatter' => 'long_date',
                 ],
             ],
             'filters' => null,
-            'date_range' => $this->faker->randomElement(DateRange::values()),
-            'formats' => [ExportFormat::Xlsx->value],
             'owner_id' => User::factory(),
             'owner_type' => User::class,
             'visibility' => ReportVisibility::OWNER,

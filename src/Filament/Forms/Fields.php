@@ -16,7 +16,6 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\TextEntry;
-use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -677,18 +676,33 @@ class Fields
             ->native(false);
     }
 
-    public static function formats(): Select
+    /**
+     * The one file a schedule produces.
+     *
+     * Stored in the `formats` json column as a single-element array. The column
+     * predates this field and once held several formats at a time; keeping the
+     * shape avoids a schema change and leaves resolved_formats untouched, so the
+     * export pipeline still receives the list it expects.
+     */
+    public static function format(): Select
     {
         return Select::make('formats')
-            ->label(__('export-scheduler::scheduler.formats'))
+            ->label(__('export-scheduler::scheduler.format'))
             ->options([
-                'csv' => __('CSV'),
-                'xlsx' => __('XLSX'),
+                ExportFormat::Csv->value => __('export-scheduler::scheduler.CSV'),
+                ExportFormat::Xlsx->value => __('export-scheduler::scheduler.XLSX'),
             ])
-            ->default([ExportFormat::Xlsx])
+            ->default(ExportFormat::Xlsx->value)
             ->native(false)
-            ->multiple()
-            ->required();
+            ->required()
+            // A legacy row may hold two formats, or none at all when it predates this
+            // field being required. Show the first, or the default, rather than an
+            // empty required field the user has to guess at.
+            ->formatStateUsing(fn ($state) => collect($state)
+                ->map(fn ($format) => $format instanceof ExportFormat ? $format->value : (string) $format)
+                ->filter()
+                ->first() ?? ExportFormat::Xlsx->value)
+            ->dehydrateStateUsing(fn ($state) => filled($state) ? [$state] : []);
     }
 
     public static function columnsRepeater(): Repeater
@@ -802,51 +816,6 @@ class Fields
                 true => __('export-scheduler::scheduler.send_empty_report_true_description'),
                 false => __('export-scheduler::scheduler.send_empty_report_false_description'),
             ]);
-    }
-
-    public static function copyToUser(): Fieldset
-    {
-        return Fieldset::make(__('export-scheduler::scheduler.cc'))
-            ->schema(self::copyToUserFields())
-            ->visible(fn (Get $get) => $get('owner_id'));
-    }
-
-    public static function copyToUserFields(): array
-    {
-        return [
-            TextEntry::make('Data Security Warning')
-                ->belowContent(fn (Get $get) => new HtmlString(__('export-scheduler::scheduler.cc_warning', ['owner_type' => class_basename($get('owner_type'))]))),
-
-            Repeater::make('cc')
-                ->hiddenLabel()
-                ->addActionLabel(__('export-scheduler::scheduler.cc_add_label'))
-                ->simple(self::selectCopyToUser()),
-        ];
-    }
-
-    public static function selectCopyToUser(): Select
-    {
-        return Select::make('id')
-            ->label('User')
-            ->placeholder(__('export-scheduler::scheduler.cc_placeholder'))
-            ->searchable()
-            ->options(function ($get) {
-                $type = $get('../../owner_type');
-                $ownerId = $get('../../owner_id');
-                $ccItems = $get('../../cc');
-                $ccIds = [];
-                if (is_array($ccItems)) {
-                    $ccIds = collect($ccItems)->pluck('id')->toArray();
-                }
-                $excludeIds = array_filter(array_merge($ccIds, [$ownerId]));
-
-                return $type ? $type::query()->whereNotIn('id', $excludeIds)->pluck('email', 'id') : [];
-            })
-            ->getOptionLabelUsing(function ($value, Get $get) {
-                $type = $get('../../owner_type');
-
-                return $type ? $type::query()->find($value)?->email : '';
-            });
     }
 
     public static function ownerMorphSelect(string $fieldName = 'owner', bool $native = false, bool $searchable = true): MorphToSelect

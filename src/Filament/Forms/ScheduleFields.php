@@ -4,7 +4,6 @@ namespace Visualbuilder\ExportScheduler\Filament\Forms;
 
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
@@ -41,6 +40,7 @@ class ScheduleFields
 
             // Timing on the left, stacked; recipient alongside it on the right.
             Grid::make()
+                ->columns(1)
                 ->columnSpanFull()
                 ->schema([
                     Group::make([
@@ -61,10 +61,11 @@ class ScheduleFields
 
                         Section::make(__('export-scheduler::scheduler.when_to_send'))
                             ->schema([Fields::sendEmptyReport()]),
-                    ]),
+                    ])->columns(),
 
                     Group::make([
                         Section::make(__('export-scheduler::scheduler.recipient'))
+                            ->columns()
                             ->schema([
                                 static::recipientType(),
                                 static::recipientId(),
@@ -73,28 +74,23 @@ class ScheduleFields
 
                         // Hidden by default. Existing rows keep fanning out at runtime; this
                         // only governs whether the fields can be reached in the UI
-                        config('export-scheduler.dynamic_recipients', false)
-                            ? Fields::automaticRecipients()->columnSpanFull()
-                            : null,
+                        //                        config('export-scheduler.dynamic_recipients', false)
+                        //                            ? Fields::automaticRecipients()->columnSpanFull()
+                        //                            : null,
                     ]),
                 ]),
 
-            // Full width on its own row. Null means inherit from the report, said
-            // in the helper text so an empty field does not read as missing.
-            Section::make(__('export-scheduler::scheduler.schedule_overrides'))
-                ->description(__('export-scheduler::scheduler.schedule_overrides_description'))
+            // Full width on its own row. Both values belong to the schedule alone —
+            // the report no longer carries either, so there is nothing to inherit.
+            // Not collapsible: it holds a required field, and a required field behind
+            // a collapsed heading is a trap on create.
+            Section::make(__('export-scheduler::scheduler.schedule_output'))
+                ->description(__('export-scheduler::scheduler.schedule_output_description'))
                 ->columns()
                 ->columnSpanFull()
-                ->collapsed()
-                ->collapsible()
                 ->schema([
-                    Fields::dateRange()
-                        ->required(false)
-                        ->helperText(__('export-scheduler::scheduler.inherits_from_report')),
-                    Fields::formats()
-                        ->required(false)
-                        ->default(null)
-                        ->helperText(__('export-scheduler::scheduler.inherits_from_report')),
+                    Fields::dateRange(),
+                    Fields::format(),
                 ]),
         ]));
     }
@@ -198,22 +194,34 @@ class ScheduleFields
             ->live();
     }
 
+    /**
+     * Single column throughout: a Fieldset defaults to two, which would leave the
+     * user picker at a quarter of the form width once this sits on a full-width row.
+     */
     public static function copyToUser(): Fieldset
     {
         return Fieldset::make(__('export-scheduler::scheduler.cc'))
+            ->contained(false)
+            ->columnSpanFull()
             ->visible(fn (Get $get) => filled($get('recipient_id')))
             ->schema([
-                TextEntry::make('cc_warning')
-                    ->hiddenLabel()
-                    ->belowContent(fn (Get $get) => new HtmlString(__(
-                        'export-scheduler::scheduler.cc_warning',
-                        ['owner_type' => class_basename((string) $get('recipient_type'))]
-                    ))),
-
-                Repeater::make('cc')
-                    ->hiddenLabel()
-                    ->addActionLabel(__('export-scheduler::scheduler.cc_add_label'))
-                    ->simple(static::selectCopyToUser()),
+                Section::make()
+                    ->compact()
+                    ->columnSpanFull()
+                    ->schema([
+                        Repeater::make('cc')
+                            ->aboveContent(
+                                fn (Get $get) => new HtmlString(__(
+                                    'export-scheduler::scheduler.cc_warning',
+                                    ['owner_type' => class_basename((string) $get('recipient_type'))]
+                                ))
+                            )
+                            ->hiddenLabel()
+                            ->columnSpanFull()
+                            ->addActionLabel(__('export-scheduler::scheduler.cc_add_label'))
+                            ->simple(static::selectCopyToUser())
+                            ->grid(),
+                    ]),
             ]);
     }
 

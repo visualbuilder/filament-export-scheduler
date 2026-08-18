@@ -18,7 +18,6 @@ it('can create a sql query report schedule', function () {
         'name' => 'SQL Test Report',
         'report_type' => ReportType::SQL_QUERY,
         'sql_query' => $query,
-        'formats' => ['csv'],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
@@ -127,7 +126,6 @@ it('can run sql query export', function () {
         'name' => 'SQL User Report',
         'report_type' => ReportType::SQL_QUERY,
         'sql_query' => 'SELECT id, name, email FROM users',
-        'formats' => ['csv'],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
@@ -144,7 +142,6 @@ it('rejects sql query export when validation fails', function () {
         'name' => 'Bad SQL Report',
         'report_type' => ReportType::SQL_QUERY,
         'sql_query' => 'DELETE FROM users',
-        'formats' => ['csv'],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
@@ -177,7 +174,6 @@ it('correctly counts rows for complex query with GROUP BY', function () {
         'name' => 'Grouped SQL Report',
         'report_type' => ReportType::SQL_QUERY,
         'sql_query' => 'SELECT owner_type, COUNT(*) as total FROM documents GROUP BY owner_type',
-        'formats' => ['csv'],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
@@ -197,7 +193,6 @@ it('creates headers.csv file for SQL query export', function () {
         'name' => 'SQL Headers Test',
         'report_type' => ReportType::SQL_QUERY,
         'sql_query' => 'SELECT id, name, email FROM users',
-        'formats' => ['csv'],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
@@ -228,7 +223,6 @@ it('sends notification with download link after SQL export completes', function 
         'name' => 'SQL Notification Test',
         'report_type' => ReportType::SQL_QUERY,
         'sql_query' => 'SELECT id, name, email FROM users',
-        'formats' => ['csv'],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);
@@ -263,7 +257,6 @@ it('handles basic SELECT query correctly', function () {
         'name' => 'Basic SELECT Test',
         'report_type' => ReportType::SQL_QUERY,
         'sql_query' => "SELECT * FROM users WHERE created_at >= '" . now()->subDay()->toDateString() . "'",
-        'formats' => ['csv'],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ]);

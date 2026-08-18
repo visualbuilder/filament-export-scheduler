@@ -2,7 +2,9 @@
 
 namespace Visualbuilder\ExportScheduler\Jobs;
 
+use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Actions\Exports\Models\Export;
+use Filament\Notifications\Notification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -24,12 +26,18 @@ class ScheduledExportCompletion implements ShouldQueue
      *
      * @param  bool  $isAdHoc  True when a user ran this export on demand for themselves, in which
      *                         case only they are notified and an empty report is never suppressed.
+     * @param  array<string>  $formats  The files this run produced, used to offer a download link
+     *                                  on an ad hoc run.
+     * @param  string|null  $authGuard  Resolved when the chain is dispatched — filament() is not
+     *                                  available to a queue worker.
      */
     public function __construct(
         protected Export $export,
         protected CustomReport $report,
         protected ?ScheduledReport $schedule = null,
         protected bool $isAdHoc = false,
+        protected array $formats = [],
+        protected ?string $authGuard = null,
     ) {}
 
     /**
@@ -45,6 +53,15 @@ class ScheduledExportCompletion implements ShouldQueue
             return;
         }
 
+        // Somebody pulled their own copy from the panel. That is the same gesture as
+        // exporting a table, so it lands in the notification bell with a download
+        // link — not in their inbox. Email is for deliveries they did not ask for.
+        if ($this->isAdHoc) {
+            $this->notifyAdHocDownloadReady();
+
+            return;
+        }
+
         $notificationClass = config('export-scheduler.notification');
 
         // Check if the user object exists and uses the Notifiable trait
@@ -53,8 +70,9 @@ class ScheduledExportCompletion implements ShouldQueue
                 // The user can be notified
                 $this->export->user->notify(new $notificationClass($this->export, $this->report, $this->schedule));
 
-                // Clone the Export for each cc'd user, unless this was an ad-hoc download
-                if (! $this->isAdHoc && $this->schedule && $this->schedule->cc && is_array($this->schedule->cc) && count($this->schedule->cc)) {
+                // Clone the Export for each cc'd user. Only reachable for a scheduled
+                // run — an ad hoc download returned above and never has cc recipients.
+                if ($this->schedule && $this->schedule->cc && is_array($this->schedule->cc) && count($this->schedule->cc)) {
                     $resolver = app(ResolvesReportUsers::class);
 
                     foreach ($this->schedule->cc as $userId) {
@@ -90,6 +108,42 @@ class ScheduledExportCompletion implements ShouldQueue
                 'user_id' => $this->export->user->id ?? null,
             ]);
         }
+    }
+
+    /**
+     * The download-link notification, matching what Filament's own table exports
+     * send. Written straight to the database so it survives the queue round trip
+     * and appears in the bell, rather than being flashed into a request that
+     * finished long ago.
+     */
+    protected function notifyAdHocDownloadReady(): void
+    {
+        $user = $this->export->user;
+
+        if (! $user) {
+            Log::error('Ad hoc export completed with no user to notify.', [
+                'export_id' => $this->export->getKey(),
+            ]);
+
+            return;
+        }
+
+        $formats = collect($this->formats)
+            ->map(fn ($format) => $format instanceof ExportFormat ? $format : ExportFormat::tryFrom((string) $format))
+            ->filter()
+            ->values();
+
+        $guard = $this->authGuard ?? config('filament.auth.guard') ?? config('auth.defaults.guard');
+
+        Notification::make()
+            ->title(__('export-scheduler::scheduler.download_complete_title', ['name' => $this->report->name]))
+            ->body(__('export-scheduler::scheduler.download_complete_body'))
+            ->success()
+            ->icon('heroicon-o-arrow-down-tray')
+            ->actions($formats
+                ->map(fn (ExportFormat $format) => $format->getDownloadNotificationAction($this->export, $guard))
+                ->all())
+            ->sendToDatabase($user, isEventDispatched: true);
     }
 
     protected function copyExportFiles(Export $source, Export $destination): void

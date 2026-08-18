@@ -108,10 +108,31 @@ class ScheduledExporter
      */
     protected function getFormats(): array
     {
-        $formats = $this->formats ?? $this->schedule?->resolved_formats ?? $this->report->formats ?? [];
-        return collect($formats)
+        $formats = collect($this->formats ?? $this->schedule?->resolved_formats ?? [])
             ->map(fn ($format) => $format instanceof ExportFormat ? $format->value : (string) $format)
+            ->filter()
+            ->values()
             ->all();
+
+        // An ad hoc download has no schedule to read a format from, and the report
+        // no longer carries one, so fall back rather than produce no file at all.
+        return $formats ?: [ExportFormat::Xlsx->value];
+    }
+
+    /**
+     * The guard a download link should be signed for.
+     *
+     * Resolved here, while a panel is still in scope, because the completion job
+     * runs on a worker where filament() has no current panel to ask. The scheduler
+     * command runs outside a panel entirely, hence the fallbacks.
+     */
+    protected function resolveAuthGuard(): ?string
+    {
+        try {
+            return filament()->getAuthGuard();
+        } catch (\Throwable) {
+            return config('filament.auth.guard') ?? config('auth.defaults.guard');
+        }
     }
 
     /**
@@ -140,7 +161,9 @@ class ScheduledExporter
         $query = $exporter::getModel()::query();
         $query = $exporter::modifyQuery($query);
 
-        $dateRange = $this->schedule?->resolved_date_range ?? $this->report->date_range;
+        // Schedule only. A report has no date range of its own any more, so an ad
+        // hoc download covers every record the filters allow.
+        $dateRange = $this->schedule?->resolved_date_range;
         if ($dateRange) {
             $dateColumn = method_exists($exporter, 'getDateColumn') ? $exporter::getDateColumn() : 'created_at';
             ['start' => $startDate, 'end' => $endDate] = $dateRange->getDateRange();
@@ -361,11 +384,11 @@ class ScheduledExporter
             $this->report->loadMissing('owner');
 
             $errors = [];
-            if (!empty(CustomReport::validateSqlQuery($this->report->sql_query))) {
+            if (! empty(CustomReport::validateSqlQuery($this->report->sql_query))) {
                 $errors[] = 'User does not have permission to create SQL queries';
             }
 
-            if (!empty($errors)) {
+            if (! empty($errors)) {
                 Log::error('SQL query validation failed', [
                     'report_id' => $this->report->id,
                     'errors' => $errors,
@@ -418,6 +441,8 @@ class ScheduledExporter
                     report: $this->report,
                     schedule: $this->schedule,
                     isAdHoc: $this->isAdHoc(),
+                    formats: $this->getFormats(),
+                    authGuard: $this->resolveAuthGuard(),
                 ),
             ])->dispatch();
 
@@ -475,6 +500,8 @@ class ScheduledExporter
                     report: $this->report,
                     schedule: $this->schedule,
                     isAdHoc: $this->isAdHoc(),
+                    formats: $this->getFormats(),
+                    authGuard: $this->resolveAuthGuard(),
                 ),
             ])
                 ->when(filled($jobQueue), fn (PendingChain $chain) => $chain->onQueue($jobQueue))

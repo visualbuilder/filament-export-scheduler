@@ -3,9 +3,9 @@
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Actions\Exports\Jobs\CreateXlsxFile;
 use Filament\Actions\Exports\Models\Export;
+use Filament\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Notification;
-use Visualbuilder\ExportScheduler\Enums\DateRange;
 use Visualbuilder\ExportScheduler\Enums\ReportType;
 use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
 use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
@@ -30,7 +30,6 @@ function makeDownloadableReport(array $overrides = []): CustomReport
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
         ],
-        'formats' => [ExportFormat::Csv->value],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
     ], $overrides));
@@ -60,8 +59,8 @@ it('runs the export for the user who asked for it', function () {
     expect(Export::first()->user_id)->toBe(auth()->id());
 });
 
-it('defaults the format to the first one the report is configured with', function () {
-    $report = makeDownloadableReport(['formats' => [ExportFormat::Xlsx->value, ExportFormat::Csv->value]]);
+it('defaults the download format to xlsx, since a report carries no format of its own', function () {
+    $report = makeDownloadableReport();
 
     livewire(ViewCustomReport::class, ['record' => $report->getKey()])
         ->mountAction('download')
@@ -208,13 +207,15 @@ it('notifies only the requester and never the schedule cc list', function () {
     // Handle completion as ad-hoc
     (new ScheduledExportCompletion($exporter->getExport()->fresh(), $report, $schedule, isAdHoc: true))->handle();
 
-    // Verify only the requester gets notified
-    Notification::assertSentTo($requester, ScheduledExportCompleteNotification::class);
+    // An ad hoc download is never emailed — it lands in the requester's bell.
+    Notification::assertNotSentTo($requester, ScheduledExportCompleteNotification::class);
+    Notification::assertSentTo($requester, DatabaseNotification::class);
 
-    // Verify CC'd users do NOT get notified in ad-hoc mode
-    Notification::assertNotSentTo($cc1, ScheduledExportCompleteNotification::class);
-    Notification::assertNotSentTo($cc2, ScheduledExportCompleteNotification::class);
-    Notification::assertNotSentTo($unrelated, ScheduledExportCompleteNotification::class);
+    // Verify CC'd users are not notified at all in ad-hoc mode
+    foreach ([$cc1, $cc2, $unrelated] as $user) {
+        Notification::assertNotSentTo($user, ScheduledExportCompleteNotification::class);
+        Notification::assertNotSentTo($user, DatabaseNotification::class);
+    }
 
     // Ad-hoc downloads should only create one Export record, never duplicates for CC list
     expect(Export::count())->toBe(1);
@@ -237,20 +238,64 @@ it('still sends an empty ad hoc report when the schedule would suppress it', fun
 
     (new ScheduledExportCompletion($export, $report, isAdHoc: true))->handle();
 
-    Notification::assertSentTo(auth()->user(), ScheduledExportCompleteNotification::class);
+    // Still notified, still not emailed.
+    Notification::assertNotSentTo(auth()->user(), ScheduledExportCompleteNotification::class);
+    Notification::assertSentTo(auth()->user(), DatabaseNotification::class);
+});
+
+it('offers a download link rather than an email when a download completes', function () {
+    Notification::fake();
+
+    $report = makeDownloadableReport();
+
+    $export = Export::create([
+        'exporter' => UserExporter::class,
+        'total_rows' => 3,
+        'file_disk' => 'local',
+        'file_name' => 'ready',
+        'user_id' => auth()->id(),
+        'user_type' => get_class(auth()->user()),
+    ]);
+
+    (new ScheduledExportCompletion(
+        $export,
+        $report,
+        isAdHoc: true,
+        formats: [ExportFormat::Csv->value],
+        authGuard: 'web',
+    ))->handle();
+
+    Notification::assertSentTo(
+        auth()->user(),
+        DatabaseNotification::class,
+        function (DatabaseNotification $notification): bool {
+            $actions = $notification->data['actions'] ?? [];
+
+            expect($actions)->toHaveCount(1)
+                ->and($actions[0]['name'])->toBe('download_csv')
+                ->and($actions[0]['url'])->toContain('exports');
+
+            return true;
+        },
+    );
 });
 
 it('normalises formats stored as strings or enums', function () {
-    $wantsXlsx = function (CustomReport $report): bool {
+    $report = makeDownloadableReport();
+
+    $wantsXlsx = function (?array $formats) use ($report): bool {
+        $schedule = makeDownloadableSchedule($report, ['formats' => $formats]);
         $method = new ReflectionMethod(ScheduledExporter::class, 'wantsFormat');
 
-        return $method->invoke(new ScheduledExporter($report), ExportFormat::Xlsx);
+        return $method->invoke(new ScheduledExporter($report, $schedule), ExportFormat::Xlsx);
     };
 
-    expect($wantsXlsx(makeDownloadableReport(['formats' => [ExportFormat::Xlsx->value]])))->toBeTrue();
-    expect($wantsXlsx(makeDownloadableReport(['formats' => [ExportFormat::Xlsx]])))->toBeTrue();
-    expect($wantsXlsx(makeDownloadableReport(['formats' => [ExportFormat::Csv->value]])))->toBeFalse();
-    expect($wantsXlsx(makeDownloadableReport(['formats' => null])))->toBeFalse();
+    expect($wantsXlsx([ExportFormat::Xlsx->value]))->toBeTrue();
+    expect($wantsXlsx([ExportFormat::Xlsx]))->toBeTrue();
+    expect($wantsXlsx([ExportFormat::Csv->value]))->toBeFalse();
+
+    // Nothing set anywhere falls back to xlsx rather than producing no file.
+    expect($wantsXlsx(null))->toBeTrue();
 });
 
 it('copies export files to cc users so their download links work', function () {

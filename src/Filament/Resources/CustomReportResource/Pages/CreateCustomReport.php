@@ -15,11 +15,15 @@ class CreateCustomReport extends CreateRecord
             $data['filters'] = null;
         }
 
-        // Whoever builds a report owns it. Ownership is transferable afterwards,
-        // but there is no path to creating one you do not own.
-        if ($user = auth()->user()) {
-            $data['owner_type'] = $user::class;
-            $data['owner_id'] = $user->getKey();
+        // The form pre-fills the owner with whoever is building the report, but it
+        // is editable: a report may be created on someone else's behalf and handed
+        // to them. Only fall back when the form left it blank, so that choice is
+        // never silently overwritten.
+        if (blank($data['owner_type'] ?? null) || blank($data['owner_id'] ?? null)) {
+            if ($user = auth()->user()) {
+                $data['owner_type'] = $user::class;
+                $data['owner_id'] = $user->getKey();
+            }
         }
 
         return $data;

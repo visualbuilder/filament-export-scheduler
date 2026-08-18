@@ -116,17 +116,17 @@ trait DownloadExportTrait
         return filled($report->exporter) && class_exists($report->exporter);
     }
 
+    /**
+     * Preselect the schedule's own format when downloading from a schedule row. A
+     * report carries no format of its own, so downloading one offers XLSX.
+     */
     protected function getDefaultFormat(Model $record): string
     {
-        $formats = $record instanceof ScheduledReport
-            ? $record->resolved_formats
-            : ($this->reportFor($record)?->formats ?? []);
-
-        $format = collect($formats)
+        $format = collect($record instanceof ScheduledReport ? $record->resolved_formats : [])
             ->map(fn ($format) => $format instanceof ExportFormat ? $format->value : (string) $format)
             ->first();
 
-        return ExportFormat::tryFrom((string) $format)?->value ?? ExportFormat::Csv->value;
+        return ExportFormat::tryFrom((string) $format)?->value ?? ExportFormat::Xlsx->value;
     }
 
     protected function reportFor(Model $record): ?CustomReport

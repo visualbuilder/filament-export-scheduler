@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Notification;
 use Visualbuilder\ExportScheduler\Enums\DateRange;
 use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
 use Visualbuilder\ExportScheduler\Models\CustomReport;
+use Visualbuilder\ExportScheduler\Models\ScheduledReport;
 use Visualbuilder\ExportScheduler\Services\ScheduledExporter;
 use Visualbuilder\ExportScheduler\Tests\Models\User;
 
@@ -46,21 +47,54 @@ it('applies date range filter to export query', function () {
     $report = CustomReport::create([
         'name' => 'User Export with Date Range',
         'exporter' => UserExporter::class,
-        'date_range' => DateRange::LAST_7_DAYS,
         'columns' => [
             ['name' => 'id', 'label' => 'ID'],
             ['name' => 'email', 'label' => 'Email'],
         ],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
-        'formats' => [ExportFormat::Csv],
+    ]);
+
+    // The range belongs to the schedule: a report no longer carries one. The
+    // recipient is the existing auth user because the factory would otherwise
+    // create a fresh one, and this report exports users.
+    $schedule = ScheduledReport::factory()->create([
+        'custom_report_id' => $report->id,
+        'date_range' => DateRange::LAST_7_DAYS,
+        'formats' => [ExportFormat::Csv->value],
+        'recipient_id' => auth()->id(),
+        'recipient_type' => get_class(auth()->user()),
+    ]);
+
+    $exporter = new ScheduledExporter($report, $schedule);
+    $exporter->run();
+
+    // Only the recent user should be included (within last 7 days)
+    expect($exporter->getTotalRows())->toBe(1);
+});
+
+it('exports every row when run ad hoc, since only a schedule carries a date range', function () {
+    Carbon::setTestNow('2024-06-15 12:00:00');
+
+    createFakeUsers(overrides: ['created_at' => '2024-01-01']);
+    createFakeUsers(overrides: ['created_at' => '2024-06-10']);
+
+    $report = CustomReport::create([
+        'name' => 'User Export without Schedule',
+        'exporter' => UserExporter::class,
+        'columns' => [
+            ['name' => 'id', 'label' => 'ID'],
+            ['name' => 'email', 'label' => 'Email'],
+        ],
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
     ]);
 
     $exporter = new ScheduledExporter($report);
     $exporter->run();
 
-    // Only the recent user should be included (within last 7 days)
-    expect($exporter->getTotalRows())->toBe(1);
+    // Both seeded users plus the signed-in one: no range means no cut-off.
+    expect($exporter->getTotalRows())->toBe(3);
 });
 
 it('applies attribute filter with like operator', function () {
@@ -75,7 +109,6 @@ it('applies attribute filter with like operator', function () {
         ],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
-        'formats' => [ExportFormat::Csv],
         'filters' => [
             'attributes' => [
                 [
@@ -106,7 +139,6 @@ it('applies attribute filter with in operator', function () {
         ],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
-        'formats' => [ExportFormat::Csv],
         'filters' => [
             'attributes' => [
                 [
@@ -137,7 +169,6 @@ it('applies attribute filter with not_in operator', function () {
         ],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
-        'formats' => [ExportFormat::Csv],
         'filters' => [
             'attributes' => [
                 [
@@ -172,7 +203,6 @@ it('applies attribute filter with since operator using array value', function ()
         ],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
-        'formats' => [ExportFormat::Csv],
         'filters' => [
             'attributes' => [
                 [
@@ -215,7 +245,6 @@ it('applies attribute filter with date range operator', function () {
         ],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
-        'formats' => [ExportFormat::Csv],
         'filters' => [
             'attributes' => [
                 [
@@ -259,7 +288,6 @@ it('applies multiple attribute filters with AND condition', function () {
         ],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
-        'formats' => [ExportFormat::Csv],
         'filters' => [
             'attributes' => [
                 [
@@ -301,7 +329,6 @@ it('applies attribute filters with OR condition', function () {
         ],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
-        'formats' => [ExportFormat::Csv],
         'filters' => [
             'attributes' => [
                 [
@@ -339,7 +366,6 @@ it('skips filters with blank column or value', function () {
         ],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
-        'formats' => [ExportFormat::Csv],
         'filters' => [
             'attributes' => [
                 [
@@ -376,7 +402,6 @@ it('generates unique file names with timestamp', function () {
         ],
         'owner_id' => auth()->id(),
         'owner_type' => get_class(auth()->user()),
-        'formats' => [ExportFormat::Csv],
     ]);
 
     $exporter = new ScheduledExporter($report);

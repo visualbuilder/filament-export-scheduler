@@ -59,8 +59,18 @@ class ScheduleFields
                                 Fields::scheduleTimeZone(),
                             ]),
 
-                        Section::make(__('export-scheduler::scheduler.when_to_send'))
-                            ->schema([Fields::sendEmptyReport()]),
+                        Group::make([
+                            Section::make(__('export-scheduler::scheduler.when_to_send'))
+                            ->schema([
+                                Fields::sendEmptyReport()
+                            ]),
+
+                            Section::make(__('export-scheduler::scheduler.schedule_output'))
+                                ->hiddenLabel()
+                                ->contained()
+                                ->description(__('export-scheduler::scheduler.schedule_output_description'))
+                                ->schema([Fields::format()->hiddenLabel()])
+                        ])
                     ])->columns(),
 
                     Group::make([
@@ -78,18 +88,6 @@ class ScheduleFields
                         //                            ? Fields::automaticRecipients()->columnSpanFull()
                         //                            : null,
                     ]),
-                ]),
-
-            // Full width on its own row. The format belongs to the schedule alone —
-            // the report no longer carries it, so there is nothing to inherit.
-            // Not collapsible: it holds a required field, and a required field behind
-            // a collapsed heading is a trap on create.
-            Section::make(__('export-scheduler::scheduler.schedule_output'))
-                ->description(__('export-scheduler::scheduler.schedule_output_description'))
-                ->columns()
-                ->columnSpanFull()
-                ->schema([
-                    Fields::format(),
                 ]),
         ]));
     }

@@ -161,15 +161,6 @@ class ScheduledExporter
         $query = $exporter::getModel()::query();
         $query = $exporter::modifyQuery($query);
 
-        // Schedule only. A report has no date range of its own any more, so an ad
-        // hoc download covers every record the filters allow.
-        $dateRange = $this->schedule?->resolved_date_range;
-        if ($dateRange) {
-            $dateColumn = method_exists($exporter, 'getDateColumn') ? $exporter::getDateColumn() : 'created_at';
-            ['start' => $startDate, 'end' => $endDate] = $dateRange->getDateRange();
-            $query->whereBetween($dateColumn, [$startDate, $endDate]);
-        }
-
         $filters = $this->report->filters ?? [];
         $relationFilters = array_filter($filters, fn ($key) => $key !== 'attributes', ARRAY_FILTER_USE_KEY);
         $attributeFilters = array_diff_key($filters, $relationFilters)['attributes'] ?? [];

@@ -35,7 +35,6 @@ class ScheduledReportFactory extends Factory
             'schedule_month' => null,
             'schedule_start_month' => null,
             'cron' => null,
-            'date_range' => null,
             'formats' => null,
             'recipient_id' => User::factory(),
             'recipient_type' => User::class,

@@ -28,10 +28,11 @@ download them on demand, and have them emailed on as many schedules as they like
 ## Reports and schedules are separate things
 
 A **Custom Report** is the definition: which exporter (or SQL query), which columns, which filters,
-which date range, which file formats, and who is allowed to see it.
+and who is allowed to see it. The date range and file format for a delivery are chosen per-schedule.
 
 A **Report Schedule** is an optional delivery instruction hanging off a report: when to run it, who
-receives it, and who to copy in.
+receives it, who to copy in, what date range and file format to use, and whether to suppress empty
+results.
 
 Keeping them apart means one report can be
 
@@ -91,7 +92,7 @@ Every report has a visibility mode:
 
 | Mode | Who can view and download |
 |------|---------------------------|
-| **Owner** (default) | Only the person who built it |
+| **Owner Only** (default) | Only the person who built it |
 | **User Type** | Every user of one chosen user class |
 | **Named Users** | Only the users you pick from that class |
 
@@ -155,6 +156,12 @@ Exclude attributes with the `excludeFilterableAttributes` method on the
 This is useful for excluding attributes not present in the database, or computed
 attributes/properties.
 
+Date filtering is offered on any attribute via the `<>` (between) and `is_in` operators, using
+preset ranges: `today` · `yesterday` · `last 7 days` · `last week` · `last 30 days` · `last month` ·
+`this month` · `last quarter` · `this year` · `last year` · `next 7 days` · `next 30 days` ·
+`next 60 days` · `next 90 days`. The date column defaults to `created_at` and can be changed in the
+exporter.
+
 ![Filter by attributes](https://github.com/user-attachments/assets/3208ec5f-a7ad-470b-9443-3506dce28f7b)
 
 ## Filter by available relationships
@@ -174,23 +181,6 @@ attributes/properties.
 <img width="1476" height="823" alt="Screenshot 2026-08-11 at 21 57 58" src="https://github.com/user-attachments/assets/3d194f25-8c70-4e14-9030-5fa1cf12c28f" />
 
 &nbsp;
-
-## Customise the query date range
-
-Choose from preset ranges. Past-facing:
-
-`today` · `yesterday` · `last 7 days` · `last week` · `last 30 days` · `last month` ·
-`this month` · `last quarter` · `this year` · `last year`
-
-And forward-facing, for reports about things yet to happen — renewals, appointments, expiries:
-
-`next 7 days` · `next 30 days` · `next 60 days` · `next 90 days`
-
-The date column defaults to `created_at` and can be changed in the exporter.
-
-The range is set on the report as its default, and any schedule may override it. So the same report
-can go out daily covering yesterday and monthly covering last month. Leave a schedule's range empty
-and it inherits the report's.
 
 ## Easy frequency selection
 
@@ -220,8 +210,7 @@ list.
 - Change the recipient's class and the cc list clears itself, so ids are never reinterpreted
   against the wrong model.
 
-The date range and file formats can both be overridden per schedule, in a collapsed **Schedule
-overrides** section. Left empty, they inherit from the report.
+The file format is chosen per-schedule: CSV or XLSX.
 
 <img width="1476" height="823" alt="Screenshot 2026-08-11 at 21 53 49" src="https://github.com/user-attachments/assets/1b1c2e96-ab78-4c4a-8140-bccf72cccc22" />
 
@@ -274,11 +263,8 @@ viewer will load — the export itself is never capped.
 
 ## File formats
 
-Reports can be produced as CSV, XLSX, or both. The format is chosen on the report and may be
-overridden by any schedule. CSV is always written first; XLSX is built from it.
-
-The download action asks which format you want for that one download, regardless of what the report
-or schedule is set to.
+A schedule's format is chosen when you create or edit it: CSV or XLSX. The download action offers
+the chosen format; CSV is always written first, and XLSX is built from it.
 
 ## Attractive HTML email templates
 

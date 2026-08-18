@@ -80,8 +80,8 @@ class ScheduleFields
                     ]),
                 ]),
 
-            // Full width on its own row. Both values belong to the schedule alone —
-            // the report no longer carries either, so there is nothing to inherit.
+            // Full width on its own row. The format belongs to the schedule alone —
+            // the report no longer carries it, so there is nothing to inherit.
             // Not collapsible: it holds a required field, and a required field behind
             // a collapsed heading is a trap on create.
             Section::make(__('export-scheduler::scheduler.schedule_output'))
@@ -89,7 +89,6 @@ class ScheduleFields
                 ->columns()
                 ->columnSpanFull()
                 ->schema([
-                    Fields::dateRange(),
                     Fields::format(),
                 ]),
         ]));

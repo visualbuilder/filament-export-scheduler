@@ -67,15 +67,6 @@ it('does not inherit formats from the report', function () {
     expect($schedule->resolved_formats)->toEqual([]);
 });
 
-it('does not inherit a date range from the report', function () {
-    $schedule = ScheduledReport::factory()->create([
-        'custom_report_id' => CustomReport::factory()->create()->id,
-        'date_range' => null,
-    ]);
-
-    expect($schedule->resolved_date_range)->toBeNull();
-});
-
 it('clears cc when changing recipient type', function () {
     $schedule = ScheduledReport::factory()->create([
         'recipient_type' => User::class,

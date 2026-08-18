@@ -10,19 +10,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Visualbuilder\ExportScheduler\Database\Factories\ScheduledReportFactory;
-use Visualbuilder\ExportScheduler\Enums\DateRange;
 use Visualbuilder\ExportScheduler\Enums\DayOfWeek;
 use Visualbuilder\ExportScheduler\Enums\Month;
 use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
-use Visualbuilder\ExportScheduler\Models\Concerns\ResolvesDateRange;
 
 /**
  * An optional delivery instruction attached to a {@see CustomReport}: when to run
  * it, and who receives the result.
  *
- * A report may carry many of these, or none. `date_range` and `formats` are
- * nullable overrides — null means inherit from the report, which is what every
- * migrated row does.
+ * A report may carry many of these, or none. `formats` is a nullable override —
+ * null means inherit from the report, which is what every migrated row does.
  *
  * @property int $id
  * @property int $custom_report_id
@@ -34,7 +31,6 @@ use Visualbuilder\ExportScheduler\Models\Concerns\ResolvesDateRange;
  * @property Month|null $schedule_month
  * @property Month|null $schedule_start_month
  * @property string|null $schedule_timezone
- * @property DateRange|null $date_range
  * @property array|null $formats
  * @property string|null $recipient_type
  * @property int|null $recipient_id
@@ -46,7 +42,6 @@ use Visualbuilder\ExportScheduler\Models\Concerns\ResolvesDateRange;
  * @property Carbon|null $last_successful_run_at
  * @property-read CustomReport|null $report
  * @property-read Model|null $recipient
- * @property-read DateRange|null $resolved_date_range
  * @property-read array $resolved_formats
  * @property-read string|null $frequency
  * @property-read int $cc_count
@@ -54,7 +49,6 @@ use Visualbuilder\ExportScheduler\Models\Concerns\ResolvesDateRange;
 class ScheduledReport extends Model
 {
     use HasFactory;
-    use ResolvesDateRange;
 
     protected $table = 'scheduled_reports';
 
@@ -68,7 +62,6 @@ class ScheduledReport extends Model
         'schedule_month',
         'schedule_start_month',
         'schedule_timezone',
-        'date_range',
         'formats',
         'recipient_id',
         'recipient_type',
@@ -96,7 +89,6 @@ class ScheduledReport extends Model
         'schedule_month' => Month::class,
         'schedule_start_month' => Month::class,
         'schedule_frequency' => ScheduleFrequency::class,
-        'date_range' => DateRange::class,
     ];
 
     protected static function booted(): void
@@ -171,31 +163,21 @@ class ScheduledReport extends Model
 
     /*
     |--------------------------------------------------------------------------
-    | Date range and formats
+    | Formats
     |--------------------------------------------------------------------------
     |
-    | Both belong to the schedule alone. They were once report-level defaults a
-    | schedule could override, but the report no longer carries either, so there
-    | is nothing left to inherit and these no longer fall back to it.
+    | Formats belongs to the schedule alone. It was once a report-level default
+    | a schedule could override, but the report no longer carries it, so there
+    | is nothing left to inherit and it no longer falls back to it.
     |
-    | Kept as accessors rather than folded into their callers: they are the
+    | Kept as an accessor rather than folded into its caller: it is the
     | documented read path, and the format column is still an array for the sake
     | of the export pipeline even though the UI now writes a single value.
     */
 
-    public function getResolvedDateRangeAttribute(): ?DateRange
-    {
-        return $this->date_range;
-    }
-
     public function getResolvedFormatsAttribute(): array
     {
         return $this->formats ?? [];
-    }
-
-    public function effectiveDateRange(): ?DateRange
-    {
-        return $this->resolved_date_range;
     }
 
     /*

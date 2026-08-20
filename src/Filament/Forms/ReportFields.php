@@ -4,6 +4,7 @@ namespace Visualbuilder\ExportScheduler\Filament\Forms;
 
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
@@ -26,7 +27,7 @@ class ReportFields
      * Two tabs, Exporter and Columns. A report no longer has a schedule to
      * configure, so the old third tab is gone — see {@see ScheduleFields}.
      *
-     * @return array<\Filament\Schemas\Components\Component>
+     * @return array<Component>
      */
     public static function schema(): array
     {
@@ -86,7 +87,6 @@ class ReportFields
     public static function ownershipSection(): Section
     {
         return Section::make(__('export-scheduler::scheduler.ownership'))
-            ->description(__('export-scheduler::scheduler.ownership_description'))
             ->columns()
             ->schema([
                 static::ownerType(),
@@ -113,7 +113,6 @@ class ReportFields
     {
         return Select::make('owner_id')
             ->label(__('export-scheduler::scheduler.owner'))
-            ->helperText(__('export-scheduler::scheduler.owner_helper'))
             ->default(fn () => auth()->user()?->getKey())
             ->options(function (Get $get) {
                 $type = $get('owner_type');
@@ -146,7 +145,6 @@ class ReportFields
     public static function sharingSection(): Section
     {
         return Section::make(__('export-scheduler::scheduler.sharing'))
-            ->description(__('export-scheduler::scheduler.sharing_description'))
             ->columns()
             ->schema([
                 static::visibility(),

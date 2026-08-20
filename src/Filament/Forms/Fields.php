@@ -21,6 +21,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use Visualbuilder\ExportScheduler\Enums\DateRange;
@@ -87,7 +88,6 @@ class Fields
             ->rows(8)
             ->required(fn (Get $get) => $get('report_type') === ReportType::SQL_QUERY->value)
             ->visible(fn (Get $get) => $get('report_type') === ReportType::SQL_QUERY->value)
-            ->helperText('Enter a SELECT query only. INSERT, UPDATE, DELETE, DROP and other write operations are blocked.')
             ->rules([
                 fn (): Closure => function (string $attribute, $value, Closure $fail) {
                     if (blank($value)) {
@@ -297,7 +297,7 @@ class Fields
                                                 return true;
                                             }
 
-                                            return ! (new $exporterModel)->{$name}() instanceof \Illuminate\Database\Eloquent\Relations\BelongsTo;
+                                            return ! (new $exporterModel)->{$name}() instanceof BelongsTo;
                                         })
                                         ->pluck('label', 'name')
                                         ->toArray();
@@ -448,8 +448,6 @@ class Fields
     {
         return Select::make('exporter')
             ->label(__('export-scheduler::scheduler.exporter'))
-            ->hintIcon('heroicon-m-question-mark-circle', tooltip: __('export-scheduler::scheduler.exporter_hint'))
-            ->hintColor('info')
             ->options(ExportScheduler::listExporters())
             ->searchable()
             ->native(false)
@@ -484,7 +482,6 @@ class Fields
         return Select::make('schedule_frequency')
             ->label(__('export-scheduler::scheduler.schedule_frequency'))
             ->placeholder(__('export-scheduler::scheduler.schedule_time_hint'))
-            ->hintIcon('heroicon-m-question-mark-circle', tooltip: __('export-scheduler::scheduler.schedule_time_hint'))
             ->options(ScheduleFrequency::selectArray())
             ->required()
             ->native(false)
@@ -811,11 +808,7 @@ class Fields
             ->boolean(
                 trueLabel: __('export-scheduler::scheduler.send_empty_report_true_label'),
                 falseLabel: __('export-scheduler::scheduler.send_empty_report_false_label'),
-            )
-            ->descriptions([
-                true => __('export-scheduler::scheduler.send_empty_report_true_description'),
-                false => __('export-scheduler::scheduler.send_empty_report_false_description'),
-            ]);
+            );
     }
 
     public static function ownerMorphSelect(string $fieldName = 'owner', bool $native = false, bool $searchable = true): MorphToSelect
@@ -861,7 +854,7 @@ class Fields
                 break;
             }
 
-            if (! $relation instanceof \Illuminate\Database\Eloquent\Relations\Relation) {
+            if (! $relation instanceof Relation) {
                 break;
             }
 

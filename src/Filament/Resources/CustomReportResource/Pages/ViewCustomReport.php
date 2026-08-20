@@ -343,13 +343,30 @@ class ViewCustomReport extends Page implements HasTable
             $names = array_keys($columnMap);
 
             return $query->cursor()
-                ->mapWithKeys(function (Model $record) use ($exporter, $names, $linkResolvers): array {
+                ->mapWithKeys(function (Model $record) use ($exporter, $names, $linkResolvers, $report, $exporterClass): array {
                     $row = array_combine($names, $exporter($record));
 
                     if ($linkResolvers) {
                         $row['__links'] = [];
                         foreach ($linkResolvers as $name => $resolver) {
-                            $row['__links'][$name] = $resolver($record);
+                            // Guard each resolver on its own: a single failing link
+                            // must not blank the whole report. Log it with context and
+                            // fall back to no link for that cell, so every other row —
+                            // and every other column — still renders.
+                            try {
+                                $row['__links'][$name] = $resolver($record);
+                            } catch (\Throwable $exception) {
+                                Log::error('Export scheduler report link resolver failed.', [
+                                    'report_id' => $report->getKey(),
+                                    'report_name' => $report->name,
+                                    'exporter' => $exporterClass,
+                                    'column' => $name,
+                                    'record_id' => $record->getKey(),
+                                    'exception' => $exception->getMessage(),
+                                ]);
+
+                                $row['__links'][$name] = null;
+                            }
                         }
                     }
 

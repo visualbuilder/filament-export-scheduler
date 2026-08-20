@@ -4,6 +4,7 @@ namespace Visualbuilder\ExportScheduler\Filament\Forms;
 
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
@@ -28,7 +29,7 @@ class ScheduleFields
     /**
      * @param  bool  $includeReportPicker  false when the report is already fixed,
      *                                     as it is inside the relation manager
-     * @return array<\Filament\Schemas\Components\Component>
+     * @return array<Component>
      */
     public static function schema(bool $includeReportPicker = true): array
     {
@@ -68,7 +69,6 @@ class ScheduleFields
                             Section::make(__('export-scheduler::scheduler.schedule_output'))
                                 ->hiddenLabel()
                                 ->contained()
-                                ->description(__('export-scheduler::scheduler.schedule_output_description'))
                                 ->schema([Fields::format()->hiddenLabel()]),
                         ]),
                     ])->columns(),
@@ -111,9 +111,6 @@ class ScheduleFields
                 ->pluck('name', 'id')
                 ->all())
             ->getOptionLabelUsing(fn ($value) => static::schedulableReports()->find($value)?->name)
-            ->helperText(fn () => static::schedulableReports()->doesntExist()
-                ? __('export-scheduler::scheduler.no_reports_yet')
-                : null)
             ->searchable()
             ->preload()
             ->required()
@@ -126,7 +123,7 @@ class ScheduleFields
      * editing somebody else's schedule would see the picker render blank — the
      * label lookup would miss the very report the schedule already points at.
      *
-     * @return \Illuminate\Database\Eloquent\Builder<CustomReport>
+     * @return Builder<CustomReport>
      */
     protected static function schedulableReports(): Builder
     {

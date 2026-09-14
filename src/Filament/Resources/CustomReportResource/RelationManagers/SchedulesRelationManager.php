@@ -50,6 +50,8 @@ class SchedulesRelationManager extends RelationManager
                 TextColumn::make('schedule_frequency')
                     ->label(__('export-scheduler::scheduler.schedule_frequency'))
                     ->badge(),
+                TextColumn::make('schedule_summary')
+                    ->label(__('export-scheduler::scheduler.schedule')),
                 TextColumn::make('recipient')
                     ->label(__('export-scheduler::scheduler.recipient'))
                     ->state(function (ScheduledReport $record) {

@@ -2,6 +2,13 @@
 
 All notable changes to `filament-export-scheduler` will be documented in this file.
 
+## 6.1.0 - 2026-09-14
+
+### Added
+- `ScheduledReport::$schedule_summary` accessor: the schedule in one line of words, e.g. `Daily at 19:00`, `Weekly on Monday at 09:00`, `Monthly on the last day at 09:00`, `Cron 0 9 * * *`. The timezone is appended only when it differs from the application's.
+- "Schedule" column on the custom reports list, listing every schedule for the report in words with disabled ones marked, and a `Not scheduled` placeholder. Finding which report fires at a given time no longer means opening each report.
+- "Schedule" column on the schedules tab of a report, beside the frequency badge.
+
 ## 6.0.3 - 2026-08-18
 
 ### Added

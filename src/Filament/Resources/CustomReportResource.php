@@ -23,6 +23,7 @@ use Visualbuilder\ExportScheduler\Filament\Forms\ReportFields;
 use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\Pages;
 use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\RelationManagers\SchedulesRelationManager;
 use Visualbuilder\ExportScheduler\Models\CustomReport;
+use Visualbuilder\ExportScheduler\Models\ScheduledReport;
 
 class CustomReportResource extends Resource
 {
@@ -85,6 +86,7 @@ class CustomReportResource extends Resource
             ->searchable()
             ->searchPlaceholder(__('export-scheduler::scheduler.search_reports'))
             ->persistSearchInSession()
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('schedules'))
             ->columns([
                 TextColumn::make('name')
                     ->searchable()
@@ -103,6 +105,15 @@ class CustomReportResource extends Resource
                     ->label(__('export-scheduler::scheduler.schedules'))
                     ->counts('schedules')
                     ->badge(),
+                TextColumn::make('schedule_summary')
+                    ->label(__('export-scheduler::scheduler.schedule'))
+                    ->state(fn (CustomReport $record): array => $record->schedules
+                        ->map(fn (ScheduledReport $schedule): ?string => $schedule->enabled
+                            ? $schedule->schedule_summary
+                            : __('export-scheduler::scheduler.summary_disabled', ['summary' => $schedule->schedule_summary]))
+                        ->all())
+                    ->listWithLineBreaks()
+                    ->placeholder(__('export-scheduler::scheduler.not_scheduled')),
                 TextColumn::make('created_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->recordActions([

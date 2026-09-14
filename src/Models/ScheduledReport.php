@@ -361,6 +361,47 @@ class ScheduledReport extends Model
         return $this->schedule_frequency?->getLabel();
     }
 
+    /**
+     * The schedule in one line of words, e.g. "Daily at 19:00" or
+     * "Weekly on Monday at 09:00". The timezone is appended only when it differs
+     * from the application's, so the common case stays short.
+     */
+    public function getScheduleSummaryAttribute(): ?string
+    {
+        if (! $this->schedule_frequency) {
+            return null;
+        }
+
+        $time = $this->schedule_time ? Carbon::parse($this->schedule_time)->format('H:i') : null;
+        $day = $this->schedule_day_of_month;
+
+        $summary = match ($this->schedule_frequency) {
+            ScheduleFrequency::DAILY => __('export-scheduler::scheduler.summary_daily', ['time' => $time]),
+            ScheduleFrequency::WEEKLY => __('export-scheduler::scheduler.summary_weekly', [
+                'day' => $this->schedule_day_of_week?->getLabel(),
+                'time' => $time,
+            ]),
+            ScheduleFrequency::MONTHLY => $day !== null && $day < 0
+                ? __('export-scheduler::scheduler.summary_monthly_last_day', ['time' => $time])
+                : __('export-scheduler::scheduler.summary_monthly', ['day' => $day, 'time' => $time]),
+            ScheduleFrequency::QUARTERLY,
+            ScheduleFrequency::HALF_YEARLY,
+            ScheduleFrequency::YEARLY => __('export-scheduler::scheduler.summary_periodic', [
+                'frequency' => $this->schedule_frequency->getLabel(),
+                'month' => $this->schedule_month?->getLabel(),
+                'day' => $day,
+                'time' => $time,
+            ]),
+            ScheduleFrequency::CRON => __('export-scheduler::scheduler.summary_cron', ['expression' => $this->cron]),
+        };
+
+        if ($this->schedule_timezone && $this->schedule_timezone !== config('app.timezone')) {
+            $summary .= ' (' . $this->schedule_timezone . ')';
+        }
+
+        return $summary;
+    }
+
     public function getCcCountAttribute(): int
     {
         return count($this->cc ?? []);

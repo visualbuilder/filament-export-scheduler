@@ -295,22 +295,7 @@ class ViewCustomReport extends Page implements HasTable
             return collect();
         }
 
-        $columns = collect($report->columns ?? [])
-            ->filter(fn ($column): bool => filled($column['name'] ?? null));
-
-        if ($columns->isEmpty()) {
-            $columns = CustomReport::getDefaultColumnsForExporter($exporterClass);
-        }
-
-        // A saved column the exporter no longer defines cannot be formatted, so drop it.
-        $definedColumns = CustomReport::getDefaultColumnsForExporter($exporterClass)
-            ->pluck('name')
-            ->all();
-
-        $columnMap = $columns
-            ->filter(fn (array $column): bool => in_array($column['name'], $definedColumns, strict: true))
-            ->mapWithKeys(fn (array $column): array => [$column['name'] => $column['label'] ?? $column['name']])
-            ->all();
+        $columnMap = $report->getExportableColumnMap('viewer');
 
         $this->resultColumns = $columnMap;
 

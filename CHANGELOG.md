@@ -2,6 +2,21 @@
 
 All notable changes to `filament-export-scheduler` will be documented in this file.
 
+## 6.2.0 - 2026-09-24
+
+### Added
+- `CustomReport::getExportableColumnMap()`: the saved columns as a `[name => label]` map, limited to those the exporter still defines, with an optional fallback to the exporter's columns when none remain.
+- `CustomReport::getStaleColumns()` and `CustomReport::hasOnlyStaleColumns()`: the saved columns the exporter no longer defines, and whether every saved column is one of them.
+
+### Fixed
+- A scheduled run no longer exports zero rows when a saved column was renamed or removed on the exporter. The stale column is left out and a warning is logged with the report, exporter, stale columns and schedule. The saved columns are not changed, since an exporter can define columns by context and a name missing from one run may be valid in another.
+
+### Changed
+- Scheduled runs never fall back to the exporter's columns, so a recipient is never sent columns nobody chose for them. A run with no columns to export (no saved columns, or none that still exist on the exporter) still sends an empty export, and now logs an error saying so.
+- When none of a report's saved columns exist on the exporter any more, the report viewer shows the exporter's columns instead of an empty table.
+- The report viewer now logs a warning when it leaves out a stale column, at most once an hour per report and set of stale columns. If the cache is unavailable the warning is logged anyway rather than breaking the viewer.
+- The **Download** button no longer produces an empty file when none of the report's saved columns exist on the exporter. It shows a "Report columns need updating" notification instead. When only some are stale, the download goes ahead and a warning names the columns that were left out. Both notifications tell the user to remove the old columns from **Columns to include in report** and add them again from **Available Columns**.
+
 ## 6.1.0 - 2026-09-14
 
 ### Added

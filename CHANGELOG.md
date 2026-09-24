@@ -2,6 +2,25 @@
 
 All notable changes to `filament-export-scheduler` will be documented in this file.
 
+## 6.2.1 - 2026-09-24
+
+### Fixed
+- A failed scheduled run is no longer recorded as successful. `export:run` used to set `last_successful_run_at` whatever the run's outcome; now a failed run keeps the previous value (or leaves it empty if the schedule has never succeeded), still records `last_run_at`, still advances `next_run_at` so a broken report is not retried every minute, and logs `Export failed` with the schedule id. The **Last Successful Run** column on a report's schedules now shows the last real success.
+- **Run now** no longer shows the "export started" notification when the run fails. It shows the "Report could not be run" notification instead, as **Download** already did.
+
+### Changed
+- The stale-column notifications no longer assume they came from the **Download** button: the text no longer mentions downloading ("Then try again." / "were left out"), and the translation keys are named after the condition. If you published and overrode them in 6.2.0, rename your keys:
+  - `download_stale_columns_title` → `stale_columns_title`
+  - `download_stale_columns_body` → `stale_columns_body`
+  - `download_partly_stale_columns_title` → `partly_stale_columns_title`
+  - `download_partly_stale_columns_body` → `partly_stale_columns_body`
+- The columns listed in the "Some columns were left out" notification are shown in italics.
+- Both stale-column notifications stay on screen for 15 seconds instead of Filament's default 6, so the steps for fixing the columns can be read.
+
+### Development
+- PHPStan upgraded to 2.x (`phpstan/phpstan` `^2.1`, `phpstan/phpstan-deprecation-rules` `^2.0`, `phpstan/phpstan-phpunit` `^2.0`). PHPStan 1.x could not read Symfony Console 8, which Laravel 13 installs, and reported inherited command constants such as `Command::SUCCESS` as undefined.
+- An owner-only visibility test no longer depends on test order under Livewire 4.
+
 ## 6.2.0 - 2026-09-24
 
 ### Added
@@ -10,17 +29,12 @@ All notable changes to `filament-export-scheduler` will be documented in this fi
 
 ### Fixed
 - A scheduled run no longer exports zero rows when a saved column was renamed or removed on the exporter. The stale column is left out and a warning is logged with the report, exporter, stale columns and schedule. The saved columns are not changed, since an exporter can define columns by context and a name missing from one run may be valid in another.
-- A failed scheduled run is no longer recorded as successful. `export:run` used to set `last_successful_run_at` whatever the run's outcome; now a failed run keeps the previous value (or leaves it empty if the schedule has never succeeded), still records `last_run_at`, still advances `next_run_at` so a broken report is not retried every minute, and logs `Export failed` with the schedule id. The **Last Successful Run** column on a report's schedules now shows the last real success.
-- **Run now** no longer shows the "export started" notification when the run fails. It shows the "Report could not be run" notification instead, as **Download** already did.
 
 ### Changed
 - Scheduled runs never fall back to the exporter's columns, so a recipient is never sent columns nobody chose for them. A run with no columns to export (no saved columns, or none that still exist on the exporter) still sends an empty export, and now logs an error saying so.
 - When none of a report's saved columns exist on the exporter any more, the report viewer shows the exporter's columns instead of an empty table.
 - The report viewer now logs a warning when it leaves out a stale column, at most once an hour per report and set of stale columns. If the cache is unavailable the warning is logged anyway rather than breaking the viewer.
-- The **Download** button no longer produces an empty file when none of the report's saved columns exist on the exporter. It shows a "Report columns need updating" notification instead. When only some are stale, the download goes ahead and a warning names the columns that were left out, in italics. Both notifications tell the user to remove the old columns from **Columns to include in report** and add them again from **Available Columns**, and stay on screen for 15 seconds instead of Filament's default 6. Their translation keys (`stale_columns_*`, `partly_stale_columns_*`) are named after the condition rather than the button, since other actions can reach it.
-
-### Development
-- PHPStan upgraded to 2.x (`phpstan/phpstan` `^2.1`, `phpstan/phpstan-deprecation-rules` `^2.0`, `phpstan/phpstan-phpunit` `^2.0`). PHPStan 1.x could not read Symfony Console 8, which Laravel 13 installs, and reported inherited command constants such as `Command::SUCCESS` as undefined.
+- The **Download** button no longer produces an empty file when none of the report's saved columns exist on the exporter. It shows a "Report columns need updating" notification instead. When only some are stale, the download goes ahead and a warning names the columns that were left out. Both notifications tell the user to remove the old columns from **Columns to include in report** and add them again from **Available Columns**.
 
 ## 6.1.0 - 2026-09-14
 

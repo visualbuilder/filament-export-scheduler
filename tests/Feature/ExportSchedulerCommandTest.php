@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Visualbuilder\ExportScheduler\Enums\DayOfWeek;
 use Visualbuilder\ExportScheduler\Enums\Month;
+use Visualbuilder\ExportScheduler\Enums\ReportType;
 use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
 use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
 use Visualbuilder\ExportScheduler\Models\CustomReport;
@@ -157,6 +158,63 @@ it('calculates next run time correctly after execution', function () {
     $this->artisan('export:run');
 
     expect($schedule->refresh()->next_run_at->toDateString())->toBe('2024-06-16');
+});
+
+it('does not record a failed run as successful and keeps the previous success', function () {
+    Carbon::setTestNow('2024-06-15 10:00:00');
+
+    // The query names a table that does not exist, so run() catches the error and returns false.
+    $scheduleReport = CustomReport::create([
+        'name' => 'Failing Schedule',
+        'report_type' => ReportType::SQL_QUERY,
+        'sql_query' => 'SELECT id FROM no_such_table',
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+    ]);
+
+    $schedule = ScheduledReport::create([
+        'custom_report_id' => $scheduleReport->id,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => '10:00:00',
+        'next_run_at' => Carbon::parse('2024-06-15 10:00:00'),
+        'last_successful_run_at' => Carbon::parse('2024-06-14 10:00:00'),
+        'enabled' => true,
+    ]);
+
+    $this->artisan('export:run')->assertExitCode(0);
+
+    expect($schedule->refresh())
+        ->last_run_at->toDateTimeString()->toBe('2024-06-15 10:00:00')
+        ->last_successful_run_at->toDateTimeString()->toBe('2024-06-14 10:00:00')
+        ->next_run_at->toDateString()->toBe('2024-06-16');
+
+    Log::shouldHaveReceived('error')
+        ->withArgs(fn (string $message, array $context = []): bool => $message === 'Export failed'
+            && ($context['schedule_id'] ?? null) === $schedule->id);
+});
+
+it('leaves last_successful_run_at empty when a first run fails', function () {
+    $scheduleReport = CustomReport::create([
+        'name' => 'Failing Schedule',
+        'report_type' => ReportType::SQL_QUERY,
+        'sql_query' => 'SELECT id FROM no_such_table',
+        'owner_id' => auth()->id(),
+        'owner_type' => get_class(auth()->user()),
+    ]);
+
+    $schedule = ScheduledReport::create([
+        'custom_report_id' => $scheduleReport->id,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => now()->toTimeString(),
+        'next_run_at' => now()->subMinute(),
+        'enabled' => true,
+    ]);
+
+    $this->artisan('export:run')->assertExitCode(0);
+
+    expect($schedule->refresh())
+        ->last_run_at->not->toBeNull()
+        ->last_successful_run_at->toBeNull();
 });
 
 it('runs daily schedule with null next_run_at when calculated run time is due', function () {

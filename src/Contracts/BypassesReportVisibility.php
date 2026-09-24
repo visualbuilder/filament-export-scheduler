@@ -3,12 +3,13 @@
 namespace Visualbuilder\ExportScheduler\Contracts;
 
 use Illuminate\Database\Eloquent\Model;
+use Visualbuilder\ExportScheduler\Support\VisibilityBypass;
 
 /**
  * Determines whether a user should see all reports and schedules, bypassing
  * visibility restrictions. By default, no user can bypass.
  *
- * The default implementation is {@see \Visualbuilder\ExportScheduler\Support\VisibilityBypass},
+ * The default implementation is {@see VisibilityBypass},
  * bound as a singleton from `config('export-scheduler.visibility_bypass')`. Bind your
  * own implementation to replace it everywhere at once.
  *

@@ -38,12 +38,23 @@ class ExportSchedulerCommand extends Command
 
                 // Attempt to run the export
                 try {
-                    (new ScheduledExporter($schedule->report, $schedule))->run();
-                    $schedule->update([
+                    $ran = (new ScheduledExporter($schedule->report, $schedule))->run();
+
+                    // run() catches its own failures and returns false, so a failed run
+                    // keeps the previous last_successful_run_at rather than claiming one.
+                    // next_run_at still advances, so a broken report is not retried every minute.
+                    $attributes = [
                         'next_run_at' => $schedule->calculateNextRun(),
                         'last_run_at' => now(),
-                        'last_successful_run_at' => now(),
-                    ]);
+                    ];
+
+                    if ($ran) {
+                        $attributes['last_successful_run_at'] = now();
+                    } else {
+                        Log::error('Export failed', ['schedule_id' => $schedule->id]);
+                    }
+
+                    $schedule->update($attributes);
                 } catch (Exception $e) {
                     $schedule->update([
                         'last_run_at' => now(),

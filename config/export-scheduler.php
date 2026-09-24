@@ -7,6 +7,7 @@ use Visualbuilder\ExportScheduler\Mail\ExportReady;
 use Visualbuilder\ExportScheduler\Notifications\ScheduledExportCompleteNotification;
 use Visualbuilder\ExportScheduler\Support\ReportUserResolver;
 use Visualbuilder\ExportScheduler\Support\VisibilityBypass;
+use Visualbuilder\ExportScheduler\Tests\Models\User;
 
 return [
 
@@ -107,7 +108,7 @@ return [
             /**
              * Change this to your own model, maybe \App\Models\User::class
              */
-            'model' => \Visualbuilder\ExportScheduler\Tests\Models\User::class,
+            'model' => User::class,
             'title_attribute' => 'email',
             // 'email_attribute' => 'email',
             // 'model_label' => 'Users',

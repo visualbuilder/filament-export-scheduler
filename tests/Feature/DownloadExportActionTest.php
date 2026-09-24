@@ -4,6 +4,7 @@ use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Actions\Exports\Jobs\CreateXlsxFile;
 use Filament\Actions\Exports\Models\Export;
 use Filament\Notifications\DatabaseNotification;
+use Illuminate\Bus\ChainedBatch;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Notification;
 use Visualbuilder\ExportScheduler\Enums\ReportType;
@@ -11,6 +12,7 @@ use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
 use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
 use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\Pages\ViewCustomReport;
 use Visualbuilder\ExportScheduler\Jobs\CreateSqlQueryXlsxFile;
+use Visualbuilder\ExportScheduler\Jobs\ExportSqlQuery;
 use Visualbuilder\ExportScheduler\Jobs\ScheduledExportCompletion;
 use Visualbuilder\ExportScheduler\Models\CustomReport;
 use Visualbuilder\ExportScheduler\Models\ScheduledReport;
@@ -76,7 +78,7 @@ it('creates the xlsx file when xlsx is chosen', function () {
         ->callAction('download', ['format' => ExportFormat::Xlsx->value]);
 
     Bus::assertChained([
-        Illuminate\Bus\ChainedBatch::class,
+        ChainedBatch::class,
         CreateXlsxFile::class,
         ScheduledExportCompletion::class,
     ]);
@@ -91,7 +93,7 @@ it('does not create the xlsx file when csv is chosen', function () {
         ->callAction('download', ['format' => ExportFormat::Csv->value]);
 
     Bus::assertChained([
-        Illuminate\Bus\ChainedBatch::class,
+        ChainedBatch::class,
         ScheduledExportCompletion::class,
     ]);
 });
@@ -110,7 +112,7 @@ it('builds the xlsx file for a sql query report without an exporter class', func
         ->callAction('download', ['format' => ExportFormat::Xlsx->value]);
 
     Bus::assertChained([
-        Visualbuilder\ExportScheduler\Jobs\ExportSqlQuery::class,
+        ExportSqlQuery::class,
         CreateSqlQueryXlsxFile::class,
         ScheduledExportCompletion::class,
     ]);

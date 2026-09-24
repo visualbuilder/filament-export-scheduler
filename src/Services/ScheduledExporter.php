@@ -317,10 +317,17 @@ class ScheduledExporter
                 $this->applyUserFilter($this->query, $this->schedule->dynamic_owner_attribute, $this->runUser);
             }
 
-            // Prepare column mappings
-            $this->columnMap = [];
-            foreach ($this->report->columns as $column) {
-                $this->columnMap[$column['name']] = $column['label'] ?? $column['name'];
+            // No fallback to the exporter's columns: the recipient would be sent columns
+            // nobody chose for them. With none left, the export still goes out, empty.
+            $this->columnMap = $this->report->getExportableColumnMap('scheduled_run', $this->schedule?->getKey(), fallbackToExporterColumns: false);
+
+            if ($this->columnMap === []) {
+                Log::error('Export scheduler: report has no columns to export; sending an empty export', [
+                    'report_id' => $this->report->getKey(),
+                    'report_name' => $this->report->name,
+                    'exporter' => $exporter,
+                    'schedule_id' => $this->schedule?->getKey(),
+                ]);
             }
 
             // Prepare options if needed

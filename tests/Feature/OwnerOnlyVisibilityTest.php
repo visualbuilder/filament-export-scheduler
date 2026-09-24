@@ -1,7 +1,6 @@
 <?php
 
 use Filament\Actions\Testing\TestAction;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Visualbuilder\ExportScheduler\Enums\ReportVisibility;
 use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource;
 use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\Pages\ListCustomReports;
@@ -89,8 +88,14 @@ it('will not resolve an owner-only report on the view page for a non-owner', fun
 
     // The resource scopes every page through visibleTo(), so the record cannot
     // even be resolved from the URL — a report you cannot see does not exist.
-    livewire(ViewCustomReport::class, ['record' => $report->getKey()]);
-})->throws(ModelNotFoundException::class);
+    // Asserted on the resource rather than through livewire(): Livewire's test
+    // harness renders the resulting ModelNotFoundException as a 404 in some test
+    // orders and lets it escape in others.
+    expect(CustomReportResource::resolveRecordRouteBinding($report->getKey()))->toBeNull();
+
+    $this->actingAs($owner);
+    expect(CustomReportResource::resolveRecordRouteBinding($report->getKey())?->is($report))->toBeTrue();
+});
 
 it('hides the schedules panel of an owner-only report from a non-owner', function () {
     $owner = User::factory()->create();

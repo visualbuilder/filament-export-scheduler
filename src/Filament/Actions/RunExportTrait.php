@@ -59,7 +59,16 @@ trait RunExportTrait
         }
 
         $exporter = new ScheduledExporter($report, $record);
-        $exporter->run();
+
+        if (! $exporter->run()) {
+            Notification::make()
+                ->title(__('export-scheduler::scheduler.download_failed_title'))
+                ->body(__('export-scheduler::scheduler.download_failed_body'))
+                ->danger()
+                ->send();
+
+            return;
+        }
 
         $ccCount = $record->cc_count;
 

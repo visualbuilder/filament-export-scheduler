@@ -4,12 +4,16 @@ namespace Visualbuilder\ExportScheduler\Models;
 
 use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Models\Export;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 use Visualbuilder\ExportScheduler\Contracts\BypassesReportVisibility;
 use Visualbuilder\ExportScheduler\Database\Factories\CustomReportFactory;
 use Visualbuilder\ExportScheduler\Enums\ReportType;
@@ -83,7 +87,7 @@ class CustomReport extends Model
                 $user = auth()->user();
 
                 if (! empty($roles) && $user && method_exists($user, 'hasRole') && ! $user->hasRole($roles)) {
-                    throw new \Illuminate\Auth\Access\AuthorizationException(
+                    throw new AuthorizationException(
                         'You do not have permission to create SQL query reports.'
                     );
                 }
@@ -265,6 +269,115 @@ class CustomReport extends Model
                 'name' => $column->getName(),
                 'label' => $column->getLabel() ?? $column->getName(),
             ]);
+    }
+
+    /**
+     * The saved columns as a [name => label] map, limited to the names the exporter
+     * still defines. A column renamed or removed from the exporter would otherwise
+     * throw on every row, so it is left out and logged instead. The saved columns are
+     * not rewritten: an exporter can define columns by context (signed-in user, export
+     * options), so a name missing from this run may be valid in another.
+     *
+     * When no saved column is left, the exporter's own columns are used only if
+     * $fallbackToExporterColumns is set. A scheduled run leaves it off, so a recipient
+     * is never sent columns nobody chose for them; it gets an empty map instead.
+     *
+     * @param  string  $source  which caller hit the stale column, e.g. scheduled_run or viewer
+     * @return array<string, string>
+     */
+    public function getExportableColumnMap(string $source, ?int $scheduleId = null, bool $fallbackToExporterColumns = true): array
+    {
+        $defaultColumns = $this->default_columns;
+
+        [$exportable, $stale] = $this->partitionSavedColumns($defaultColumns);
+
+        $toColumnMap = fn (Collection $columns): array => $columns
+            ->mapWithKeys(fn (array $column): array => [$column['name'] => $column['label'] ?? $column['name']])
+            ->all();
+
+        if ($stale->isNotEmpty() && $this->shouldLogStaleColumns($source, $stale)) {
+            $message = match (true) {
+                $exportable->isNotEmpty() => 'Export scheduler: report column no longer exists on the exporter and was left out',
+                $fallbackToExporterColumns => 'Export scheduler: report has no columns the exporter still defines; using the exporter\'s default columns instead',
+                default => 'Export scheduler: report has no columns the exporter still defines; the export will be empty',
+            };
+
+            Log::warning($message, [
+                'report_id' => $this->getKey(),
+                'report_name' => $this->name,
+                'exporter' => $this->exporter,
+                'stale_columns' => $toColumnMap($stale),
+                'schedule_id' => $scheduleId,
+                'source' => $source,
+            ]);
+        }
+
+        if ($exportable->isEmpty()) {
+            return $fallbackToExporterColumns ? $toColumnMap($defaultColumns) : [];
+        }
+
+        return $toColumnMap($exportable);
+    }
+
+    /**
+     * Every saved column is one the exporter no longer defines, so without a fallback
+     * there is nothing to export. False when no columns are saved at all.
+     */
+    public function hasOnlyStaleColumns(): bool
+    {
+        [$exportable, $stale] = $this->partitionSavedColumns($this->default_columns);
+
+        return $exportable->isEmpty() && $stale->isNotEmpty();
+    }
+
+    /**
+     * The saved columns the exporter no longer defines, as a [name => label] map.
+     *
+     * @return array<string, string>
+     */
+    public function getStaleColumns(): array
+    {
+        [, $stale] = $this->partitionSavedColumns($this->default_columns);
+
+        return $stale
+            ->mapWithKeys(fn (array $column): array => [$column['name'] => $column['label'] ?? $column['name']])
+            ->all();
+    }
+
+    /**
+     * The saved columns split into those the exporter still defines and those it doesn't.
+     *
+     * @return array{0: Collection, 1: Collection}
+     */
+    protected function partitionSavedColumns(Collection $defaultColumns): array
+    {
+        $definedColumns = $defaultColumns->pluck('name')->all();
+
+        return collect($this->columns ?? [])
+            ->filter(fn ($column): bool => filled($column['name'] ?? null))
+            ->partition(fn (array $column): bool => in_array($column['name'], $definedColumns, strict: true))
+            ->all();
+    }
+
+    /**
+     * The viewer re-reads the columns on every table interaction, so its warning is
+     * logged at most once an hour per report and stale set. A scheduled run always
+     * logs, as each run is its own event. If the cache is unreachable the warning is
+     * logged anyway: a cache outage must not break the viewer or hide a stale column.
+     */
+    protected function shouldLogStaleColumns(string $source, Collection $stale): bool
+    {
+        if ($source !== 'viewer') {
+            return true;
+        }
+
+        $key = 'export-scheduler:stale-columns:' . $this->getKey() . ':' . md5($stale->pluck('name')->sort()->implode(','));
+
+        try {
+            return Cache::add($key, true, now()->addHour());
+        } catch (Throwable) {
+            return true;
+        }
     }
 
     public function getDefaultColumnsAttribute(): Collection

@@ -370,6 +370,30 @@ it('offers the run action on a sql query report that has no exporter class', fun
         ->assertHasNoFormErrors();
 });
 
+it('reports a failed run from the run action instead of claiming it started', function () {
+    // The query names a table that does not exist, so run() catches the error and returns false.
+    $report = makeSchedule([
+        'report_type' => ReportType::SQL_QUERY,
+        'exporter' => null,
+        'columns' => null,
+        'sql_query' => 'SELECT id FROM no_such_table',
+    ]);
+
+    $schedule = ScheduledReport::create([
+        'custom_report_id' => $report->id,
+        'schedule_frequency' => ScheduleFrequency::DAILY,
+        'schedule_time' => '08:00',
+        'schedule_timezone' => 'UTC',
+        'enabled' => true,
+    ]);
+
+    livewire(SchedulesRelationManager::class, ['ownerRecord' => $report, 'pageClass' => ViewCustomReport::class])
+        ->callAction(TestAction::make('run')->table($schedule))
+        ->assertNotified(__('export-scheduler::scheduler.download_failed_title'));
+
+    expect(Export::query()->count())->toBe(0);
+});
+
 it('treats a schedule with no owner as not owned by the current user', function () {
     $schedule = makeSchedule(['owner_id' => null, 'owner_type' => null]);
 

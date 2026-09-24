@@ -60,6 +60,19 @@ trait DownloadExportTrait
             return;
         }
 
+        // The viewer falls back to the exporter's columns, but a download does not, so
+        // it would come out empty. Say why instead of sending an empty file.
+        if ($report->hasOnlyStaleColumns()) {
+            Notification::make()
+                ->title(__('export-scheduler::scheduler.stale_columns_title'))
+                ->body(__('export-scheduler::scheduler.stale_columns_body'))
+                ->danger()
+                ->seconds(15)
+                ->send();
+
+            return;
+        }
+
         // No schedule: an ad hoc download has no recipient, no cc and no
         // send_empty_report suppression.
         $exporter = (new ScheduledExporter($report))
@@ -90,6 +103,21 @@ trait DownloadExportTrait
         }
 
         $notification->send();
+
+        // The file goes out without the columns the exporter no longer defines; say which.
+        if ($staleColumns = $report->getStaleColumns()) {
+            Notification::make()
+                ->title(__('export-scheduler::scheduler.partly_stale_columns_title'))
+                ->body(__('export-scheduler::scheduler.partly_stale_columns_body', [
+                    // The body is rendered as HTML: each saved label is escaped, then italicised.
+                    'columns' => collect($staleColumns)
+                        ->map(fn (string $label): string => '<em>' . e($label) . '</em>')
+                        ->implode(', '),
+                ]))
+                ->warning()
+                ->seconds(15)
+                ->send();
+        }
     }
 
     protected function notifyDownloadFailed(): void

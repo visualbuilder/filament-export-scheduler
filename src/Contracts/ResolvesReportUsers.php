@@ -3,13 +3,14 @@
 namespace Visualbuilder\ExportScheduler\Contracts;
 
 use Illuminate\Database\Eloquent\Model;
+use Visualbuilder\ExportScheduler\Support\ReportUserResolver;
 
 /**
  * Every id, label and email address the package reads off a user goes through
  * this. The package ships to unknown applications and cannot assume a user
  * model has an `email` column, a `name`, or an integer primary key.
  *
- * The default implementation is {@see \Visualbuilder\ExportScheduler\Support\ReportUserResolver},
+ * The default implementation is {@see ReportUserResolver},
  * bound as a singleton from `config('export-scheduler.user_resolver')`. Bind your
  * own implementation to replace it everywhere at once.
  */

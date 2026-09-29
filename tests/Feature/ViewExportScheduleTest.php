@@ -2,6 +2,7 @@
 
 use Filament\Actions\Exports\Models\Export;
 use Filament\Actions\Testing\TestAction;
+use Illuminate\Support\Facades\DB;
 use Visualbuilder\ExportScheduler\Enums\ReportType;
 use Visualbuilder\ExportScheduler\Enums\ScheduleFrequency;
 use Visualbuilder\ExportScheduler\Filament\Exporters\UserExporter;
@@ -416,3 +417,48 @@ it('caps the rows loaded when a viewer limit is configured', function () {
         ->assertSee('Showing the first 3 rows')
         ->assertDontSee('user9@domain.com');
 });
+
+it('eager loads a relation column instead of querying it once per row', function (?int $maxRows) {
+    // With a cap the viewer loads rows with get(), without one with lazy(). Either way the
+    // relation must be eager loaded, so the query count cannot grow with the row count.
+    config()->set('export-scheduler.viewer_max_rows', $maxRows);
+
+    $schedule = makeSchedule([
+        'exporter' => DocumentOwnerExporter::class,
+        'columns' => [
+            ['name' => 'title', 'label' => 'Title'],
+            ['name' => 'owner.created_at', 'label' => 'Owner Created At'],
+        ],
+    ]);
+
+    $queriesToView = function (int $rows, int $month) use ($schedule): int {
+        Document::query()->delete();
+        User::query()->where('email', 'like', 'owner%@domain.com')->delete();
+
+        foreach (range(1, $rows) as $i) {
+            $owner = User::create([
+                'name' => "Owner {$i}",
+                'email' => "owner{$i}@domain.com",
+                'password' => 'password',
+                'created_at' => now()->setDate(2023, $month, $i),
+            ]);
+
+            Document::create(['title' => "Doc {$i}", 'owner_id' => $owner->id, 'owner_type' => User::class]);
+        }
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        livewire(ViewCustomReport::class, ['record' => $schedule->getKey()])
+            ->assertOk()
+            ->assertSee(sprintf('2023-%02d-01', $month))
+            ->assertSee(sprintf('2023-%02d-%02d', $month, $rows));
+
+        return count(DB::getQueryLog());
+    };
+
+    expect($queriesToView(6, 6))->toBe($queriesToView(2, 5));
+})->with([
+    'capped' => [50],
+    'uncapped' => [null],
+]);

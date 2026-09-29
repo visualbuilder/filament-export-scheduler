@@ -102,6 +102,64 @@ it('still caps the rows loaded when a viewer limit is configured', function () {
         ->assertDontSee('Doc 5');
 });
 
+it('eager loads a dot-notation relationship column in one query on the capped get() path too', function () {
+    // viewer_max_rows set → getExporterRows() takes the get() branch, not lazy().
+    // The eager load is applied to the query before either branch runs, but nothing
+    // upstream of this test exercises get() with a relationship column and checks the
+    // query count — assert it independently so a regression that reintroduces
+    // per-row queries on the capped path is caught even though lazy() stays fixed.
+    config()->set('export-scheduler.viewer_max_rows', 50);
+
+    foreach ([1, 2] as $i) {
+        $owner = User::create([
+            'name' => "Owner {$i}",
+            'email' => "owner{$i}@domain.com",
+            'password' => 'password',
+            'created_at' => now()->setDate(2023, 5, $i),
+        ]);
+
+        Document::create(['title' => "Doc {$i}", 'owner_id' => $owner->id, 'owner_type' => User::class]);
+    }
+
+    $report = makeOwnerReport();
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    livewire(ViewCustomReport::class, ['record' => $report->getKey()])
+        ->assertOk()
+        ->assertSee('2023-05-01')
+        ->assertSee('2023-05-02');
+
+    $smallQueryCount = count(DB::getQueryLog());
+
+    Document::query()->delete();
+    User::query()->where('email', 'like', 'owner%@domain.com')->delete();
+
+    foreach (range(1, 6) as $i) {
+        $owner = User::create([
+            'name' => "Owner {$i}",
+            'email' => "owner{$i}@domain.com",
+            'password' => 'password',
+            'created_at' => now()->setDate(2023, 6, $i),
+        ]);
+
+        Document::create(['title' => "Doc {$i}", 'owner_id' => $owner->id, 'owner_type' => User::class]);
+    }
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    livewire(ViewCustomReport::class, ['record' => $report->getKey()])
+        ->assertOk()
+        ->assertSee('2023-06-01')
+        ->assertSee('2023-06-06');
+
+    $largeQueryCount = count(DB::getQueryLog());
+
+    expect($largeQueryCount)->toBe($smallQueryCount);
+});
+
 it('renders every row when the viewer limit is not configured', function () {
     config()->set('export-scheduler.viewer_max_rows', null);
 

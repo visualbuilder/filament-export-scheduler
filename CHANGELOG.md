@@ -2,6 +2,11 @@
 
 All notable changes to `filament-export-scheduler` will be documented in this file.
 
+## 6.2.2 - 2026-09-29
+
+### Fixed
+- The report viewer now eager loads relationship columns. It used `cursor()`, which skips eager loading, so each relationship column ran its own queries for every row.
+
 ## 6.2.1 - 2026-09-24
 
 ### Fixed

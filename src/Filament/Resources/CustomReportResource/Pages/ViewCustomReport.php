@@ -327,7 +327,14 @@ class ViewCustomReport extends Page implements HasTable
 
             $names = array_keys($columnMap);
 
-            return $query->cursor()
+            // cursor() hydrates rows one at a time and never runs eager loads, so each
+            // relationship column would query once per row. get() (capped) and lazy()
+            // (uncapped, chunked) both eager load.
+            $records = $maxRows
+                ? $query->get()
+                : $query->lazy(500);
+
+            return $records
                 ->mapWithKeys(function (Model $record) use ($exporter, $names, $linkResolvers, $report, $exporterClass): array {
                     $row = array_combine($names, $exporter($record));
 

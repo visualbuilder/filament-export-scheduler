@@ -184,6 +184,25 @@ class CustomReportResource extends Resource
         return $record->isOwnedBy($user) || app(BypassesReportVisibility::class)->can($user);
     }
 
+    /**
+     * Filament 5.11.2+ authorises the view page through authorizeView(), which
+     * reads the model policy and skips canView(). There is no CustomReport
+     * policy, so route the page back through the rules above.
+     */
+    public static function authorizeView(Model $record): void
+    {
+        abort_unless(static::canView($record), 403);
+    }
+
+    /**
+     * As authorizeView(): without this the edit page opens by URL to anyone the
+     * report is shared with, because sharing grants visibility, not ownership.
+     */
+    public static function authorizeEdit(Model $record): void
+    {
+        abort_unless(static::canEdit($record), 403);
+    }
+
     public static function canDelete(Model $record): bool
     {
         $user = auth()->user();

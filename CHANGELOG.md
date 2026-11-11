@@ -2,6 +2,14 @@
 
 All notable changes to `filament-export-scheduler` will be documented in this file.
 
+## 6.2.3 - 2026-11-11
+
+### Security
+- The edit page of a report no longer opens by URL to someone the report is only shared with. Filament 5.11.2 authorises resource pages through `authorizeEdit()` and `authorizeView()`, which skip the resource's `canEdit()` and `canView()`, and reports have no model policy, so sharing a report (visibility) also let the user open its edit page (ownership). The resource now routes both pages back through its own rules. Viewing was already safe: every page is scoped by `visibleTo()`.
+
+### Fixed
+- Tests read notifications through Filament 5.11's notification mailbox.
+
 ## 6.2.2 - 2026-09-29
 
 ### Fixed

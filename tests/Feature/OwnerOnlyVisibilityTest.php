@@ -3,6 +3,7 @@
 use Filament\Actions\Testing\TestAction;
 use Visualbuilder\ExportScheduler\Enums\ReportVisibility;
 use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource;
+use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\Pages\EditCustomReport;
 use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\Pages\ListCustomReports;
 use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\Pages\ViewCustomReport;
 use Visualbuilder\ExportScheduler\Filament\Resources\CustomReportResource\RelationManagers\SchedulesRelationManager;
@@ -166,4 +167,39 @@ it('shows a guest nothing at all', function () {
     ownerOnlyReport(User::factory()->create());
 
     expect(CustomReport::visibleTo(null)->count())->toBe(0);
+});
+
+/*
+ * Filament 5.11.2 (filamentphp/filament#20957) authorises the view and edit pages
+ * through authorizeView()/authorizeEdit(), which skip the overridden canView() and
+ * canEdit(). Viewing stays safe because getEloquentQuery() scopes every page by
+ * visibleTo(), but editing is stricter than seeing: a report shared with you is
+ * visible, not editable. Mount the pages so that cannot recur.
+ */
+it('forbids the edit page of a shared report to a user who can only see it', function () {
+    $owner = User::factory()->create();
+    $viewer = User::factory()->create();
+
+    $report = CustomReport::factory()->create([
+        'owner_id' => $owner->id,
+        'owner_type' => User::class,
+        'visibility' => ReportVisibility::USER_TYPE,
+        'visible_to_type' => User::class,
+    ]);
+
+    $this->actingAs($viewer);
+
+    livewire(ViewCustomReport::class, ['record' => $report->getRouteKey()])->assertSuccessful();
+    livewire(EditCustomReport::class, ['record' => $report->getRouteKey()])->assertForbidden();
+});
+
+it('opens the view and edit pages of an owner-only report to its owner', function () {
+    $owner = User::factory()->create();
+
+    $report = ownerOnlyReport($owner);
+
+    $this->actingAs($owner);
+
+    livewire(ViewCustomReport::class, ['record' => $report->getRouteKey()])->assertSuccessful();
+    livewire(EditCustomReport::class, ['record' => $report->getRouteKey()])->assertSuccessful();
 });

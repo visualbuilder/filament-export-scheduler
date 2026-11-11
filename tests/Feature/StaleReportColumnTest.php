@@ -4,6 +4,7 @@ use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Actions\Exports\Models\Export;
 use Filament\Notifications\Livewire\Notifications;
 use Filament\Notifications\Notification as FilamentNotification;
+use Filament\Notifications\NotificationMailbox;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -315,8 +316,11 @@ it('italicises each left-out column and escapes its label', function () {
         ->callAction('download', ['format' => ExportFormat::Csv->value]);
 
     // Read the sent notification the way Filament's own assertNotified() does.
+    // Filament 5.11.1+ delivers through a mailbox that must be flushed first.
+    app(NotificationMailbox::class)->flush();
     $notifications = new Notifications;
     $notifications->mount();
+    $notifications->pullNotifications();
 
     $body = $notifications->notifications
         ->first(fn (FilamentNotification $notification): bool => $notification->getTitle() === 'Some columns were left out')
